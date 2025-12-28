@@ -1,10 +1,25 @@
+import { Container } from "@/shared/ui/Container";
+import { Text } from "@/shared/ui/Text";
+import { Button } from "@/shared/ui/Button";
+import { Divider } from "@/shared/ui/Divider";
+
 export default function MyPage() {
   return (
-    <div className="flex min-h-full items-center justify-center p-4">
-      <div className="text-center">
-        <h1 className="mb-4 text-2xl font-bold">내정보</h1>
-        <p className="text-gray-600 dark:text-gray-400">내정보 페이지입니다.</p>
+    <Container className="py-10">
+      <Text variant="title">내 정보</Text>
+      <Divider />
+      <div className="mb-8 flex items-center gap-4">
+        <div className="bg-primary-soft h-16 w-16 rounded-full" />
+        <div>
+          <Text variant="body" className="font-bold">
+            사용자님
+          </Text>
+          <Text variant="caption">user@example.com</Text>
+        </div>
       </div>
-    </div>
+      <Button variant="primary" className="w-full" disabled>
+        프로필 수정하기 (준비 중)
+      </Button>
+    </Container>
   );
 }

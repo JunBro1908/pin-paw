@@ -1,10 +1,20 @@
+import { Container } from "@/shared/ui/Container";
+import { Text } from "@/shared/ui/Text";
+import { Loading } from "@/shared/ui/Loading";
+
 export default function MapPage() {
   return (
-    <div className="flex min-h-full items-center justify-center p-4">
-      <div className="text-center">
-        <h1 className="mb-4 text-2xl font-bold">지도</h1>
-        <p className="text-gray-600 dark:text-gray-400">지도 페이지입니다.</p>
+    <Container className="py-10">
+      <Text variant="title" className="mb-4">
+        지도
+      </Text>
+      <Text variant="body" className="mb-8">
+        주변의 펫 친화 장소를 찾아보세요.
+      </Text>
+      <div className="bg-surface rounded-xl p-10 text-center">
+        <Loading />
+        <Text variant="caption">지도를 불러오는 중...</Text>
       </div>
-    </div>
+    </Container>
   );
 }

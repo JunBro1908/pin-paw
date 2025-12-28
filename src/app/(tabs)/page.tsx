@@ -1,10 +1,20 @@
+import { Container } from "@/shared/ui/Container";
+import { Text } from "@/shared/ui/Text";
+import { Button } from "@/shared/ui/Button";
+import { Divider } from "@/shared/ui/Divider";
+
 export default function HomePage() {
   return (
-    <div className="flex min-h-full items-center justify-center p-4">
-      <div className="text-center">
-        <h1 className="mb-4 text-2xl font-bold">홈</h1>
-        <p className="text-gray-600 dark:text-gray-400">홈 페이지입니다.</p>
+    <Container className="py-10">
+      <Text variant="title">홈</Text>
+      <Divider />
+      <Text variant="body" className="mb-6">
+        PinPaw 프로젝트에 오신 것을 환영합니다.
+      </Text>
+      <div className="flex flex-col gap-3">
+        <Button variant="primary">기본 버튼</Button>
+        <Button variant="secondary">보조 버튼</Button>
       </div>
-    </div>
+    </Container>
   );
 }
