@@ -7,30 +7,34 @@ import { SightingFormData } from "../model/types";
 import { validateSightingForm } from "../lib/validators";
 import { cn } from "@/shared/lib/cn";
 
-/**
- * 목격 제보를 위한 메인 폼 컴포넌트입니다.
- */
 export function SightingForm() {
-  // 1. 초기 상태 설정
   const [formData, setFormData] = useState<SightingFormData>({
     photo: null,
     photoUrl: null,
-    location: "",
+    lat: 37.5665, // 예시: 서울 시청 위도
+    lng: 126.978, // 예시: 서울 시청 경도
+    locationName: "",
     time: new Date().toISOString().slice(0, 16),
     description: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showErrors, setShowErrors] = useState(false); // 에러 표시 여부 상태
+  const [showErrors, setShowErrors] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // 2. 입력값 변경 핸들러
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const url = URL.createObjectURL(file);
       setFormData((prev) => ({ ...prev, photo: file, photoUrl: url }));
     }
+  };
+
+  const handleRemovePhoto = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (formData.photoUrl) URL.revokeObjectURL(formData.photoUrl);
+    setFormData((prev) => ({ ...prev, photo: null, photoUrl: null }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const handleChange = (
@@ -40,45 +44,60 @@ export function SightingForm() {
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  // 3. 사진 제거 핸들러
-  const handleRemovePhoto = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (formData.photoUrl) {
-      URL.revokeObjectURL(formData.photoUrl);
-    }
-    setFormData((prev) => ({ ...prev, photo: null, photoUrl: null }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
-  };
-
-  // 4. 유효성 검사
   const errors = validateSightingForm(formData);
   const isValid = Object.keys(errors).length === 0;
 
-  // 5. 폼 제출 핸들러
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    // 유효하지 않으면 에러 표시 활성화
     if (!isValid) {
       setShowErrors(true);
       return;
     }
 
     setIsSubmitting(true);
-    setTimeout(() => {
-      alert("제보가 성공적으로 등록되었습니다!");
-      setIsSubmitting(false);
-      setShowErrors(false);
-    }, 1500);
-  };
 
-  const maxDateTime = new Date().toISOString().slice(0, 16);
+    try {
+      const body = new FormData();
+      if (formData.photo) body.append("photo", formData.photo);
+      body.append("lat", formData.lat.toString());
+      body.append("lng", formData.lng.toString());
+      body.append("occurred_at", formData.time);
+      body.append("note", formData.description);
+
+      const response = await fetch("/api/sightings", {
+        method: "POST",
+        body,
+      });
+
+      const result = await response.json();
+
+      if (!result.ok) {
+        throw new Error(result.error?.message || "제보 등록에 실패했습니다.");
+      }
+
+      alert("제보가 성공적으로 등록되었습니다!");
+
+      // 폼 초기화
+      setFormData({
+        photo: null,
+        photoUrl: null,
+        lat: 37.5665,
+        lng: 126.978,
+        locationName: "",
+        time: new Date().toISOString().slice(0, 16),
+        description: "",
+      });
+      setShowErrors(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "오류가 발생했습니다.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* 사진 업로드 섹션 */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <Text variant="body" className="text-text-main font-bold">
@@ -104,24 +123,19 @@ export function SightingForm() {
               <button
                 type="button"
                 onClick={handleRemovePhoto}
-                className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-110 active:scale-95"
+                className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
               >
-                <span className="text-lg">✕</span>
+                ✕
               </button>
             </>
           ) : (
-            <div className="flex flex-col items-center gap-3 transition-transform group-hover:scale-105">
+            <div className="flex flex-col items-center gap-3">
               <div className="bg-primary-soft text-primary flex h-16 w-16 items-center justify-center rounded-full shadow-sm">
                 <span className="text-3xl">➕</span>
               </div>
-              <div className="text-center">
-                <Text variant="body" className="text-text-sub font-medium">
-                  촬영 및 앨범 선택
-                </Text>
-                <Text variant="caption" className="mt-1 opacity-60">
-                  동물의 특징이 잘 보이게 찍어주세요
-                </Text>
-              </div>
+              <Text variant="body" className="text-text-sub font-medium">
+                촬영 및 앨범 선택
+              </Text>
             </div>
           )}
           <input
@@ -134,44 +148,26 @@ export function SightingForm() {
         </div>
       </section>
 
-      {/* 위치 정보 섹션 */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
           <Text variant="body" className="text-text-main font-bold">
             목격 위치 <span className="text-primary">*</span>
           </Text>
-          {showErrors && !formData.location.trim() && (
+          {showErrors && !formData.locationName && !formData.lat && (
             <span className="animate-pulse text-[11px] font-medium text-red-500">
               위치를 입력해주세요
             </span>
           )}
         </div>
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            variant="secondary"
-            className="flex-1 gap-2 rounded-xl py-3 text-sm shadow-sm"
-          >
-            📍 현재 위치
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            className="flex-1 gap-2 rounded-xl py-3 text-sm shadow-sm"
-          >
-            🗺️ 지도 선택
-          </Button>
-        </div>
         <input
-          name="location"
-          value={formData.location}
+          name="locationName"
+          value={formData.locationName}
           onChange={handleChange}
-          placeholder="상세 위치를 입력해주세요"
+          placeholder="목격한 장소를 입력해주세요 (예: 강남역 10번 출구)"
           className="border-border-subtle focus:border-primary focus:ring-primary/10 w-full rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2"
         />
       </section>
 
-      {/* 시간 및 설명 섹션 */}
       <section className="space-y-6">
         <div className="space-y-3">
           <Text variant="body" className="text-text-main font-bold">
@@ -181,12 +177,11 @@ export function SightingForm() {
             type="datetime-local"
             name="time"
             value={formData.time}
-            max={maxDateTime}
+            max={new Date().toISOString().slice(0, 16)}
             onChange={handleChange}
             className="border-border-subtle focus:border-primary focus:ring-primary/10 w-full rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2"
           />
         </div>
-
         <div className="space-y-3">
           <Text variant="body" className="text-text-main font-bold">
             추가 설명 (선택)
@@ -195,14 +190,13 @@ export function SightingForm() {
             name="description"
             value={formData.description}
             onChange={handleChange}
-            placeholder="동물의 특징이나 상황을 알려주세요 (털 색깔, 목줄 여부 등)"
+            placeholder="동물의 특징이나 상황을 알려주세요"
             rows={4}
             className="border-border-subtle focus:border-primary focus:ring-primary/10 w-full resize-none rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2"
           />
         </div>
       </section>
 
-      {/* 최종 등록 버튼 */}
       <div className="sticky bottom-6 pt-4">
         <Button
           type="submit"

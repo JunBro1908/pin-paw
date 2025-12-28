@@ -3,9 +3,11 @@
  */
 export interface SightingFormData {
   photo: File | null;
-  photoUrl: string | null; // 미리보기용 URL
-  location: string;
-  time: string; // ISO string format
+  photoUrl: string | null;
+  lat: number;
+  lng: number;
+  locationName: string; // 사용자에게 보여줄 위치 이름
+  time: string;
   description: string;
 }
 
