@@ -10,7 +10,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
  */
 export function Button({
   children,
-  variant = "primary",
+  variant,
   isLoading,
   className,
   disabled,
@@ -24,9 +24,11 @@ export function Button({
     secondary: "bg-primary-soft text-primary",
   };
 
+  const variantStyles = variant ? variants[variant] : "";
+
   return (
     <button
-      className={cn(baseStyles, variants[variant], className)}
+      className={cn(baseStyles, variantStyles, className)}
       disabled={disabled || isLoading}
       {...props}
     >
