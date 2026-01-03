@@ -61,52 +61,20 @@ export function SightingForm() {
       return;
     }
 
+    // 1. 네트워크 연결 상태 확인
+    if (typeof window !== "undefined" && !window.navigator.onLine) {
+      setToast({ message: "이미지 업로드에 실패했습니다.", type: "error" });
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
-      // 1. Presigned URL 요청
-      const presignRes = await fetch("/api/v1/uploads/presign", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": crypto.randomUUID(),
-        },
-        body: JSON.stringify({
-          purpose: "sighting_photo",
-          files: [
-            {
-              contentType: formData.photo.type,
-              sizeBytes: formData.photo.size,
-            },
-          ],
-        }),
-      });
-      const presignResult = await presignRes.json();
-      if (!presignResult.success) throw new Error(presignResult.error);
+      // 2. 사진 업로드 (Presigned URL 발급 + Storage 업로드)
+      const fileKey = await uploadPhoto(formData.photo);
 
-      const { uploadUrl, fileKey } = presignResult.data.uploads[0];
-
-      // 2. Storage로 직접 업로드 (PUT)
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": formData.photo.type },
-        body: formData.photo,
-      });
-      if (!uploadRes.ok) throw new Error("이미지 업로드에 실패했습니다.");
-
-      // 3. 목격 제보 저장 요청
-      const sightingRes = await fetch("/api/v1/sightings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          photoKeys: [fileKey],
-          location: { lat: formData.lat, lng: formData.lng },
-          occurredAt: new Date(formData.time).toISOString(),
-          note: formData.description,
-        }),
-      });
-      const sightingResult = await sightingRes.json();
-      if (!sightingResult.success) throw new Error(sightingResult.error);
+      // 3. 목격 제보 저장
+      await registerSighting(fileKey, formData);
 
       setToast({
         message: "제보가 성공적으로 등록되었습니다!",
@@ -114,17 +82,7 @@ export function SightingForm() {
       });
 
       // 폼 초기화
-      setFormData({
-        photo: null,
-        photoUrl: null,
-        lat: 37.5665,
-        lng: 126.978,
-        locationName: "",
-        time: new Date().toISOString().slice(0, 16),
-        description: "",
-      });
-      setShowErrors(false);
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      resetForm();
     } catch (err) {
       setToast({
         message: err instanceof Error ? err.message : "오류가 발생했습니다.",
@@ -133,6 +91,98 @@ export function SightingForm() {
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  /**
+   * 사진을 업로드하고 fileKey를 반환합니다.
+   */
+  const uploadPhoto = async (photo: File): Promise<string> => {
+    try {
+      // 1-1. Presigned URL 요청
+      const presignRes = await fetch("/api/v1/uploads/presign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": crypto.randomUUID(),
+        },
+        body: JSON.stringify({
+          purpose: "sighting_photo",
+          files: [{ contentType: photo.type, sizeBytes: photo.size }],
+        }),
+      });
+
+      const presignResult = await presignRes.json();
+      if (!presignResult.success) {
+        throw new Error(presignResult.error || "이미지 업로드에 실패했습니다.");
+      }
+
+      const { uploadUrl, fileKey } = presignResult.data.uploads[0];
+
+      // 1-2. Storage로 직접 업로드 (PUT)
+      const uploadRes = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": photo.type },
+        body: photo,
+      });
+
+      if (!uploadRes.ok) {
+        throw new Error("이미지 업로드에 실패했습니다.");
+      }
+
+      return fileKey;
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message && err.message !== "Failed to fetch"
+          ? err.message
+          : "이미지 업로드에 실패했습니다.";
+      throw new Error(message);
+    }
+  };
+
+  /**
+   * 제보 정보를 서버에 저장합니다.
+   */
+  const registerSighting = async (fileKey: string, data: SightingFormData) => {
+    try {
+      const sightingRes = await fetch("/api/v1/sightings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          photoKeys: [fileKey],
+          location: { lat: data.lat, lng: data.lng },
+          occurredAt: new Date(data.time).toISOString(),
+          note: data.description,
+        }),
+      });
+
+      const sightingResult = await sightingRes.json();
+      if (!sightingResult.success) {
+        throw new Error(sightingResult.error || "제보 등록에 실패했습니다.");
+      }
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message && err.message !== "Failed to fetch"
+          ? err.message
+          : "제보 등록에 실패했습니다.";
+      throw new Error(message);
+    }
+  };
+
+  /**
+   * 폼 상태를 초기화합니다.
+   */
+  const resetForm = () => {
+    setFormData({
+      photo: null,
+      photoUrl: null,
+      lat: 37.5665,
+      lng: 126.978,
+      locationName: "",
+      time: new Date().toISOString().slice(0, 16),
+      description: "",
+    });
+    setShowErrors(false);
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
