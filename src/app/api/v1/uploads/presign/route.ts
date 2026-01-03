@@ -115,14 +115,14 @@ export async function POST(request: Request) {
 
       const { data, error } = await supabase.storage
         .from(bucket)
-        .createSignedUploadUrl(fileKey);
+        .createSignedUploadUrl(fileKey, { upsert: false });
 
       if (error) throw error;
 
       uploads.push({
         fileKey,
         uploadUrl: data.signedUrl,
-        expiresInSec: 600,
+        // TODO : 추후 파라미터 확장시 추가할 예정 expiresAt: 60,
       });
     }
 
