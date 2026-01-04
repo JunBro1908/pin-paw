@@ -1,20 +1,33 @@
-import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
-import { Loading } from "@/shared/ui/Loading";
+import { NaverMap } from "@/features/map/components/NaverMap";
 
 export default function MapPage() {
+  const clientId = process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
+
   return (
-    <Container className="py-10">
-      <Text variant="title" className="mb-4">
-        지도
-      </Text>
-      <Text variant="body" className="mb-8">
-        주변의 펫 친화 장소를 찾아보세요.
-      </Text>
-      <div className="bg-surface rounded-xl p-10 text-center">
-        <Loading />
-        <Text variant="caption">지도를 불러오는 중...</Text>
+    <div className="relative h-[calc(100vh-80px)] w-full overflow-hidden">
+      {/* Overlay Header */}
+      <div className="pointer-events-none absolute top-0 left-0 z-10 w-full p-5">
+        <div className="inline-block rounded-2xl bg-white/80 p-4 shadow-lg backdrop-blur-md dark:bg-gray-900/80">
+          <Text variant="title" className="text-lg">
+            PinPaw 지도
+          </Text>
+          <Text variant="caption" className="text-xs">
+            반려동물의 흔적을 찾아보세요
+          </Text>
+        </div>
       </div>
-    </Container>
+
+      {!clientId ? (
+        <div className="bg-surface flex h-full items-center justify-center p-10 text-center">
+          <Text color="error">
+            Naver Maps Client ID가 설정되지 않았습니다. <br />
+            .env 파일에 NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID를 설정해주세요.
+          </Text>
+        </div>
+      ) : (
+        <NaverMap clientId={clientId} />
+      )}
+    </div>
   );
 }
