@@ -6,9 +6,17 @@ import { Loading } from "@/shared/ui/Loading";
 import { Text } from "@/shared/ui/Text";
 import { Toast } from "@/shared/ui/Toast";
 import Image from "next/image";
+import { MapItem, ClusterResponse } from "../types/naver";
+import { ApiResponse } from "@/shared/types/api";
 
 interface NaverMapProps {
   clientId: string;
+}
+
+// 클라이언트 캐시 타입
+interface CacheValue {
+  etag: string;
+  items: MapItem[];
 }
 
 export function NaverMap({ clientId }: NaverMapProps) {
@@ -19,58 +27,9 @@ export function NaverMap({ clientId }: NaverMapProps) {
   // 맵 인스턴스와 마커를 ref로 관리하여 리렌더링 시에도 유지
   const mapInstanceRef = useRef<any>(null);
   const myLocationMarkerRef = useRef<any>(null);
-
-  // 로딩 및 피드백 상태
-  const [isLocating, setIsLocating] = useState(false);
-  const [toast, setToast] = useState<{
-    message: string;
-    type: "success" | "error";
-  } | null>(null);
-
-  /**
-   * 지도 초기화 함수
-   */
-  const initMap = useCallback(() => {
-    if (!mapRef.current || !window.naver?.maps || mapInstanceRef.current)
-      return;
-
-    try {
-      // 1. 기본 옵션으로 지도 생성 (일단 시청역 중심)
-      const mapOptions = {
-        center: new window.naver.maps.LatLng(37.5665, 126.978),
-        zoom: 13,
-        zoomControl: true,
-        zoomControlOptions: {
-          position: window.naver.maps.Position.RIGHT_CENTER,
-        },
-      };
-
-      mapInstanceRef.current = new window.naver.maps.Map(
-        mapRef.current,
-        mapOptions
-      );
-      setIsLoaded(true);
-
-      // 2. 지도가 로드되면 즉시 내 위치 찾기 시도
-      handleCurrentLocation();
-    } catch (err) {
-      console.error("Naver Map Init Error:", err);
-      setError("지도를 초기화하는 중 오류가 발생했습니다.");
-    }
-  }, []); // handleCurrentLocation을 dependency에 넣으면 순환 참조가 생길 수 있으므로 주의
-
-  useEffect(() => {
-    if (window.naver?.maps && !mapInstanceRef.current) {
-      initMap();
-    }
-
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.destroy();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, [initMap]);
+  const markersRef = useRef<any[]>([]);
+  const cacheRef = useRef<Map<string, CacheValue>>(new Map());
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   /**
    * 현재 위치 찾기 및 지도 이동
@@ -146,6 +105,229 @@ export function NaverMap({ clientId }: NaverMapProps) {
       }
     );
   }, []);
+
+  /**
+   * 마커 및 클러스터 렌더링 함수
+   */
+  const renderClusters = useCallback((items: MapItem[]) => {
+    if (!mapInstanceRef.current || !window.naver?.maps) return;
+
+    // 1. 기존 마커 제거
+    markersRef.current.forEach((marker) => marker.setMap(null));
+    markersRef.current = [];
+
+    // 2. 새 마커 생성
+    const newMarkers = items.map((item) => {
+      let content = "";
+
+      if (item.type === "cluster") {
+        // 클러스터: 숫자와 함께 원형 표시
+        const size = 30 + Math.min(item.count * 2, 20); // 데이터 수에 따라 크기 조절
+        content = `
+          <div style="
+            width: ${size}px;
+            height: ${size}px;
+            background: #FF4D4D;
+            border: 2px solid white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+          ">
+            ${item.count}
+          </div>
+        `;
+      } else {
+        // 포인트: 핀 형태의 마커
+        content = `
+          <div style="position: relative; width: 30px; height: 30px;">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 21C16 17.5 19 14.4183 19 10C19 6.13401 15.866 3 12 3C8.13401 3 5 6.13401 5 10C5 14.4183 8 17.5 12 21Z" fill="#FF4D4D" stroke="white" stroke-width="2"/>
+              <circle cx="12" cy="10" r="3" fill="white"/>
+            </svg>
+          </div>
+        `;
+      }
+
+      const marker = new window.naver.maps.Marker({
+        position: new window.naver.maps.LatLng(item.lat, item.lng),
+        map: mapInstanceRef.current,
+        icon: {
+          content,
+          anchor: new window.naver.maps.Point(15, 15),
+        },
+      });
+
+      return marker;
+    });
+
+    markersRef.current = newMarkers;
+  }, []);
+
+  /**
+   * 클러스터 데이터 가져오기
+   */
+  const fetchClusters = useCallback(async () => {
+    if (!mapInstanceRef.current) return;
+
+    const bounds = mapInstanceRef.current.getBounds();
+    const zoom = mapInstanceRef.current.getZoom();
+    const sw = bounds.getSW();
+    const ne = bounds.getNE();
+
+    const minLat = sw.lat();
+    const minLng = sw.lng();
+    const maxLat = ne.lat();
+    const maxLng = ne.lng();
+
+    // 1. 서버(SQL)의 클러스터링 격자 크기와 동일하게 정의
+    const getGridSize = (z: number) => {
+      if (z >= 17) return 0.001; // 110m
+      if (z >= 14) return 0.01; // 1.1km
+      if (z >= 9) return 0.1; // 11km
+      return 0.5;
+    };
+
+    // 2. 좌표를 특정 격자 인덱스로
+    const gridSize = getGridSize(zoom);
+    const snap = (num: number) => Math.floor(num / gridSize);
+
+    // 3. Grid ID 기반의 캐시 키 생성
+    const cacheKey = `${snap(minLat)},${snap(minLng)},${snap(maxLat)},${snap(maxLng)},${zoom}`;
+    const cached = cacheRef.current.get(cacheKey);
+
+    // 캐시가 있으면 즉시 렌더링 (SWR 패턴)
+    if (cached) {
+      renderClusters(cached.items);
+    }
+
+    try {
+      const params = new URLSearchParams({
+        minLat: minLat.toString(),
+        minLng: minLng.toString(),
+        maxLat: maxLat.toString(),
+        maxLng: maxLng.toString(),
+        zoom: zoom.toString(),
+      });
+
+      const headers: Record<string, string> = {};
+      if (cached?.etag) {
+        headers["If-None-Match"] = cached.etag;
+      }
+
+      const response = await fetch(`/api/v1/public/map/clusters?${params}`, {
+        headers,
+      });
+
+      if (response.status === 304) {
+        return;
+      }
+
+      if (!response.ok) throw new Error("데이터를 가져오는데 실패했습니다.");
+
+      const result: ApiResponse<ClusterResponse> = await response.json();
+      if (result.ok && result.data) {
+        const etag = response.headers.get("ETag") || "";
+        const items = result.data.clusters;
+
+        // 캐시 업데이트 및 렌더링
+        cacheRef.current.set(cacheKey, { etag, items });
+        renderClusters(items);
+      }
+    } catch (err) {
+      console.error("Fetch clusters error:", err);
+      setToast({
+        message: "주변 데이터를 불러오는 데 실패했습니다.",
+        type: "error",
+      });
+    }
+  }, [renderClusters]);
+
+  /**
+   * 지도의 idle 이벤트 핸들러 (이동/줌 완료 시 발생)
+   */
+  const handleMapIdle = useCallback(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      fetchClusters();
+    }, 300);
+  }, [fetchClusters]);
+
+  // 로딩 및 피드백 상태
+  const [isLocating, setIsLocating] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
+
+  /**
+   * 지도 초기화 함수
+   */
+  const initMap = useCallback(() => {
+    if (!mapRef.current || !window.naver?.maps || mapInstanceRef.current)
+      return;
+
+    try {
+      // 1. 기본 옵션으로 지도 생성 (일단 시청역 중심)
+      const mapOptions = {
+        center: new window.naver.maps.LatLng(37.5665, 126.978),
+        zoom: 13,
+        zoomControl: true,
+        zoomControlOptions: {
+          position: window.naver.maps.Position.RIGHT_CENTER,
+        },
+      };
+
+      mapInstanceRef.current = new window.naver.maps.Map(
+        mapRef.current,
+        mapOptions
+      );
+
+      // 2. 이벤트 리스너 등록
+      window.naver.maps.Event.addListener(
+        mapInstanceRef.current,
+        "idle",
+        handleMapIdle
+      );
+
+      setIsLoaded(true);
+
+      // 3. 지도가 로드되면 즉시 내 위치 찾기 시도
+      handleCurrentLocation();
+    } catch (err) {
+      console.error("Naver Map Init Error:", err);
+      setError("지도를 초기화하는 중 오류가 발생했습니다.");
+    }
+  }, [handleMapIdle, handleCurrentLocation]); // handleCurrentLocation을 dependency에 넣음
+
+  useEffect(() => {
+    if (window.naver?.maps && !mapInstanceRef.current) {
+      initMap();
+    }
+
+    return () => {
+      if (mapInstanceRef.current) {
+        // 이벤트 리스너 제거는 destroy()에서 자동으로 처리될 수 있지만 명시적으로 관리하는 것이 좋음
+        if (window.naver?.maps?.Event) {
+          window.naver.maps.Event.clearInstanceListeners(
+            mapInstanceRef.current
+          );
+        }
+        mapInstanceRef.current.destroy();
+        mapInstanceRef.current = null;
+      }
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [initMap]);
 
   if (error) {
     return (

@@ -155,6 +155,17 @@ export function SightingForm() {
         }),
       });
 
+      if (!sightingRes.ok) {
+        try {
+          const errorData = await sightingRes.json();
+          throw new Error(errorData.error || "제보 등록에 실패했습니다.");
+        } catch {
+          throw new Error(
+            "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+          );
+        }
+      }
+
       const sightingResult = await sightingRes.json();
       if (!sightingResult.success) {
         throw new Error(sightingResult.error || "제보 등록에 실패했습니다.");

@@ -291,3 +291,73 @@ with check (
       and lp.owner_id = auth.uid()
   )
 );
+
+-- -----------------------------------------------------------------------------
+-- 10) Map Clustering Functions
+-- -----------------------------------------------------------------------------
+
+create or replace function public.get_sighting_clusters(
+  min_lat float,
+  max_lat float,
+  min_lng float,
+  max_lng float,
+  zoom_level int
+)
+returns jsonb
+language plpgsql
+stable
+as $$ declare
+  grid_size float;
+  result jsonb;
+begin
+  if zoom_level >= 17 then
+    grid_size := 0.001;   -- 약 110m
+  elsif zoom_level >= 16 then
+    grid_size := 0.003;    -- 약 330m
+  elsif zoom_level >= 15 then
+    grid_size := 0.006;    -- 약 660m
+  elsif zoom_level >= 14 then
+    grid_size := 0.01;    -- 약 1.1km
+  elsif zoom_level >= 13 then
+    grid_size := 0.03;    -- 약 3.3km
+  elsif zoom_level >= 11 then
+    grid_size := 0.05;    -- 약 5.5km
+  elsif zoom_level >= 9 then
+    grid_size := 0.1;     -- 약 11km
+  else
+    grid_size := 0.5;     -- 약 55km
+  end if;
+
+  with filtered_points as (
+    select 
+      id,
+      st_y(location::geometry) as lat,
+      st_x(location::geometry) as lng
+    from public.sightings
+    where location && st_makeenvelope(min_lng, min_lat, max_lng, max_lat, 4326)
+  ),
+  grid_clusters as (
+    select
+      count(*) as cnt,
+      st_y(st_centroid(st_collect(st_setsrid(st_point(lng, lat), 4326)))) as cluster_lat,
+      st_x(st_centroid(st_collect(st_setsrid(st_point(lng, lat), 4326)))) as cluster_lng,
+      min(id::text) as representative_id
+    from filtered_points
+    group by 
+      floor(lat / grid_size),
+      floor(lng / grid_size)
+  )
+  select jsonb_agg(
+    jsonb_build_object(
+      'id', case when cnt > 1 then 'cluster_' || (floor(cluster_lat * 10000) || '_' || floor(cluster_lng * 10000)) else representative_id end,
+      'lat', cluster_lat,
+      'lng', cluster_lng,
+      'count', cnt,
+      'type', case when cnt > 1 then 'cluster' else 'point' end
+    )
+  ) into result
+  from grid_clusters;
+
+  return coalesce(result, '[]'::jsonb);
+end;
+$$;

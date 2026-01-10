@@ -81,10 +81,9 @@ export async function GET(request: Request) {
     const clusters = data || [];
 
     // 3. ETag 생성
-    // 데이터의 해시와 입력 파라미터를 조합하여 생성합니다.
     const contentHash = crypto
       .createHash("md5")
-      .update(JSON.stringify(clusters) + searchParams.toString())
+      .update(JSON.stringify(clusters))
       .digest("hex");
     const etag = `W/"${contentHash}"`;
 
@@ -120,5 +119,5 @@ export async function GET(request: Request) {
       },
       { status: 500 }
     );
-  } 
+  }
 }
