@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/shared/supabase/server";
 import { ApiResponse } from "@/shared/types/api";
+import { getClientIp } from "@/shared/lib/ip";
 import crypto from "crypto";
 
 /**
@@ -59,18 +60,20 @@ export async function GET(request: Request) {
 
   const supabase = createServerSupabase();
 
-  // Rate Limit Placeholder
-  // TODO: Implement rate limiting for public endpoint
+  // 1.5. Rate Limit (IP 기반 제한)
+  const ip = await getClientIp();
+  // TODO: 비인증 유저에게는 인증 유저보다 훨씬 엄격한 제한(예: 1분당 30회)을 적용합니다.
+  console.log(`[RateLimit] Request from IP: ${ip}`);
 
   try {
     // 2. 데이터 조회 및 클러스터링 (RPC 호출)
-    // NOTE: DB에 'get_sightings_clusters' RPC가 정의되어 있어야 합니다.
-    const { data, error } = await supabase.rpc("get_sightings_clusters", {
+    const { data, error } = await supabase.rpc("get_sighting_clusters", {
       min_lat: minLat,
       min_lng: minLng,
       max_lat: maxLat,
       max_lng: maxLng,
       zoom_level: zoom,
+      is_public: false,
     });
 
     if (error) {

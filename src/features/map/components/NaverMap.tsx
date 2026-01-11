@@ -8,6 +8,7 @@ import { Toast } from "@/shared/ui/Toast";
 import Image from "next/image";
 import { MapItem, ClusterResponse } from "../types/naver";
 import { ApiResponse } from "@/shared/types/api";
+import { supabase } from "@/shared/supabase/client";
 
 interface NaverMapProps {
   clientId: string;
@@ -23,6 +24,18 @@ export function NaverMap({ clientId }: NaverMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // 인증 상태 확인
+  useEffect(() => {
+    const checkAuth = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+    checkAuth();
+  }, []);
 
   // 맵 인스턴스와 마커를 ref로 관리하여 리렌더링 시에도 유지
   const mapInstanceRef = useRef<any>(null);
@@ -185,15 +198,20 @@ export function NaverMap({ clientId }: NaverMapProps) {
     const maxLng = ne.lng();
 
     // 1. 서버(SQL)의 클러스터링 격자 크기와 동일하게 정의
-    const getGridSize = (z: number) => {
-      if (z >= 17) return 0.001; // 110m
-      if (z >= 14) return 0.01; // 1.1km
-      if (z >= 9) return 0.1; // 11km
+    const getGridSize = (z: number, isAuth: boolean) => {
+      const effectiveZoom = isAuth ? z : Math.min(z, 14);
+      if (effectiveZoom >= 17) return 0.001;
+      if (effectiveZoom >= 16) return 0.003;
+      if (effectiveZoom >= 15) return 0.006;
+      if (effectiveZoom >= 14) return 0.01;
+      if (effectiveZoom >= 13) return 0.03;
+      if (effectiveZoom >= 11) return 0.05;
+      if (effectiveZoom >= 9) return 0.1;
       return 0.5;
     };
 
     // 2. 좌표를 특정 격자 인덱스로
-    const gridSize = getGridSize(zoom);
+    const gridSize = getGridSize(zoom, isAuthenticated);
     const snap = (num: number) => Math.floor(num / gridSize);
 
     // 3. Grid ID 기반의 캐시 키 생성
@@ -219,7 +237,11 @@ export function NaverMap({ clientId }: NaverMapProps) {
         headers["If-None-Match"] = cached.etag;
       }
 
-      const response = await fetch(`/api/v1/public/map/clusters?${params}`, {
+      const endpoint = isAuthenticated
+        ? "/api/v1/auth/map/markers"
+        : "/api/v1/public/map/clusters";
+
+      const response = await fetch(`${endpoint}?${params}`, {
         headers,
       });
 

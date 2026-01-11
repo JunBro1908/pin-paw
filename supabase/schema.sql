@@ -301,7 +301,8 @@ create or replace function public.get_sighting_clusters(
   max_lat float,
   min_lng float,
   max_lng float,
-  zoom_level int
+  zoom_level int,
+  is_public boolean default true
 )
 returns jsonb
 language plpgsql
@@ -309,23 +310,36 @@ stable
 as $$ declare
   grid_size float;
   result jsonb;
+  effective_zoom int;
 begin
-  if zoom_level >= 17 then
+  -- 비인증 유저(public)인 경우 줌 레벨을 제한하여 상세 위치 노출 방지
+  effective_zoom := case when is_public then least(zoom_level, 11) else zoom_level end;
+
+  if effective_zoom >= 17 then
     grid_size := 0.001;   -- 약 110m
-  elsif zoom_level >= 16 then
+  elsif effective_zoom >= 16 then
     grid_size := 0.003;    -- 약 330m
-  elsif zoom_level >= 15 then
+  elsif effective_zoom >= 15 then
     grid_size := 0.006;    -- 약 660m
-  elsif zoom_level >= 14 then
+  elsif effective_zoom >= 14 then
     grid_size := 0.01;    -- 약 1.1km
-  elsif zoom_level >= 13 then
+  elsif effective_zoom >= 13 then
     grid_size := 0.03;    -- 약 3.3km
-  elsif zoom_level >= 11 then
+  elsif effective_zoom >= 11 then
     grid_size := 0.05;    -- 약 5.5km
-  elsif zoom_level >= 9 then
+  elsif effective_zoom >= 9 then
     grid_size := 0.1;     -- 약 11km
   else
     grid_size := 0.5;     -- 약 55km
+  end if;
+
+  -- 비인증 유저라면 조회 범위를 격자 경계선까지 강제로 확장
+  -- 이를 통해 줌을 당겨도 격자 내 전체 숫자가 변하지 않도록 함 (보안 강화)
+  if is_public then
+    min_lat := floor(min_lat / grid_size) * grid_size;
+    max_lat := ceil(max_lat / grid_size) * grid_size;
+    min_lng := floor(min_lng / grid_size) * grid_size;
+    max_lng := ceil(max_lng / grid_size) * grid_size;
   end if;
 
   with filtered_points as (
@@ -339,8 +353,14 @@ begin
   grid_clusters as (
     select
       count(*) as cnt,
-      st_y(st_centroid(st_collect(st_setsrid(st_point(lng, lat), 4326)))) as cluster_lat,
-      st_x(st_centroid(st_collect(st_setsrid(st_point(lng, lat), 4326)))) as cluster_lng,
+      case 
+        when is_public then (floor(min(lat) / grid_size) + 0.5) * grid_size
+        else st_y(st_centroid(st_collect(st_setsrid(st_point(lng, lat), 4326)))) 
+      end as cluster_lat,
+      case 
+        when is_public then (floor(min(lng) / grid_size) + 0.5) * grid_size
+        else st_x(st_centroid(st_collect(st_setsrid(st_point(lng, lat), 4326)))) 
+      end as cluster_lng,
       min(id::text) as representative_id
     from filtered_points
     group by 
@@ -349,11 +369,15 @@ begin
   )
   select jsonb_agg(
     jsonb_build_object(
-      'id', case when cnt > 1 then 'cluster_' || (floor(cluster_lat * 10000) || '_' || floor(cluster_lng * 10000)) else representative_id end,
+      'id', case 
+              when is_public then 'masked_' || floor(cluster_lat * 1000) || '_' || floor(cluster_lng * 1000)
+              when cnt > 1 then 'cluster_' || (floor(cluster_lat * 10000) || '_' || floor(cluster_lng * 10000)) 
+              else representative_id 
+            end,
       'lat', cluster_lat,
       'lng', cluster_lng,
       'count', cnt,
-      'type', case when cnt > 1 then 'cluster' else 'point' end
+      'type', case when is_public or cnt > 1 then 'cluster' else 'point' end
     )
   ) into result
   from grid_clusters;
