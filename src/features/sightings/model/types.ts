@@ -6,7 +6,6 @@ export interface SightingFormData {
   photoUrl: string | null;
   lat: number;
   lng: number;
-  locationName: string; // 사용자에게 보여줄 위치 이름
   time: string;
   description: string;
 }

@@ -60,9 +60,9 @@ export async function GET(request: Request) {
 
   const supabase = createServerSupabase();
 
-  // 1.5. Rate Limit (IP 기반 제한)
+  // 1.5. Rate Limit
+  // 인프라 레벨(Vercel Firewall/Rate Limiting)에서 처리 예정이므로 코드 레벨에서는 로깅만 수행합니다.
   const ip = await getClientIp();
-  // TODO: 비인증 유저에게는 인증 유저보다 훨씬 엄격한 제한(예: 1분당 30회)을 적용합니다.
   console.log(`[RateLimit] Request from IP: ${ip}`);
 
   try {

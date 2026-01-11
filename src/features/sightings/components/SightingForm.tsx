@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { SightingFormData } from "../model/types";
 import { validateSightingForm } from "../lib/validators";
 import { cn } from "@/shared/lib/cn";
 import { Toast } from "@/shared/ui/Toast";
+import { LocationPicker } from "@/features/map/components/LocationPicker";
 
 export function SightingForm() {
   const [formData, setFormData] = useState<SightingFormData>({
@@ -14,18 +15,55 @@ export function SightingForm() {
     photoUrl: null,
     lat: 37.5665,
     lng: 126.978,
-    locationName: "",
     time: new Date().toISOString().slice(0, 16),
     description: "",
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
+  const [isLocating, setIsLocating] = useState(false);
+  const [isLocationSet, setIsLocationSet] = useState(false);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
   } | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID || "";
+
+  // 초기 렌더링 시 현재 위치 가져오기
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      setIsLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setFormData((prev) => ({
+            ...prev,
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          }));
+          setIsLocationSet(true);
+          setIsLocating(false);
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          setIsLocating(false);
+
+          let msg = "위치 정보를 가져오지 못했습니다.";
+          if (error.code === error.PERMISSION_DENIED) {
+            msg = "위치 권한을 허용해주세요.";
+          } else if (error.code === error.TIMEOUT) {
+            msg = "측정 시간이 초과되었습니다. 다시 시도해주세요.";
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            msg = "현재 위치 정보를 사용할 수 없습니다.";
+          }
+          setToast({ message: msg, type: "error" });
+        },
+        { enableHighAccuracy: false, timeout: 10000 }
+      );
+    }
+  }, []);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -52,7 +90,7 @@ export function SightingForm() {
   };
 
   const errors = validateSightingForm(formData);
-  const isValid = Object.keys(errors).length === 0;
+  const isValid = Object.keys(errors).length === 0 && isLocationSet;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -188,10 +226,10 @@ export function SightingForm() {
       photoUrl: null,
       lat: 37.5665,
       lng: 126.978,
-      locationName: "",
       time: new Date().toISOString().slice(0, 16),
       description: "",
     });
+    setIsLocationSet(false);
     setShowErrors(false);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
@@ -257,24 +295,67 @@ export function SightingForm() {
         </section>
 
         <section className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="space-y-1">
             <Text variant="body" className="text-text-main font-bold">
               목격 위치 <span className="text-primary">*</span>
             </Text>
+            <Text
+              variant="caption"
+              color="caption"
+              className="block text-[11px] leading-relaxed opacity-80"
+            >
+              현재 위치가 자동 입력되며, 변경 버튼으로 지도 상에서 변경
+              가능합니다.
+            </Text>
           </div>
-          <input
-            name="locationName"
-            value={formData.locationName}
-            onChange={handleChange}
-            placeholder="목격한 장소를 입력해주세요"
-            className="border-border-subtle focus:border-primary focus:ring-primary/10 w-full rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2"
-          />
+          <button
+            type="button"
+            onClick={() => setIsMapOpen(true)}
+            className="border-border-subtle hover:border-primary/50 focus:ring-primary/10 flex w-full items-center justify-between rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2 active:scale-[0.99]"
+          >
+            <div className="flex items-center gap-2">
+              <Text
+                variant="body"
+                className={cn(
+                  "font-medium",
+                  !isLocationSet && !isLocating
+                    ? "text-error"
+                    : "text-text-main",
+                  isLocating && "text-text-caption"
+                )}
+              >
+                {isLocating
+                  ? "현재 위치 확인 중..."
+                  : isLocationSet
+                    ? `${formData.lat.toFixed(6)}, ${formData.lng.toFixed(6)}`
+                    : "위치 정보 접근 실패"}
+              </Text>
+            </div>
+            <div className="bg-primary-soft flex items-center gap-1 rounded-lg px-3 py-1.5">
+              <Text variant="caption" className="text-primary font-bold">
+                <span className="text-lg">🐾</span> 변경
+              </Text>
+            </div>
+          </button>
         </section>
+
+        {isMapOpen && (
+          <LocationPicker
+            clientId={naverMapsClientId}
+            initialLat={formData.lat}
+            initialLng={formData.lng}
+            onSelect={(lat, lng) => {
+              setFormData((prev) => ({ ...prev, lat, lng }));
+              setIsLocationSet(true);
+            }}
+            onClose={() => setIsMapOpen(false)}
+          />
+        )}
 
         <section className="space-y-6">
           <div className="space-y-3">
             <Text variant="body" className="text-text-main font-bold">
-              목격 시간
+              목격 시간 <span className="text-primary">*</span>
             </Text>
             <input
               type="datetime-local"
