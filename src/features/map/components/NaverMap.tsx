@@ -7,8 +7,12 @@ import { Text } from "@/shared/ui/Text";
 import { Toast } from "@/shared/ui/Toast";
 import Image from "next/image";
 import { MapItem, ClusterResponse } from "../types/naver";
-import { ApiResponse } from "@/shared/types/api";
-import { supabase } from "@/shared/supabase/client";
+import {
+  ApiSuccessResponse,
+  ApiErrorResponse,
+} from "@/shared/lib/api-response";
+import { createClient, supabase } from "@/shared/supabase/client";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 interface NaverMapProps {
   clientId: string;
@@ -24,25 +28,14 @@ export function NaverMap({ clientId }: NaverMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // 인증 상태 확인
-  useEffect(() => {
-    const checkAuth = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-    };
-    checkAuth();
-  }, []);
+  // useAuth 훅을 사용하여 인증 상태 가져오기
+  const { session, isLoading: isAuthLoading } = useAuth();
+  const isAuthenticated = !!session;
 
   // 맵 인스턴스와 마커를 ref로 관리하여 리렌더링 시에도 유지
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const myLocationMarkerRef = useRef<any>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<any[]>([]);
   const cacheRef = useRef<Map<string, CacheValue>>(new Map());
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
@@ -68,7 +61,9 @@ export function NaverMap({ clientId }: NaverMapProps) {
    * 이미지 URL 생성 헬퍼
    */
   const getImageUrl = useCallback((key: string) => {
-    const { data } = supabase.storage.from("sightings").getPublicUrl(key);
+    const client = createClient();
+    if (!client?.storage) return "";
+    const { data } = client.storage.from("sightings").getPublicUrl(key);
     return data.publicUrl;
   }, []);
 
@@ -151,7 +146,6 @@ export function NaverMap({ clientId }: NaverMapProps) {
    * 마커 및 클러스터 렌더링 함수
    */
   const renderClusters = useCallback(
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     (items: MapItem[]) => {
       if (!mapInstanceRef.current || !window.naver?.maps) return;
 
@@ -272,111 +266,112 @@ export function NaverMap({ clientId }: NaverMapProps) {
 
       markersRef.current = newMarkers;
     },
-    [setSelectedSighting]
+    [getImageUrl, setSelectedSighting]
   );
 
   /**
    * 클러스터 데이터 가져오기
    */
-  const fetchClusters = useCallback(
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    async () => {
-      if (!mapInstanceRef.current) return;
+  const fetchClusters = useCallback(async () => {
+    if (!mapInstanceRef.current) return;
+    // 인증 상태가 정해질 때까지 요청 보내지 않음 (잘못된 엔드포인트 호출 방지)
+    if (isAuthLoading) return;
 
-      const bounds = mapInstanceRef.current.getBounds();
-      const zoom = mapInstanceRef.current.getZoom();
-      const sw = bounds.getSW();
-      const ne = bounds.getNE();
+    const bounds = mapInstanceRef.current.getBounds();
+    const zoom = mapInstanceRef.current.getZoom();
+    const sw = bounds.getSW();
+    const ne = bounds.getNE();
 
-      const minLat = sw.lat();
-      const minLng = sw.lng();
-      const maxLat = ne.lat();
-      const maxLng = ne.lng();
+    const minLat = sw.lat();
+    const minLng = sw.lng();
+    const maxLat = ne.lat();
+    const maxLng = ne.lng();
 
-      // 1. 서버(SQL)의 클러스터링 격자 크기와 동일하게 정의
-      const getGridSize = (z: number, isAuth: boolean) => {
-        const effectiveZoom = isAuth ? z : Math.min(z, 14);
-        if (effectiveZoom >= 17) return 0.001;
-        if (effectiveZoom >= 16) return 0.003;
-        if (effectiveZoom >= 15) return 0.006;
-        if (effectiveZoom >= 14) return 0.01;
-        if (effectiveZoom >= 13) return 0.03;
-        if (effectiveZoom >= 11) return 0.05;
-        if (effectiveZoom >= 9) return 0.1;
-        return 0.5;
-      };
+    // 1. 서버(SQL)의 클러스터링 격자 크기와 동일하게 정의
+    const getGridSize = (z: number, isAuth: boolean) => {
+      const effectiveZoom = isAuth ? z : Math.min(z, 14);
+      if (effectiveZoom >= 17) return 0.001;
+      if (effectiveZoom >= 16) return 0.003;
+      if (effectiveZoom >= 15) return 0.006;
+      if (effectiveZoom >= 14) return 0.01;
+      if (effectiveZoom >= 13) return 0.03;
+      if (effectiveZoom >= 11) return 0.05;
+      if (effectiveZoom >= 9) return 0.1;
+      return 0.5;
+    };
 
-      // 2. 좌표를 특정 격자 인덱스로
-      const gridSize = getGridSize(zoom, isAuthenticated);
-      const snap = (num: number) => Math.floor(num / gridSize);
+    // 2. 좌표를 특정 격자 인덱스로
+    const gridSize = getGridSize(zoom, isAuthenticated);
+    const snap = (num: number) => Math.floor(num / gridSize);
 
-      // 3. Grid ID 기반의 캐시 키 생성
-      const cacheKey = `${snap(minLat)},${snap(minLng)},${snap(maxLat)},${snap(maxLng)},${zoom}`;
-      const cached = cacheRef.current.get(cacheKey);
+    // 3. Grid ID 기반의 캐시 키 생성 (인증 여부별로 캐시 분리)
+    const cacheKey = `${isAuthenticated}:${snap(minLat)},${snap(minLng)},${snap(maxLat)},${snap(maxLng)},${zoom}`;
+    const cached = cacheRef.current.get(cacheKey);
 
-      // 캐시가 있으면 즉시 렌더링 (SWR 패턴)
-      if (cached) {
-        renderClusters(cached.items);
-        setItemsInView(cached.items);
+    // 캐시가 있으면 즉시 렌더링 (SWR 패턴)
+    if (cached) {
+      renderClusters(cached.items);
+      setItemsInView(cached.items);
+    }
+
+    try {
+      const params = new URLSearchParams({
+        minLat: minLat.toString(),
+        minLng: minLng.toString(),
+        maxLat: maxLat.toString(),
+        maxLng: maxLng.toString(),
+        zoom: zoom.toString(),
+      });
+
+      const headers: Record<string, string> = {};
+      if (cached?.etag) {
+        headers["If-None-Match"] = cached.etag;
       }
 
-      try {
-        const params = new URLSearchParams({
-          minLat: minLat.toString(),
-          minLng: minLng.toString(),
-          maxLat: maxLat.toString(),
-          maxLng: maxLng.toString(),
-          zoom: zoom.toString(),
-        });
+      const endpoint = isAuthenticated
+        ? "/api/v1/auth/map/markers"
+        : "/api/v1/public/map/clusters";
 
-        const headers: Record<string, string> = {};
-        if (cached?.etag) {
-          headers["If-None-Match"] = cached.etag;
-        }
+      console.log(
+        "[NaverMap] isAuthenticated:",
+        isAuthenticated,
+        "endpoint:",
+        endpoint
+      );
 
-        const endpoint = isAuthenticated
-          ? "/api/v1/auth/map/markers"
-          : "/api/v1/public/map/clusters";
+      const response = await fetch(`${endpoint}?${params}`, {
+        headers,
+        credentials: "include", // 세션 쿠키 전달 (인증 API 401 방지)
+      });
 
-        const response = await fetch(`${endpoint}?${params}`, {
-          headers,
-        });
-
-        if (response.status === 304) {
-          return;
-        }
-
-        const result: ApiResponse<ClusterResponse> = await response.json();
-
-        if (!response.ok) {
-          const message =
-            result?.error?.message ?? "데이터를 가져오는데 실패했습니다.";
-          throw new Error(message);
-        }
-
-        if (result.ok && result.data) {
-          const etag = response.headers.get("ETag") || "";
-          const items = result.data.clusters;
-
-          // 캐시 업데이트 및 렌더링
-          cacheRef.current.set(cacheKey, { etag, items });
-          renderClusters(items);
-          setItemsInView(items);
-        }
-      } catch (err) {
-        console.error("Fetch clusters error:", err);
-        const message =
-          err instanceof Error
-            ? err.message
-            : "주변 데이터를 불러오는 데 실패했습니다.";
-        setToast({
-          message,
-          type: "error",
-        });
+      if (response.status === 304) {
+        return;
       }
-    },
-    [renderClusters]
-  );
+
+      const result: ApiSuccessResponse<ClusterResponse> | ApiErrorResponse =
+        await response.json();
+
+      if (result.success && result.data) {
+        const etag = response.headers.get("ETag") || "";
+        const items = result.data.clusters;
+
+        // 캐시 업데이트 및 렌더링
+        cacheRef.current.set(cacheKey, { etag, items });
+        renderClusters(items);
+        setItemsInView(items);
+      }
+    } catch (err) {
+      console.error("Fetch clusters error:", err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : "주변 데이터를 불러오는 데 실패했습니다.";
+      setToast({
+        message,
+        type: "error",
+      });
+    }
+  }, [renderClusters, isAuthenticated, isAuthLoading]);
 
   /**
    * 지도의 idle 이벤트 핸들러 (이동/줌 완료 시 발생)
@@ -468,6 +463,13 @@ export function NaverMap({ clientId }: NaverMapProps) {
       }
     };
   }, [initMap]);
+
+  // 인증 상태 변경 시 클러스터 다시 가져오기
+  useEffect(() => {
+    if (mapInstanceRef.current && isLoaded) {
+      fetchClusters();
+    }
+  }, [isAuthenticated, fetchClusters, isLoaded]);
 
   if (error) {
     return (
