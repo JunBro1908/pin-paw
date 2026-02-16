@@ -1,4 +1,4 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -13,4 +13,10 @@ if (!supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// 기존 singleton 인스턴스 (레거시 코드 호환성)
+export const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey);
+
+// SSR을 위한 클라이언트 생성 함수
+export function createClient() {
+  return createSupabaseClient(supabaseUrl!, supabaseAnonKey!);
+}
