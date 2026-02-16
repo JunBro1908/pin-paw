@@ -1,30 +1,16 @@
 "use client";
 
-import Link from "next/link";
-import { Container } from "@/shared/ui/Container";
-import { Text } from "@/shared/ui/Text";
-import { Button } from "@/shared/ui/Button";
-import { AuthGuard } from "@/features/auth/components/AuthGuard";
-import { LostPostList } from "@/features/lost-posts/components/LostPostList";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 
-function LostPostsPageContent() {
-  return (
-    <Container className="py-8">
-      <div className="mb-6 flex items-center justify-between">
-        <Text variant="title">내 유실글</Text>
-        <Link href="/my/lost-posts/new">
-          <Button variant="primary">+ 등록</Button>
-        </Link>
-      </div>
-      <LostPostList />
-    </Container>
-  );
-}
-
-export default function LostPostsPage() {
-  return (
-    <AuthGuard>
-      <LostPostsPageContent />
-    </AuthGuard>
-  );
+/**
+ * 내 유실글 목록은 내정보(My) 페이지에 인라인으로 표시되므로,
+ * /my/lost-posts 진입 시 /my로 리다이렉트하여 뎁스를 줄입니다.
+ */
+export default function LostPostsIndexPage() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace("/my");
+  }, [router]);
+  return null;
 }

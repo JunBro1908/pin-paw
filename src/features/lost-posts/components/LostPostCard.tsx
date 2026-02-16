@@ -3,15 +3,16 @@
 import Link from "next/link";
 import { Text } from "@/shared/ui/Text";
 import { createClient } from "@/shared/supabase/client";
+import { StatusBadge } from "./StatusBadge";
 import type { LostPostItem } from "../model/types";
 
-const statusLabel: Record<string, string> = {
-  searching: "찾는 중",
-  found: "찾았어요",
-  closed: "마감",
-};
+interface LostPostCardProps {
+  item: LostPostItem;
+  /** 지정 시 상세 대신 이 링크로 이동 (예: 추천 페이지용) */
+  href?: string;
+}
 
-export function LostPostCard({ item }: { item: LostPostItem }) {
+export function LostPostCard({ item, href }: LostPostCardProps) {
   const client = createClient();
   const ref = client?.storage?.from("lost");
   const coverUrl = ref
@@ -31,9 +32,11 @@ export function LostPostCard({ item }: { item: LostPostItem }) {
     .filter(Boolean)
     .join(" · ");
 
+  const linkHref = href ?? `/my/lost-posts/${item.id}`;
+
   return (
     <Link
-      href={`/my/lost-posts/${item.id}`}
+      href={linkHref}
       className="border-border-subtle bg-surface flex gap-4 rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md"
     >
       <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
@@ -50,11 +53,8 @@ export function LostPostCard({ item }: { item: LostPostItem }) {
         )}
       </div>
       <div className="min-w-0 flex-1">
-        <span
-          className="bg-primary-soft text-primary mb-1 inline-block rounded-full px-2 py-0.5 text-xs font-medium"
-          data-status={item.status}
-        >
-          {statusLabel[item.status] ?? item.status}
+        <span className="mb-1 block">
+          <StatusBadge status={item.status} size="sm" />
         </span>
         <Text variant="body" className="font-medium">
           {lostAt}

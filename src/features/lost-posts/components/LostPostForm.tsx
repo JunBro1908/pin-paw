@@ -151,7 +151,7 @@ export function LostPostForm() {
       }
 
       setToast({ message: "유실글이 등록되었습니다.", type: "success" });
-      setTimeout(() => router.push("/my/lost-posts"), 1000);
+      setTimeout(() => router.push("/my"), 1000);
     } catch (err) {
       setToast({
         message: err instanceof Error ? err.message : "오류가 발생했습니다.",
