@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/shared/supabase/server";
+import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 
 export async function POST(request: Request) {
   const supabase = createServerSupabase();
@@ -8,9 +8,10 @@ export async function POST(request: Request) {
     const { photoKeys, location, occurredAt, note } = await request.json();
 
     if (!photoKeys || !location || !occurredAt) {
-      return NextResponse.json(
-        { success: false, error: "필수 데이터가 누락되었습니다." },
-        { status: 400 }
+      return fail(
+        ApiErrorCode.VALIDATION_ERROR,
+        "필수 데이터가 누락되었습니다.",
+        400
       );
     }
 
@@ -51,17 +52,16 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error(error);
-      return NextResponse.json(
-        { success: false, error: "제보 저장에 실패했습니다." },
-        { status: 500 }
+      return fail(
+        ApiErrorCode.INTERNAL_ERROR,
+        "제보 저장에 실패했습니다.",
+        500
       );
     }
 
-    return NextResponse.json({ success: true, data });
+    return ok(data);
   } catch (err) {
-    return NextResponse.json(
-      { success: false, error: "서버 오류가 발생했습니다." },
-      { status: 500 }
-    );
+    console.error(err);
+    return fail(ApiErrorCode.INTERNAL_ERROR, "서버 오류가 발생했습니다.", 500);
   }
 }

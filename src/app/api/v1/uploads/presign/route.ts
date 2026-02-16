@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/shared/supabase/server";
 import { getClientIp } from "@/shared/lib/ip";
 import { sha256 } from "@/shared/lib/hash";
+import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
+import { NextResponse } from "next/server";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 const ALLOWED_TYPES = ["image/jpeg", "image/png"];
@@ -20,29 +21,33 @@ export async function POST(request: Request) {
 
     // 1. 요청 검증
     if (!BUCKET_MAPPING[purpose as keyof typeof BUCKET_MAPPING]) {
-      return NextResponse.json(
-        { success: false, error: "잘못된 업로드 목적(purpose)입니다." },
-        { status: 400 }
+      return fail(
+        ApiErrorCode.VALIDATION_ERROR,
+        "잘못된 업로드 목적(purpose)입니다.",
+        400
       );
     }
     if (!Array.isArray(files) || files.length < 1 || files.length > 3) {
-      return NextResponse.json(
-        { success: false, error: "파일은 1개에서 3개까지 업로드 가능합니다." },
-        { status: 400 }
+      return fail(
+        ApiErrorCode.VALIDATION_ERROR,
+        "파일은 1개에서 3개까지 업로드 가능합니다.",
+        400
       );
     }
 
     for (const file of files) {
       if (!ALLOWED_TYPES.includes(file.contentType)) {
-        return NextResponse.json(
-          { success: false, error: "허용되지 않는 파일 형식입니다." },
-          { status: 400 }
+        return fail(
+          ApiErrorCode.VALIDATION_ERROR,
+          "허용되지 않는 파일 형식입니다.",
+          400
         );
       }
       if (file.sizeBytes > MAX_FILE_SIZE) {
-        return NextResponse.json(
-          { success: false, error: "파일 크기는 10MB를 초과할 수 없습니다." },
-          { status: 400 }
+        return fail(
+          ApiErrorCode.VALIDATION_ERROR,
+          "파일 크기는 10MB를 초과할 수 없습니다.",
+          400
         );
       }
     }
@@ -74,13 +79,10 @@ export async function POST(request: Request) {
     if (cached) {
       // 1. 키는 같은데 내용(파일 등)이 다른 경우 -> 409 충돌!
       if (cached.request_hash !== requestHash) {
-        return NextResponse.json(
-          {
-            success: false,
-            error:
-              "Idempotency-Key 충돌이 발생했습니다. 동일한 키로 다른 데이터를 전송할 수 없습니다.",
-          },
-          { status: 409 }
+        return fail(
+          "IDEMPOTENCY_CONFLICT",
+          "Idempotency-Key 충돌이 발생했습니다. 동일한 키로 다른 데이터를 전송할 수 없습니다.",
+          409
         );
       }
       // 2. 키도 같고 내용도 같은 경우 -> 기존 응답 그대로 반환 (성공)
@@ -98,9 +100,10 @@ export async function POST(request: Request) {
       .gt("created_at", tenSecAgo);
 
     if (recentCount && recentCount > 0) {
-      return NextResponse.json(
-        { success: false, error: "잠시 후 다시 시도해주세요. (10초 쿨다운)" },
-        { status: 429 }
+      return fail(
+        ApiErrorCode.RATE_LIMITED,
+        "잠시 후 다시 시도해주세요. (10초 쿨다운)",
+        429
       );
     }
 
@@ -126,14 +129,16 @@ export async function POST(request: Request) {
       });
     }
 
-    const finalResponse = {
-      success: true,
-      data: { uploads },
-      meta: { serverTime: now.toISOString() },
-      error: null,
-    };
+    const responseData = { uploads };
+    const responseMeta = { serverTime: now.toISOString() };
 
     // 4. 결과 저장 (멱등성)
+    const finalResponse = {
+      success: true,
+      data: responseData,
+      meta: responseMeta,
+    };
+
     const { error: idempotencyError } = await supabase
       .from("idempotency_keys")
       .insert({
@@ -148,22 +153,16 @@ export async function POST(request: Request) {
 
     if (idempotencyError) {
       console.error("Idempotency Save Error:", idempotencyError);
-      // 키 형식이 틀렸거나 DB 오류가 나면 여기서 에러를 확인할 수 있습니다.
-      return NextResponse.json(
-        {
-          success: false,
-          error: `보안 키 저장 실패: ${idempotencyError.message}`,
-        },
-        { status: 500 }
+      return fail(
+        ApiErrorCode.INTERNAL_ERROR,
+        `보안 키 저장 실패: ${idempotencyError.message}`,
+        500
       );
     }
 
-    return NextResponse.json(finalResponse);
+    return ok(responseData, responseMeta);
   } catch (err) {
     console.error(err);
-    return NextResponse.json(
-      { success: false, error: "서버 오류가 발생했습니다." },
-      { status: 500 }
-    );
+    return fail(ApiErrorCode.INTERNAL_ERROR, "서버 오류가 발생했습니다.", 500);
   }
 }

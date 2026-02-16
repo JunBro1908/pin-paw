@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/shared/supabase/server";
-import { ApiResponse } from "@/shared/types/api";
 import { getClientIp } from "@/shared/lib/ip";
+import { fail, notModified, ApiErrorCode } from "@/shared/lib/api-response";
 import crypto from "crypto";
 
 /**
@@ -25,15 +25,10 @@ export async function GET(request: Request) {
     isNaN(maxLng) ||
     isNaN(zoom)
   ) {
-    return NextResponse.json<ApiResponse>(
-      {
-        ok: false,
-        error: {
-          code: "INVALID_PARAMS",
-          message: "필수 파라미터가 누락되었거나 유효하지 않습니다.",
-        },
-      },
-      { status: 400 }
+    return fail(
+      ApiErrorCode.INVALID_PARAMS,
+      "필수 파라미터가 누락되었거나 유효하지 않습니다.",
+      400
     );
   }
 
@@ -46,15 +41,10 @@ export async function GET(request: Request) {
     minLat > maxLat ||
     minLng > maxLng
   ) {
-    return NextResponse.json<ApiResponse>(
-      {
-        ok: false,
-        error: {
-          code: "INVALID_RANGE",
-          message: "위경도 범위가 유효하지 않습니다.",
-        },
-      },
-      { status: 400 }
+    return fail(
+      ApiErrorCode.VALIDATION_ERROR,
+      "위경도 범위가 유효하지 않습니다.",
+      400
     );
   }
 
@@ -86,28 +76,17 @@ export async function GET(request: Request) {
         String(error.details ?? "").includes("ECONNREFUSED");
 
       if (isNetworkError) {
-        return NextResponse.json<ApiResponse>(
-          {
-            ok: false,
-            error: {
-              code: "SERVICE_UNAVAILABLE",
-              message:
-                "지도 데이터를 불러올 수 없습니다. 인터넷 연결을 확인해 주세요.",
-            },
-          },
-          { status: 503 }
+        return fail(
+          ApiErrorCode.SERVICE_UNAVAILABLE,
+          "지도 데이터를 불러올 수 없습니다. 인터넷 연결을 확인해 주세요.",
+          503
         );
       }
 
-      return NextResponse.json<ApiResponse>(
-        {
-          ok: false,
-          error: {
-            code: "UPSTREAM_ERROR",
-            message: "데이터를 가져오는 중 오류가 발생했습니다.",
-          },
-        },
-        { status: 502 }
+      return fail(
+        ApiErrorCode.UPSTREAM_ERROR,
+        "데이터를 가져오는 중 오류가 발생했습니다.",
+        502
       );
     }
 
@@ -123,34 +102,28 @@ export async function GET(request: Request) {
     // 4. If-None-Match 확인 (캐시 처리)
     const ifNoneMatch = request.headers.get("if-none-match");
     if (ifNoneMatch === etag) {
-      return new NextResponse(null, { status: 304 });
+      return notModified();
     }
 
     // 5. 응답 반환
-    const response: ApiResponse = {
-      ok: true,
-      data: {
-        clusters,
+    return NextResponse.json(
+      {
+        success: true,
+        data: { clusters },
       },
-    };
-
-    return NextResponse.json(response, {
-      headers: {
-        ETag: etag,
-        "Cache-Control": "public, max-age=0, must-revalidate", // ETag를 통한 조건부 요청 유도
-      },
-    });
+      {
+        headers: {
+          ETag: etag,
+          "Cache-Control": "public, max-age=0, must-revalidate", // ETag를 통한 조건부 요청 유도
+        },
+      }
+    );
   } catch (err) {
     console.error(err);
-    return NextResponse.json<ApiResponse>(
-      {
-        ok: false,
-        error: {
-          code: "INTERNAL_SERVER_ERROR",
-          message: "서버 내부 오류가 발생했습니다.",
-        },
-      },
-      { status: 500 }
+    return fail(
+      ApiErrorCode.INTERNAL_ERROR,
+      "서버 내부 오류가 발생했습니다.",
+      500
     );
   }
 }
