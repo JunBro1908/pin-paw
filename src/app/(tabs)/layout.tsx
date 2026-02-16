@@ -18,11 +18,11 @@ export default function TabsLayout({
   const pathname = usePathname();
 
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="flex min-h-[100dvh] flex-col">
       <main className="flex-1 pb-20">{children}</main>
 
       <nav
-        className="fixed right-0 bottom-0 left-0 z-50 border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+        className="fixed right-0 bottom-0 left-0 z-[100] border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
         style={{
           paddingBottom: "env(safe-area-inset-bottom)",
         }}

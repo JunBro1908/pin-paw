@@ -5,7 +5,7 @@ export default function MapPage() {
   const clientId = process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
 
   return (
-    <div className="relative h-[calc(100vh-80px)] w-full overflow-hidden">
+    <div className="relative h-[calc(100dvh-80px)] w-full overflow-hidden">
       {/* Overlay Header */}
       <div className="pointer-events-none absolute top-0 left-0 z-10 w-full p-5">
         <div className="inline-block rounded-2xl bg-white/80 p-4 shadow-lg backdrop-blur-md dark:bg-gray-900/80">

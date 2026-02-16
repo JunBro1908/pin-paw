@@ -73,12 +73,42 @@ export async function GET(request: Request) {
       max_lat: maxLat,
       max_lng: maxLng,
       zoom_level: zoom,
-      is_public: false,
+      is_public: true,
     });
 
     if (error) {
       console.error("Clusters fetch error:", error);
-      throw new Error("데이터를 가져오는 중 오류가 발생했습니다.");
+
+      // 네트워크/DNS 오류 (Supabase에 연결 불가)
+      const isNetworkError =
+        error.message?.includes("fetch failed") ||
+        String(error.details ?? "").includes("ENOTFOUND") ||
+        String(error.details ?? "").includes("ECONNREFUSED");
+
+      if (isNetworkError) {
+        return NextResponse.json<ApiResponse>(
+          {
+            ok: false,
+            error: {
+              code: "SERVICE_UNAVAILABLE",
+              message:
+                "지도 데이터를 불러올 수 없습니다. 인터넷 연결을 확인해 주세요.",
+            },
+          },
+          { status: 503 }
+        );
+      }
+
+      return NextResponse.json<ApiResponse>(
+        {
+          ok: false,
+          error: {
+            code: "UPSTREAM_ERROR",
+            message: "데이터를 가져오는 중 오류가 발생했습니다.",
+          },
+        },
+        { status: 502 }
+      );
     }
 
     const clusters = data || [];

@@ -8,6 +8,7 @@ import { validateSightingForm } from "../lib/validators";
 import { cn } from "@/shared/lib/cn";
 import { Toast } from "@/shared/ui/Toast";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
+import { supabase } from "@/shared/supabase/client";
 
 export function SightingForm() {
   const [formData, setFormData] = useState<SightingFormData>({
@@ -182,9 +183,21 @@ export function SightingForm() {
    */
   const registerSighting = async (fileKey: string, data: SightingFormData) => {
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const headers: Record<string, string> = {
+        "Content-Type": "application/json",
+      };
+
+      if (session?.access_token) {
+        headers["Authorization"] = `Bearer ${session.access_token}`;
+      }
+
       const sightingRes = await fetch("/api/v1/sightings", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify({
           photoKeys: [fileKey],
           location: { lat: data.lat, lng: data.lng },

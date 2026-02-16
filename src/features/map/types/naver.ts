@@ -14,7 +14,14 @@ export interface ClusterPoint {
   lat: number;
   lng: number;
   type: "point";
-  // Add other sighting fields if needed
+  note?: string;
+  photo_keys?: string[];
+  occurred_at?: string;
+  trait_color?: string;
+  trait_size?: string;
+  trait_state?: string;
+  author_type?: "anon" | "user";
+  nickname?: string;
 }
 
 export interface ClusterData {
@@ -23,6 +30,9 @@ export interface ClusterData {
   lng: number;
   count: number;
   type: "cluster";
+  note?: never;
+  photo_keys?: never;
+  occurred_at?: never;
 }
 
 export type MapItem = ClusterPoint | ClusterData;
@@ -30,4 +40,3 @@ export type MapItem = ClusterPoint | ClusterData;
 export interface ClusterResponse {
   clusters: MapItem[];
 }
-

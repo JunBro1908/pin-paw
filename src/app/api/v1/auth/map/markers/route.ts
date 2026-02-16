@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/shared/supabase/server";
+import {
+  createServerSupabase,
+  createServerSupabaseClient,
+} from "@/shared/supabase/server";
 import { ApiResponse } from "@/shared/types/api";
 import crypto from "crypto";
 
@@ -8,10 +11,12 @@ import crypto from "crypto";
  * 인증된 사용자를 위한 상세 목격 제보 마커 데이터를 반환합니다.
  */
 export async function GET(request: Request) {
-  const supabase = createServerSupabase();
+  // 쿠키 기반 세션 확인
+  const supabaseAuth = await createServerSupabaseClient();
+  const {
+    data: { session },
+  } = await supabaseAuth.auth.getSession();
 
-  // 1. 세션 확인 (인증 여부 검사)
-  const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     return NextResponse.json<ApiResponse>(
       {
@@ -25,6 +30,9 @@ export async function GET(request: Request) {
     );
   }
 
+  // RPC 호출용 Service Role 클라이언트
+  const supabase = createServerSupabase();
+
   const { searchParams } = new URL(request.url);
   const minLat = parseFloat(searchParams.get("minLat") || "");
   const minLng = parseFloat(searchParams.get("minLng") || "");
@@ -33,7 +41,13 @@ export async function GET(request: Request) {
   const zoom = parseInt(searchParams.get("zoom") || "");
 
   // 2. 파라미터 유효성 검사
-  if (isNaN(minLat) || isNaN(minLng) || isNaN(maxLat) || isNaN(maxLng) || isNaN(zoom)) {
+  if (
+    isNaN(minLat) ||
+    isNaN(minLng) ||
+    isNaN(maxLat) ||
+    isNaN(maxLng) ||
+    isNaN(zoom)
+  ) {
     return NextResponse.json<ApiResponse>(
       {
         ok: false,
@@ -57,7 +71,36 @@ export async function GET(request: Request) {
       is_public: false, // 인증 유저용 상세 데이터
     });
 
-    if (error) throw error;
+    if (error) {
+      console.error("Auth markers fetch error:", error);
+      const isNetworkError =
+        error.message?.includes("fetch failed") ||
+        String(error.details ?? "").includes("ENOTFOUND") ||
+        String(error.details ?? "").includes("ECONNREFUSED");
+      if (isNetworkError) {
+        return NextResponse.json<ApiResponse>(
+          {
+            ok: false,
+            error: {
+              code: "SERVICE_UNAVAILABLE",
+              message:
+                "지도 데이터를 불러올 수 없습니다. 인터넷 연결을 확인해 주세요.",
+            },
+          },
+          { status: 503 }
+        );
+      }
+      return NextResponse.json<ApiResponse>(
+        {
+          ok: false,
+          error: {
+            code: "UPSTREAM_ERROR",
+            message: "데이터를 가져오는 중 오류가 발생했습니다.",
+          },
+        },
+        { status: 502 }
+      );
+    }
 
     const clusters = data || [];
 
@@ -99,4 +142,3 @@ export async function GET(request: Request) {
     );
   }
 }
-

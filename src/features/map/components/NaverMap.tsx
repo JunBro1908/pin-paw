@@ -38,11 +38,39 @@ export function NaverMap({ clientId }: NaverMapProps) {
   }, []);
 
   // 맵 인스턴스와 마커를 ref로 관리하여 리렌더링 시에도 유지
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mapInstanceRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const myLocationMarkerRef = useRef<any>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const markersRef = useRef<any[]>([]);
   const cacheRef = useRef<Map<string, CacheValue>>(new Map());
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // 선택된 제보 정보 (팝업용)
+  const [selectedSighting, setSelectedSighting] = useState<MapItem | null>(
+    null
+  );
+
+  /**
+   * 이벤트 전파를 중단하여 지도가 반응하지 않도록 합니다.
+   * 모바일 환경에서 상세 창 스크롤 시 지도가 함께 움직이는 문제를 해결합니다.
+   */
+  const stopPropagation = useCallback((e: React.UIEvent | React.WheelEvent) => {
+    e.stopPropagation();
+  }, []);
+
+  // 목록 보기 상태
+  const [isListViewOpen, setIsListViewOpen] = useState(false);
+  const [itemsInView, setItemsInView] = useState<MapItem[]>([]);
+
+  /**
+   * 이미지 URL 생성 헬퍼
+   */
+  const getImageUrl = useCallback((key: string) => {
+    const { data } = supabase.storage.from("sightings").getPublicUrl(key);
+    return data.publicUrl;
+  }, []);
 
   /**
    * 현재 위치 찾기 및 지도 이동
@@ -122,152 +150,233 @@ export function NaverMap({ clientId }: NaverMapProps) {
   /**
    * 마커 및 클러스터 렌더링 함수
    */
-  const renderClusters = useCallback((items: MapItem[]) => {
-    if (!mapInstanceRef.current || !window.naver?.maps) return;
+  const renderClusters = useCallback(
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    (items: MapItem[]) => {
+      if (!mapInstanceRef.current || !window.naver?.maps) return;
 
-    // 1. 기존 마커 제거
-    markersRef.current.forEach((marker) => marker.setMap(null));
-    markersRef.current = [];
+      // 1. 기존 마커 제거
+      markersRef.current.forEach((marker) => marker.setMap(null));
+      markersRef.current = [];
 
-    // 2. 새 마커 생성
-    const newMarkers = items.map((item) => {
-      let content = "";
+      // 2. 새 마커 생성
+      const newMarkers = items.map((item) => {
+        let content = "";
 
-      if (item.type === "cluster") {
-        // 클러스터: 숫자와 함께 원형 표시
-        const size = 30 + Math.min(item.count * 2, 20); // 데이터 수에 따라 크기 조절
-        content = `
+        if (item.type === "cluster") {
+          // 클러스터: 네이버 지도 스타일 (초록색 원형)
+          const size = 32 + Math.min(item.count * 1.5, 20);
+          content = `
           <div style="
             width: ${size}px;
             height: ${size}px;
-            background: #FF4D4D;
+            background: #00C73C;
             border: 2px solid white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: bold;
+            font-weight: 700;
             font-size: 14px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-          ">
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            cursor: pointer;
+            transition: all 0.2s ease-out;
+          " 
+          onmouseover="this.style.transform='scale(1.05)'; this.style.backgroundColor='#00B336'" 
+          onmouseout="this.style.transform='scale(1)'; this.style.backgroundColor='#00C73C'">
             ${item.count}
           </div>
         `;
-      } else {
-        // 포인트: 핀 형태의 마커
-        content = `
-          <div style="position: relative; width: 30px; height: 30px;">
-            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M12 21C16 17.5 19 14.4183 19 10C19 6.13401 15.866 3 12 3C8.13401 3 5 6.13401 5 10C5 14.4183 8 17.5 12 21Z" fill="#FF4D4D" stroke="white" stroke-width="2"/>
-              <circle cx="12" cy="10" r="3" fill="white"/>
-            </svg>
+        } else {
+          // 포인트: 핀 이미지 내부에 제보 사진 썸네일 표시
+          const thumbnailUrl = item.photo_keys?.[0]
+            ? getImageUrl(item.photo_keys[0])
+            : "/icons/marker.png";
+
+          content = `
+          <div style="cursor: pointer; position: relative; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+            <!-- 외부 핀 배경 (marker.png 스타일 반영) -->
+            <div style="
+              width: 44px;
+              height: 44px;
+              background: white;
+              border: 2.5px solid #FF4D4D;
+              border-radius: 50% 50% 50% 0;
+              transform: rotate(-45deg);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              overflow: hidden;
+            ">
+              <!-- 내부 사진 썸네일 -->
+              <div style="
+                width: 34px;
+                height: 34px;
+                border-radius: 50%;
+                background-image: url('${thumbnailUrl}');
+                background-size: cover;
+                background-position: center;
+                transform: rotate(45deg);
+                border: 1px solid rgba(0,0,0,0.1);
+              "></div>
+            </div>
+            <!-- 핀 꼬리 부분 (CSS로 구현) -->
+            <div style="
+              width: 2px;
+              height: 6px;
+              background: #FF4D4D;
+              margin-top: -2px;
+            "></div>
           </div>
         `;
-      }
+        }
 
-      const marker = new window.naver.maps.Marker({
-        position: new window.naver.maps.LatLng(item.lat, item.lng),
-        map: mapInstanceRef.current,
-        icon: {
-          content,
-          anchor: new window.naver.maps.Point(15, 15),
-        },
+        const marker = new window.naver.maps.Marker({
+          position: new window.naver.maps.LatLng(item.lat, item.lng),
+          map: mapInstanceRef.current,
+          icon: {
+            content,
+            anchor: new window.naver.maps.Point(22, 50), // 커진 사이즈에 맞춰 앵커 조정
+          },
+          title: item.type === "point" ? item.note : `클러스터 (${item.count})`,
+        });
+
+        // 클릭 이벤트 등록
+        window.naver.maps.Event.addListener(marker, "click", () => {
+          if (item.type === "cluster") {
+            // 클러스터 클릭 시: 줌 레벨에 따라 확대하거나 목록 표시
+            const currentZoom = mapInstanceRef.current.getZoom();
+            if (currentZoom >= 16) {
+              // 충분히 확대된 상태에서 클러스터 클릭 시 목록 보기 열기
+              setIsListViewOpen(true);
+              // 선택된 마커가 중앙에 오도록 이동 (부드럽게)
+              mapInstanceRef.current.panTo(marker.getPosition());
+            } else {
+              // 그 외에는 더 확대
+              mapInstanceRef.current.morph(
+                marker.getPosition(),
+                currentZoom + 2
+              );
+            }
+          } else {
+            // 포인트 클릭 시 정보 팝업 표시
+            setSelectedSighting(item);
+            // 선택된 마커가 중앙에 오도록 이동 (부드럽게)
+            mapInstanceRef.current.panTo(marker.getPosition());
+          }
+        });
+
+        return marker;
       });
 
-      return marker;
-    });
-
-    markersRef.current = newMarkers;
-  }, []);
+      markersRef.current = newMarkers;
+    },
+    [setSelectedSighting]
+  );
 
   /**
    * 클러스터 데이터 가져오기
    */
-  const fetchClusters = useCallback(async () => {
-    if (!mapInstanceRef.current) return;
+  const fetchClusters = useCallback(
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    async () => {
+      if (!mapInstanceRef.current) return;
 
-    const bounds = mapInstanceRef.current.getBounds();
-    const zoom = mapInstanceRef.current.getZoom();
-    const sw = bounds.getSW();
-    const ne = bounds.getNE();
+      const bounds = mapInstanceRef.current.getBounds();
+      const zoom = mapInstanceRef.current.getZoom();
+      const sw = bounds.getSW();
+      const ne = bounds.getNE();
 
-    const minLat = sw.lat();
-    const minLng = sw.lng();
-    const maxLat = ne.lat();
-    const maxLng = ne.lng();
+      const minLat = sw.lat();
+      const minLng = sw.lng();
+      const maxLat = ne.lat();
+      const maxLng = ne.lng();
 
-    // 1. 서버(SQL)의 클러스터링 격자 크기와 동일하게 정의
-    const getGridSize = (z: number, isAuth: boolean) => {
-      const effectiveZoom = isAuth ? z : Math.min(z, 14);
-      if (effectiveZoom >= 17) return 0.001;
-      if (effectiveZoom >= 16) return 0.003;
-      if (effectiveZoom >= 15) return 0.006;
-      if (effectiveZoom >= 14) return 0.01;
-      if (effectiveZoom >= 13) return 0.03;
-      if (effectiveZoom >= 11) return 0.05;
-      if (effectiveZoom >= 9) return 0.1;
-      return 0.5;
-    };
+      // 1. 서버(SQL)의 클러스터링 격자 크기와 동일하게 정의
+      const getGridSize = (z: number, isAuth: boolean) => {
+        const effectiveZoom = isAuth ? z : Math.min(z, 14);
+        if (effectiveZoom >= 17) return 0.001;
+        if (effectiveZoom >= 16) return 0.003;
+        if (effectiveZoom >= 15) return 0.006;
+        if (effectiveZoom >= 14) return 0.01;
+        if (effectiveZoom >= 13) return 0.03;
+        if (effectiveZoom >= 11) return 0.05;
+        if (effectiveZoom >= 9) return 0.1;
+        return 0.5;
+      };
 
-    // 2. 좌표를 특정 격자 인덱스로
-    const gridSize = getGridSize(zoom, isAuthenticated);
-    const snap = (num: number) => Math.floor(num / gridSize);
+      // 2. 좌표를 특정 격자 인덱스로
+      const gridSize = getGridSize(zoom, isAuthenticated);
+      const snap = (num: number) => Math.floor(num / gridSize);
 
-    // 3. Grid ID 기반의 캐시 키 생성
-    const cacheKey = `${snap(minLat)},${snap(minLng)},${snap(maxLat)},${snap(maxLng)},${zoom}`;
-    const cached = cacheRef.current.get(cacheKey);
+      // 3. Grid ID 기반의 캐시 키 생성
+      const cacheKey = `${snap(minLat)},${snap(minLng)},${snap(maxLat)},${snap(maxLng)},${zoom}`;
+      const cached = cacheRef.current.get(cacheKey);
 
-    // 캐시가 있으면 즉시 렌더링 (SWR 패턴)
-    if (cached) {
-      renderClusters(cached.items);
-    }
-
-    try {
-      const params = new URLSearchParams({
-        minLat: minLat.toString(),
-        minLng: minLng.toString(),
-        maxLat: maxLat.toString(),
-        maxLng: maxLng.toString(),
-        zoom: zoom.toString(),
-      });
-
-      const headers: Record<string, string> = {};
-      if (cached?.etag) {
-        headers["If-None-Match"] = cached.etag;
+      // 캐시가 있으면 즉시 렌더링 (SWR 패턴)
+      if (cached) {
+        renderClusters(cached.items);
+        setItemsInView(cached.items);
       }
 
-      const endpoint = isAuthenticated
-        ? "/api/v1/auth/map/markers"
-        : "/api/v1/public/map/clusters";
+      try {
+        const params = new URLSearchParams({
+          minLat: minLat.toString(),
+          minLng: minLng.toString(),
+          maxLat: maxLat.toString(),
+          maxLng: maxLng.toString(),
+          zoom: zoom.toString(),
+        });
 
-      const response = await fetch(`${endpoint}?${params}`, {
-        headers,
-      });
+        const headers: Record<string, string> = {};
+        if (cached?.etag) {
+          headers["If-None-Match"] = cached.etag;
+        }
 
-      if (response.status === 304) {
-        return;
+        const endpoint = isAuthenticated
+          ? "/api/v1/auth/map/markers"
+          : "/api/v1/public/map/clusters";
+
+        const response = await fetch(`${endpoint}?${params}`, {
+          headers,
+        });
+
+        if (response.status === 304) {
+          return;
+        }
+
+        const result: ApiResponse<ClusterResponse> = await response.json();
+
+        if (!response.ok) {
+          const message =
+            result?.error?.message ?? "데이터를 가져오는데 실패했습니다.";
+          throw new Error(message);
+        }
+
+        if (result.ok && result.data) {
+          const etag = response.headers.get("ETag") || "";
+          const items = result.data.clusters;
+
+          // 캐시 업데이트 및 렌더링
+          cacheRef.current.set(cacheKey, { etag, items });
+          renderClusters(items);
+          setItemsInView(items);
+        }
+      } catch (err) {
+        console.error("Fetch clusters error:", err);
+        const message =
+          err instanceof Error
+            ? err.message
+            : "주변 데이터를 불러오는 데 실패했습니다.";
+        setToast({
+          message,
+          type: "error",
+        });
       }
-
-      if (!response.ok) throw new Error("데이터를 가져오는데 실패했습니다.");
-
-      const result: ApiResponse<ClusterResponse> = await response.json();
-      if (result.ok && result.data) {
-        const etag = response.headers.get("ETag") || "";
-        const items = result.data.clusters;
-
-        // 캐시 업데이트 및 렌더링
-        cacheRef.current.set(cacheKey, { etag, items });
-        renderClusters(items);
-      }
-    } catch (err) {
-      console.error("Fetch clusters error:", err);
-      setToast({
-        message: "주변 데이터를 불러오는 데 실패했습니다.",
-        type: "error",
-      });
-    }
-  }, [renderClusters]);
+    },
+    [renderClusters]
+  );
 
   /**
    * 지도의 idle 이벤트 핸들러 (이동/줌 완료 시 발생)
@@ -317,6 +426,15 @@ export function NaverMap({ clientId }: NaverMapProps) {
         mapInstanceRef.current,
         "idle",
         handleMapIdle
+      );
+
+      // 지도 클릭 시 선택된 마커 해제
+      window.naver.maps.Event.addListener(
+        mapInstanceRef.current,
+        "click",
+        () => {
+          setSelectedSighting(null);
+        }
       );
 
       setIsLoaded(true);
@@ -369,12 +487,327 @@ export function NaverMap({ clientId }: NaverMapProps) {
       <div className="bg-surface relative h-full w-full">
         <div ref={mapRef} className="h-full w-full" />
 
-        {/* 현재 위치 버튼 */}
-        {isLoaded && (
+        {/* 제보 상세 정보 카드 */}
+        {selectedSighting && selectedSighting.type === "point" && (
+          <div
+            className="animate-in slide-in-from-bottom-6 absolute inset-x-0 bottom-[104px] z-50 px-4 duration-300"
+            onMouseDown={stopPropagation}
+            onMouseUp={stopPropagation}
+            onMouseMove={stopPropagation}
+            onTouchStart={stopPropagation}
+            onTouchMove={stopPropagation}
+            onTouchEnd={stopPropagation}
+            onWheel={stopPropagation}
+          >
+            <div className="bg-surface relative overflow-hidden rounded-[32px] shadow-[0_8px_40px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:ring-white/10">
+              {/* 닫기 버튼 (카드 상단 고정) */}
+              <button
+                onClick={() => setSelectedSighting(null)}
+                className="absolute top-4 right-4 z-30 rounded-full bg-black/20 p-2 text-white backdrop-blur-md transition-colors hover:bg-black/40"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+
+              {/* 스크롤 가능한 내용 영역 */}
+              <div className="max-h-[60vh] overflow-y-auto">
+                <div className="flex flex-col">
+                  {/* 큰 사진 영역 */}
+                  {selectedSighting.photo_keys?.[0] && (
+                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                      <Image
+                        src={getImageUrl(selectedSighting.photo_keys[0])}
+                        alt="목격 사진"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 50vw"
+                        className="object-cover transition-transform duration-500 hover:scale-105"
+                        priority
+                      />
+                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                    </div>
+                  )}
+
+                  <div className="p-6">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <Text variant="title" className="text-2xl font-black">
+                          {selectedSighting.author_type === "anon"
+                            ? "익명 제보자"
+                            : "회원 제보"}
+                        </Text>
+                        <Text
+                          variant="caption"
+                          color="caption"
+                          className="mt-1 block text-sm"
+                        >
+                          {selectedSighting.occurred_at
+                            ? new Date(
+                                selectedSighting.occurred_at
+                              ).toLocaleString("ko-KR", {
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : ""}
+                        </Text>
+                      </div>
+                    </div>
+
+                    <div className="mb-5 flex flex-wrap gap-2">
+                      {selectedSighting.trait_color && (
+                        <span className="bg-primary/10 text-primary rounded-xl px-3 py-1.5 text-xs font-bold">
+                          {selectedSighting.trait_color}
+                        </span>
+                      )}
+                      {selectedSighting.trait_size && (
+                        <span className="rounded-xl bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
+                          {selectedSighting.trait_size}
+                        </span>
+                      )}
+                      {selectedSighting.trait_state && (
+                        <span className="rounded-xl bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
+                          {selectedSighting.trait_state}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="rounded-2xl bg-gray-50 p-4 dark:bg-gray-900/50">
+                      <Text
+                        variant="body"
+                        className="text-[15px] leading-relaxed text-gray-700 dark:text-gray-300"
+                      >
+                        {selectedSighting.note || "상세 설명이 없습니다."}
+                      </Text>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 목록 보기 하단 시트 */}
+        {isListViewOpen && (
+          <div
+            className="animate-in fade-in fixed inset-0 z-[110] flex flex-col justify-end bg-black/40 backdrop-blur-sm transition-all duration-300"
+            onMouseDown={stopPropagation}
+            onMouseUp={stopPropagation}
+            onMouseMove={stopPropagation}
+            onTouchStart={stopPropagation}
+            onTouchMove={stopPropagation}
+            onTouchEnd={stopPropagation}
+            onWheel={stopPropagation}
+          >
+            <div
+              className="absolute inset-0"
+              onClick={() => setIsListViewOpen(false)}
+            />
+            <div className="bg-surface animate-in slide-in-from-bottom-full relative flex max-h-[85vh] w-full flex-col rounded-t-[32px] shadow-2xl duration-500">
+              <div className="flex items-center justify-between p-6">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Text variant="title" className="text-2xl">
+                      제보 목록
+                    </Text>
+                    <span className="bg-primary/10 text-primary rounded-full px-3 py-0.5 text-sm font-bold">
+                      {itemsInView.filter((i) => i.type === "point").length}건
+                    </span>
+                  </div>
+                  <Text variant="caption" color="caption">
+                    현재 화면에 보이는 제보 정보입니다.
+                  </Text>
+                </div>
+                <button
+                  onClick={() => setIsListViewOpen(false)}
+                  className="bg-muted rounded-full p-2 transition-colors hover:bg-gray-200 dark:hover:bg-gray-700"
+                >
+                  <svg
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <line x1="18" y1="6" x2="6" y2="18"></line>
+                    <line x1="6" y1="6" x2="18" y2="18"></line>
+                  </svg>
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto px-6 pb-10">
+                {itemsInView.filter((i) => i.type === "point").length === 0 ? (
+                  <div className="flex h-60 flex-col items-center justify-center space-y-4 text-center">
+                    <div className="rounded-full bg-gray-100 p-6 dark:bg-gray-800">
+                      <svg
+                        width="40"
+                        height="40"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        className="text-gray-400"
+                      >
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <line x1="12" y1="8" x2="12" y2="12"></line>
+                        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                      </svg>
+                    </div>
+                    <Text variant="body" color="caption" className="text-lg">
+                      상세 정보가 있는 제보가 없습니다.
+                      <br />
+                      지도를 확대하여 개별 핀을 확인해주세요.
+                    </Text>
+                  </div>
+                ) : (
+                  <div className="grid gap-4">
+                    {itemsInView
+                      .filter((i) => i.type === "point")
+                      .map((item) => (
+                        <div
+                          key={item.id}
+                          onClick={() => {
+                            setSelectedSighting(item);
+                            setIsListViewOpen(false);
+                            if (mapInstanceRef.current) {
+                              mapInstanceRef.current.panTo(
+                                new window.naver.maps.LatLng(item.lat, item.lng)
+                              );
+                            }
+                          }}
+                          className="bg-muted/50 hover:bg-muted group flex gap-4 rounded-3xl p-4 transition-all active:scale-[0.98]"
+                        >
+                          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-2xl bg-gray-200">
+                            {item.photo_keys?.[0] ? (
+                              <Image
+                                src={getImageUrl(item.photo_keys[0])}
+                                alt="Sighting"
+                                fill
+                                className="object-cover transition-transform group-hover:scale-110"
+                              />
+                            ) : (
+                              <div className="flex h-full w-full items-center justify-center text-gray-400">
+                                <svg
+                                  width="24"
+                                  height="24"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                >
+                                  <rect
+                                    x="3"
+                                    y="3"
+                                    width="18"
+                                    height="18"
+                                    rx="2"
+                                    ry="2"
+                                  ></rect>
+                                  <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                                  <polyline points="21 15 16 10 5 21"></polyline>
+                                </svg>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
+                            <div>
+                              <div className="mb-0.5 flex items-center justify-between">
+                                <Text className="truncate font-bold">
+                                  {item.author_type === "anon"
+                                    ? "익명 제보자"
+                                    : "회원 제보"}
+                                </Text>
+                                <Text
+                                  variant="caption"
+                                  color="caption"
+                                  className="shrink-0 text-[10px]"
+                                >
+                                  {item.occurred_at
+                                    ? new Date(
+                                        item.occurred_at
+                                      ).toLocaleDateString()
+                                    : "날짜 정보 없음"}
+                                </Text>
+                              </div>
+                              <Text
+                                variant="caption"
+                                className="mb-2 line-clamp-1 text-xs opacity-70"
+                              >
+                                {item.note || "상세 설명 없음"}
+                              </Text>
+                            </div>
+                            <div className="no-scrollbar flex gap-1.5 overflow-x-auto">
+                              {item.trait_color && (
+                                <span className="bg-primary/10 text-primary rounded-lg px-2 py-0.5 text-[10px] font-bold whitespace-nowrap">
+                                  {item.trait_color}
+                                </span>
+                              )}
+                              {item.trait_size && (
+                                <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap text-gray-500 dark:bg-gray-800">
+                                  {item.trait_size}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 하단 컨트롤러 */}
+        <div className="absolute right-5 bottom-24 z-10 flex flex-col gap-3">
+          {/* 목록 보기 버튼 */}
+          <button
+            onClick={() => setIsListViewOpen(true)}
+            className="bg-primary flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-xl transition-transform active:scale-95"
+          >
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <line x1="8" y1="6" x2="21" y2="6"></line>
+              <line x1="8" y1="12" x2="21" y2="12"></line>
+              <line x1="8" y1="18" x2="21" y2="18"></line>
+              <line x1="3" y1="6" x2="3.01" y2="6"></line>
+              <line x1="3" y1="12" x2="3.01" y2="12"></line>
+              <line x1="3" y1="18" x2="3.01" y2="18"></line>
+            </svg>
+          </button>
+
+          {/* 현재 위치 버튼 */}
           <button
             onClick={handleCurrentLocation}
             disabled={isLocating}
-            className="absolute right-5 bottom-24 z-10 flex h-12 w-12 items-center justify-center rounded-full bg-white shadow-xl active:scale-95 disabled:opacity-50 dark:bg-gray-800"
+            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xl transition-transform active:scale-95 disabled:opacity-50 dark:bg-gray-800"
           >
             {isLocating ? (
               <div className="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
@@ -389,7 +822,7 @@ export function NaverMap({ clientId }: NaverMapProps) {
               </div>
             )}
           </button>
-        )}
+        </div>
 
         {/* 로딩 오버레이 */}
         {!isLoaded && (
