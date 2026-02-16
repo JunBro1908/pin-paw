@@ -150,9 +150,19 @@ export function SightingForm() {
         }),
       });
 
+      // HTTP 상태 코드 체크
+      if (!presignRes.ok) {
+        const errorData = await presignRes.json();
+        const errorMessage =
+          errorData.error?.message || "이미지 업로드에 실패했습니다.";
+        throw new Error(errorMessage);
+      }
+
       const presignResult = await presignRes.json();
       if (!presignResult.success) {
-        throw new Error(presignResult.error || "이미지 업로드에 실패했습니다.");
+        const errorMessage =
+          presignResult.error?.message || "이미지 업로드에 실패했습니다.";
+        throw new Error(errorMessage);
       }
 
       const { uploadUrl, fileKey } = presignResult.data.uploads[0];
@@ -209,8 +219,13 @@ export function SightingForm() {
       if (!sightingRes.ok) {
         try {
           const errorData = await sightingRes.json();
-          throw new Error(errorData.error || "제보 등록에 실패했습니다.");
-        } catch {
+          const errorMessage =
+            errorData.error?.message || "제보 등록에 실패했습니다.";
+          throw new Error(errorMessage);
+        } catch (err) {
+          if (err instanceof Error && err.message !== "Failed to fetch") {
+            throw err;
+          }
           throw new Error(
             "서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
           );
@@ -219,7 +234,9 @@ export function SightingForm() {
 
       const sightingResult = await sightingRes.json();
       if (!sightingResult.success) {
-        throw new Error(sightingResult.error || "제보 등록에 실패했습니다.");
+        const errorMessage =
+          sightingResult.error?.message || "제보 등록에 실패했습니다.";
+        throw new Error(errorMessage);
       }
     } catch (err) {
       const message =

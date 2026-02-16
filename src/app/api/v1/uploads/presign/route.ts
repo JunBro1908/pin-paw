@@ -2,6 +2,7 @@ import { createServerSupabase } from "@/shared/supabase/server";
 import { getClientIp } from "@/shared/lib/ip";
 import { sha256 } from "@/shared/lib/hash";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
+import { checkRateLimit, RateLimitPresets } from "@/shared/lib/rate-limit";
 import { NextResponse } from "next/server";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -15,6 +16,7 @@ const BUCKET_MAPPING = {
 
 export async function POST(request: Request) {
   const supabase = createServerSupabase();
+  const now = new Date();
 
   try {
     const { purpose, files } = await request.json();
@@ -52,7 +54,7 @@ export async function POST(request: Request) {
       }
     }
 
-    // 2. 사용자 식별 및 속도 제한
+    // 2. 사용자 식별
     const {
       data: { user },
     } = await supabase.auth.getUser(
@@ -89,22 +91,23 @@ export async function POST(request: Request) {
       return NextResponse.json(cached.response);
     }
 
-    // Rate Limit 체크 (10초 쿨다운 등)
-    const now = new Date();
-    const tenSecAgo = new Date(now.getTime() - 10000).toISOString();
-    const { count: recentCount } = await supabase
-      .from("idempotency_keys")
-      .select("*", { count: "exact", head: true })
-      .eq("scope", SCOPE)
-      .match(userId ? { owner_id: userId } : { ip_hash: ipHash })
-      .gt("created_at", tenSecAgo);
-
-    if (recentCount && recentCount > 0) {
-      return fail(
-        ApiErrorCode.RATE_LIMITED,
-        "잠시 후 다시 시도해주세요. (10초 쿨다운)",
-        429
+    // 2.5 Rate Limit 체크 (DB 기반, 비회원만)
+    if (!userId) {
+      const rateLimitResult = await checkRateLimit(
+        supabase,
+        SCOPE,
+        ipHash,
+        userId,
+        RateLimitPresets.sighting
       );
+
+      if (!rateLimitResult.allowed) {
+        return fail(
+          ApiErrorCode.RATE_LIMITED,
+          rateLimitResult.errorMessage!,
+          429
+        );
+      }
     }
 
     // 3. Presigned URL 생성
