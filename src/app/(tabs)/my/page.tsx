@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
@@ -30,7 +31,12 @@ function MyPageContent() {
           {displayEmail ? <Text variant="caption">{displayEmail}</Text> : null}
         </div>
       </div>
-      <Button variant="primary" className="w-full" disabled>
+      <Link href="/my/lost-posts" className="block w-full">
+        <Button variant="primary" className="w-full">
+          내 유실글
+        </Button>
+      </Link>
+      <Button variant="secondary" className="mt-3 w-full" disabled>
         프로필 수정하기 (준비 중)
       </Button>
       <Button
