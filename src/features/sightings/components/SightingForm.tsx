@@ -9,6 +9,12 @@ import { cn } from "@/shared/lib/cn";
 import { Toast } from "@/shared/ui/Toast";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { supabase } from "@/shared/supabase/client";
+import { DOG_BREEDS } from "../constants/breeds";
+
+const inputBase =
+  "w-full rounded-xl border bg-white px-4 py-3 text-[15px] shadow-sm transition-all outline-none focus:ring-2 focus:ring-primary/20 border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100";
+const selectBase =
+  "w-full rounded-xl border bg-white px-4 py-3 pr-10 text-[15px] shadow-sm transition-all outline-none focus:ring-2 focus:ring-primary/20 border-gray-200 appearance-none cursor-pointer dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat";
 
 export function SightingForm() {
   const [formData, setFormData] = useState<SightingFormData>({
@@ -17,6 +23,9 @@ export function SightingForm() {
     lat: 37.5665,
     lng: 126.978,
     time: new Date().toISOString().slice(0, 16),
+    traitColor: "",
+    traitSize: "",
+    traitSpecies: "",
     description: "",
   });
 
@@ -212,7 +221,10 @@ export function SightingForm() {
           photoKeys: [fileKey],
           location: { lat: data.lat, lng: data.lng },
           occurredAt: new Date(data.time).toISOString(),
-          note: data.description,
+          traitColor: data.traitColor?.trim() || null,
+          traitSize: data.traitSize?.trim() || null,
+          traitSpecies: data.traitSpecies?.trim() || null,
+          note: data.description?.trim() || null,
         }),
       });
 
@@ -257,6 +269,9 @@ export function SightingForm() {
       lat: 37.5665,
       lng: 126.978,
       time: new Date().toISOString().slice(0, 16),
+      traitColor: "",
+      traitSize: "",
+      traitSpecies: "",
       description: "",
     });
     setIsLocationSet(false);
@@ -393,9 +408,60 @@ export function SightingForm() {
               value={formData.time}
               max={new Date().toISOString().slice(0, 16)}
               onChange={handleChange}
-              className="border-border-subtle focus:border-primary focus:ring-primary/10 w-full rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2"
+              className={cn(inputBase, "py-4")}
             />
           </div>
+
+          <div className="space-y-3">
+            <Text variant="body" className="text-text-main font-bold">
+              색상 · 크기 · 종 (선택)
+            </Text>
+            <input
+              type="text"
+              name="traitColor"
+              value={formData.traitColor}
+              onChange={handleChange}
+              placeholder="예: 흰색, 검정"
+              className={inputBase}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="relative">
+                <select
+                  name="traitSize"
+                  value={formData.traitSize}
+                  onChange={handleChange}
+                  className={cn(
+                    selectBase,
+                    "bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]"
+                  )}
+                >
+                  <option value="">크기</option>
+                  <option value="소">소</option>
+                  <option value="중">중</option>
+                  <option value="대">대</option>
+                </select>
+              </div>
+              <div className="relative">
+                <select
+                  name="traitSpecies"
+                  value={formData.traitSpecies}
+                  onChange={handleChange}
+                  className={cn(
+                    selectBase,
+                    "bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]"
+                  )}
+                >
+                  <option value="">견종</option>
+                  {DOG_BREEDS.map((breed) => (
+                    <option key={breed} value={breed}>
+                      {breed}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
           <div className="space-y-3">
             <Text variant="body" className="text-text-main font-bold">
               추가 설명 (선택)
@@ -406,7 +472,7 @@ export function SightingForm() {
               onChange={handleChange}
               placeholder="상세 정보를 입력해주세요"
               rows={4}
-              className="border-border-subtle focus:border-primary focus:ring-primary/10 w-full resize-none rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2"
+              className={cn(inputBase, "resize-none py-4")}
             />
           </div>
         </section>

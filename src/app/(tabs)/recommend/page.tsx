@@ -159,7 +159,7 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
               <Text variant="body" className="font-medium">
                 {lostAt}
               </Text>
-              {[post.trait_color, post.trait_size, post.trait_state].filter(
+              {[post.trait_color, post.trait_size, post.trait_species].filter(
                 Boolean
               ).length > 0 && (
                 <Text
@@ -167,7 +167,7 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
                   color="caption"
                   className="block truncate"
                 >
-                  {[post.trait_color, post.trait_size, post.trait_state]
+                  {[post.trait_color, post.trait_size, post.trait_species]
                     .filter(Boolean)
                     .join(" · ")}
                 </Text>

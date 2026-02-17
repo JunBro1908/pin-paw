@@ -69,7 +69,7 @@ create table if not exists public.lost_posts (
 
   trait_color text null,
   trait_size  text null,
-  trait_state text null,
+  trait_species text null,
 
   status lost_status not null default 'searching',
 
@@ -105,7 +105,7 @@ create table if not exists public.sightings (
   -- traits
   trait_color text null,
   trait_size  text null,
-  trait_state text null,
+  trait_species text null,
 
   -- note (민감할 수 있음)
   note text null,
@@ -262,6 +262,10 @@ create policy "sightings_owner_read"
 on public.sightings for select
 using (auth.uid() = user_id);
 
+create policy "sightings_owner_delete"
+on public.sightings for delete
+using (auth.uid() = user_id);
+
 -- Recommendation cache: owner only via lost_posts join
 drop policy if exists "reco_cache_owner_read" on public.recommendation_cache;
 create policy "reco_cache_owner_read"
@@ -343,45 +347,105 @@ begin
   end if;
 
   with filtered_points as (
-    select 
-      id,
-      st_y(location::geometry) as lat,
-      st_x(location::geometry) as lng
+    select id, st_y(location::geometry) as lat, st_x(location::geometry) as lng
     from public.sightings
     where location && st_makeenvelope(min_lng, min_lat, max_lng, max_lat, 4326)
   ),
   grid_clusters as (
     select
       count(*) as cnt,
-      case 
-        when is_public then (floor(min(lat) / grid_size) + 0.5) * grid_size
-        else st_y(st_centroid(st_collect(st_setsrid(st_point(lng, lat), 4326)))) 
-      end as cluster_lat,
-      case 
-        when is_public then (floor(min(lng) / grid_size) + 0.5) * grid_size
-        else st_x(st_centroid(st_collect(st_setsrid(st_point(lng, lat), 4326)))) 
-      end as cluster_lng,
+      case when is_public then (floor(min(lat) / grid_size) + 0.5) * grid_size
+           else st_y(st_centroid(st_collect(st_setsrid(st_point(lng, lat), 4326)))) end as cluster_lat,
+      case when is_public then (floor(min(lng) / grid_size) + 0.5) * grid_size
+           else st_x(st_centroid(st_collect(st_setsrid(st_point(lng, lat), 4326)))) end as cluster_lng,
       min(id::text) as representative_id
     from filtered_points
-    group by 
-      floor(lat / grid_size),
-      floor(lng / grid_size)
+    group by floor(lat / grid_size), floor(lng / grid_size)
+  ),
+  with_details as (
+    select
+      gc.cnt,
+      gc.cluster_lat,
+      gc.cluster_lng,
+      gc.representative_id,
+      s.note,
+      s.photo_keys,
+      s.trait_color,
+      s.trait_size,
+      s.trait_species,
+      s.occurred_at,
+      s.author_type
+    from grid_clusters gc
+    left join public.sightings s on s.id = gc.representative_id::uuid and gc.cnt = 1 and not is_public
   )
   select jsonb_agg(
-    jsonb_build_object(
-      'id', case 
-              when is_public then 'masked_' || floor(cluster_lat * 1000) || '_' || floor(cluster_lng * 1000)
-              when cnt > 1 then 'cluster_' || (floor(cluster_lat * 10000) || '_' || floor(cluster_lng * 10000)) 
-              else representative_id 
-            end,
-      'lat', cluster_lat,
-      'lng', cluster_lng,
-      'count', cnt,
-      'type', case when is_public or cnt > 1 then 'cluster' else 'point' end
-    )
+    case
+      when is_public or cnt > 1 then
+        jsonb_build_object(
+          'id', case when is_public then 'masked_' || floor(cluster_lat * 1000) || '_' || floor(cluster_lng * 1000)
+                     else 'cluster_' || (floor(cluster_lat * 10000) || '_' || floor(cluster_lng * 10000)) end,
+          'lat', cluster_lat,
+          'lng', cluster_lng,
+          'count', cnt,
+          'type', 'cluster'
+        )
+      else
+        jsonb_build_object(
+          'id', representative_id,
+          'lat', cluster_lat,
+          'lng', cluster_lng,
+          'count', cnt,
+          'type', 'point',
+          'note', note,
+          'photo_keys', photo_keys,
+          'trait_color', trait_color,
+          'trait_size', trait_size,
+          'trait_species', trait_species,
+          'occurred_at', occurred_at,
+          'author_type', author_type
+        )
+    end
   ) into result
-  from grid_clusters;
+  from with_details;
 
   return coalesce(result, '[]'::jsonb);
 end;
+$$;
+
+-- 본인 제보 한 건의 중심 좌표 (지도 포커스용)
+create or replace function public.get_my_sighting_center(sighting_id uuid)
+returns table(lat double precision, lng double precision)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select st_y(location::geometry), st_x(location::geometry)
+  from public.sightings
+  where id = sighting_id and user_id = auth.uid();
+$$;
+
+-- 본인 제보 목록 (위도·경도 포함, 지도 링크용)
+create or replace function public.get_my_sightings_list(limit_count int default 20, offset_count int default 0)
+returns table (
+  id uuid,
+  photo_keys text[],
+  occurred_at timestamptz,
+  note text,
+  created_at timestamptz,
+  lat double precision,
+  lng double precision
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select s.id, s.photo_keys, s.occurred_at, s.note, s.created_at,
+    st_y(s.location::geometry), st_x(s.location::geometry)
+  from public.sightings s
+  where s.user_id = auth.uid()
+  order by s.created_at desc
+  limit nullif(least(limit_count, 50), 0)
+  offset greatest(offset_count, 0);
 $$;

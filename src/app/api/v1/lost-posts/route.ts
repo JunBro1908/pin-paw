@@ -19,7 +19,7 @@ function parseIdempotencyKey(header: string | null): string {
 
 /**
  * POST /api/v1/lost-posts — 유실글 생성 (인증 필수)
- * Body: { coverPhotoKey, lostAt, lostLocation: { lat, lng }, traitColor?, traitSize?, traitState? }
+ * Body: { coverPhotoKey, lostAt, lostLocation: { lat, lng }, traitColor?, traitSize?, traitSpecies? }
  * Header: Idempotency-Key (optional, UUID)
  */
 export async function POST(request: Request) {
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       lostLocation,
       traitColor,
       traitSize,
-      traitState,
+      traitSpecies,
     } = body;
 
     if (!coverPhotoKey || !lostAt || !lostLocation) {
@@ -78,7 +78,7 @@ export async function POST(request: Request) {
         lostLocation: { lat, lng },
         traitColor: traitColor ?? null,
         traitSize: traitSize ?? null,
-        traitState: traitState ?? null,
+        traitSpecies: traitSpecies ?? null,
       })
     );
 
@@ -112,7 +112,7 @@ export async function POST(request: Request) {
         lost_location: lostLocationWkt,
         trait_color: traitColor ?? null,
         trait_size: traitSize ?? null,
-        trait_state: traitState ?? null,
+        trait_species: traitSpecies ?? null,
         status: "searching",
         embedding_status: "pending",
       })
@@ -174,7 +174,7 @@ export async function GET(request: Request) {
   const { data: rows, error } = await supabaseAuth
     .from("lost_posts")
     .select(
-      "id, cover_photo_key, lost_at, lost_location, trait_color, trait_size, trait_state, status, embedding_status, created_at, updated_at"
+      "id, cover_photo_key, lost_at, lost_location, trait_color, trait_size, trait_species, status, embedding_status, created_at, updated_at"
     )
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);

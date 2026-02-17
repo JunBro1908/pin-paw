@@ -14,7 +14,7 @@ const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
       "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
   },
   closed: {
-    label: "취소",
+    label: "종료",
     className: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
   },
 };

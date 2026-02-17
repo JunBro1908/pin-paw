@@ -28,7 +28,7 @@ export function LostPostCard({ item, href }: LostPostCardProps) {
       })
     : "";
 
-  const traits = [item.trait_color, item.trait_size, item.trait_state]
+  const traits = [item.trait_color, item.trait_size, item.trait_species]
     .filter(Boolean)
     .join(" · ");
 

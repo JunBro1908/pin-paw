@@ -8,6 +8,7 @@ import { Text } from "@/shared/ui/Text";
 import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { LostPostList } from "@/features/lost-posts/components/LostPostList";
+import { MySightingList } from "@/features/sightings/components/MySightingList";
 import { cn } from "@/shared/lib/cn";
 
 function MyPageContent() {
@@ -135,20 +136,8 @@ function MyPageContent() {
             !sightingsOpen && "hidden"
           )}
         >
-          <div className="px-5 py-6">
-            <Text
-              variant="body"
-              color="caption"
-              className="mb-2 block text-center"
-            >
-              아직 작성한 제보가 없습니다.
-            </Text>
-            <Link
-              href="/"
-              className="text-primary block text-center text-sm font-medium hover:underline"
-            >
-              제보하러 가기
-            </Link>
+          <div className="px-5 pt-3 pb-5">
+            <MySightingList />
           </div>
         </div>
       </section>

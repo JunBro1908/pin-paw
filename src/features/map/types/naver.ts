@@ -19,7 +19,7 @@ export interface ClusterPoint {
   occurred_at?: string;
   trait_color?: string;
   trait_size?: string;
-  trait_state?: string;
+  trait_species?: string;
   author_type?: "anon" | "user";
   nickname?: string;
 }

@@ -84,8 +84,8 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
   if (body.traitColor !== undefined) updates.trait_color = body.traitColor;
   if (body.traitSize !== undefined) updates.trait_size = body.traitSize;
-  if (body.traitState !== undefined) updates.trait_state = body.traitState;
-
+  if (body.traitSpecies !== undefined)
+    updates.trait_species = body.traitSpecies;
   if (Object.keys(updates).length === 0) {
     const { data: current } = await supabaseAuth
       .from("lost_posts")

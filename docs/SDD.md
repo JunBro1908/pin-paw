@@ -3,6 +3,8 @@
 > **목격된 유실 동물의 발자국에 핀을 꽂으며 반려인과의 재회를 돕는 플랫폼**
 >
 > 작성일: 2026-02-16 | 마지막 업데이트: 2026-02-16
+>
+> **진행:** Phase 2 인증(카카오 로그인, AuthContext, 로그아웃) 및 지도 마커 인증 분기 반영. Phase 4 Commit 4-1~4-3: Lost Posts API + UI 구현 완료. 지도 컴포넌트 생명주기·API 최소화 반영(싱글톤, lat/lng 쿼리 전달).
 
 ---
 
@@ -19,53 +21,52 @@
    - [Phase 7: 안정화 & 최적화](#phase-7-안정화--최적화)
 3. [기술 스택 정리](#3-기술-스택-정리)
 4. [디렉토리 구조 계획](#4-디렉토리-구조-계획)
+5. [지도 컴포넌트 설계 (생명주기·API 최소화)](#5-지도-컴포넌트-설계-생명주기api-최소화)
 
 ---
 
 ## 1. 현재 구현 상태 요약
 
-### ✅ 완료 (약 55%)
+### ✅ 완료 (약 65%)
 
-| 영역                     | 상태    | 구현 내용                                                                        |
-| ------------------------ | ------- | -------------------------------------------------------------------------------- |
-| **목격 제보 폼 (`/`)**   | ✅ 완료 | SightingForm, 사진 업로드, 위치 자동 입력, Optimistic UI                         |
-| **Presigned URL 업로드** | ✅ 완료 | `POST /api/v1/uploads/presign` — Rate Limit, Idempotency, IP 해싱                |
-| **목격 저장 API**        | ✅ 완료 | `POST /api/v1/sightings` — 익명/인증 분기, PostGIS 위치 저장                     |
-| **지도 뷰 (`/map`)**     | ✅ 완료 | 네이버 맵, 공개 클러스터 + 인증 마커, ETag 캐싱 (304)                            |
-| **Public Clusters API**  | ✅ 완료 | `GET /api/v1/public/map/clusters` — bbox/zoom 기반, 좌표 마스킹                  |
-| **Auth Markers API**     | ✅ 완료 | `GET /api/v1/auth/map/markers` — 인증 전용, 상세 정보 포함                       |
-| **DB 스키마**            | ✅ 완료 | users, sightings, lost_posts, embeddings, recommendation_cache, idempotency_keys |
-| **RLS 정책**             | ✅ 완료 | lost_posts 소유자 전용, sightings 공개 insert, recommendation_cache 소유자 전용  |
-| **DB Functions**         | ✅ 완료 | `get_sighting_clusters()` — 줌 레벨 기반 그리드 클러스터링                       |
-| **공통 UI**              | ✅ 완료 | Button, Text, Toast, Loading, Divider, Container                                 |
-| **탭 네비게이션**        | ✅ 완료 | 하단 탭바 (홈, 지도, 추천, 내정보)                                               |
+| 영역                     | 상태    | 구현 내용                                                                          |
+| ------------------------ | ------- | ---------------------------------------------------------------------------------- |
+| **목격 제보 폼 (`/`)**   | ✅ 완료 | SightingForm, 사진 업로드, 위치 자동 입력, Optimistic UI                           |
+| **Presigned URL 업로드** | ✅ 완료 | `POST /api/v1/uploads/presign` — Rate Limit, Idempotency, IP 해싱                  |
+| **목격 저장 API**        | ✅ 완료 | `POST /api/v1/sightings` — 익명/인증 분기, PostGIS 위치 저장                       |
+| **지도 뷰 (`/map`)**     | ✅ 완료 | 네이버 맵, 공개 클러스터 + 인증 마커, ETag 캐싱 (304), 인증 시 상세 마커           |
+| **Public Clusters API**  | ✅ 완료 | `GET /api/v1/public/map/clusters` — bbox/zoom 기반, 좌표 마스킹                    |
+| **Auth Markers API**     | ✅ 완료 | `GET /api/v1/auth/map/markers` — 쿠키 세션 기반, 상세 정보 포함                    |
+| **인증 (카카오)**        | ✅ 완료 | AuthContext 전역 상태, createBrowserClient(쿠키), AuthGuard, 로그아웃(내정보)      |
+| **유실글 CRUD API**      | ✅ 완료 | `POST/GET /api/v1/lost-posts`, `GET/PATCH/DELETE /api/v1/lost-posts/[id]`          |
+| **DB 스키마**            | ✅ 완료 | users, sightings, lost_posts, embeddings, recommendation_cache, idempotency_keys   |
+| **RLS 정책**             | ✅ 완료 | lost_posts 소유자 전용, sightings 공개 insert, recommendation_cache 소유자 전용    |
+| **DB Functions**         | ✅ 완료 | `get_sighting_clusters()` — 줌 레벨 기반 그리드 클러스터링                         |
+| **유실글 UI**            | ✅ 완료 | 등록 폼, 목록, 상세(상태 변경·삭제·추천 보기), StatusBadge, useLostPost (4-2, 4-3) |
+| **공통 UI**              | ✅ 완료 | Button, Text, Toast, Loading, Divider, Container                                   |
+| **탭 네비게이션**        | ✅ 완료 | 하단 탭바 (홈, 지도, 추천, 내정보)                                                 |
 
-### ⚠️ 부분 구현 (약 15%)
+### ⚠️ 부분 구현 (약 10%)
 
-| 영역                           | 상태 | 누락 사항                                                            |
-| ------------------------------ | ---- | -------------------------------------------------------------------- |
-| **Supabase 서버 클라이언트**   | ⚠️   | `createServerSupabaseClient` (세션 기반) 미구현, Service Role만 존재 |
-| **Rate Limiting**              | ⚠️   | presign 라우트에만 적용, 나머지 API 미적용                           |
-| **목격 폼 선택 입력**          | ⚠️   | 견종/색상/태그 선택 UI 미구현 (DB 컬럼은 존재)                       |
-| **추천 페이지 (`/recommend`)** | ⚠️   | 하드코딩 플레이스홀더 UI만 존재                                      |
-| **마이페이지 (`/my`)**         | ⚠️   | 정적 더미 데이터만 표시                                              |
-| **API 응답 형식**              | ⚠️   | `success/data/error` 사용 중이나 spec의 `meta` 필드 미포함           |
+| 영역                           | 상태 | 누락 사항                                                          |
+| ------------------------------ | ---- | ------------------------------------------------------------------ |
+| **Rate Limiting**              | ⚠️   | presign/sightings에만 적용, lost-posts 등 나머지 API 미적용        |
+| **목격 폼 선택 입력**          | ⚠️   | 견종/색상/태그 선택 UI 미구현 (DB 컬럼은 존재)                     |
+| **추천 페이지 (`/recommend`)** | ⚠️   | 하드코딩 플레이스홀더 UI만 존재                                    |
+| **마이페이지 (`/my`)**         | ⚠️   | 로그인·로그아웃·표시명 반영 완료, 내 유실글 목록 링크 등 추가 필요 |
+| **API 응답 형식**              | ⚠️   | `success/data/error` 사용 중이나 spec의 `meta` 필드 미포함         |
 
-### ❌ 미구현 (약 30%)
+### ❌ 미구현 (약 25%)
 
-| 영역                   | 상태 | 필요 사항                                        |
-| ---------------------- | ---- | ------------------------------------------------ |
-| **로그인/회원가입 UI** | ❌   | Supabase Auth 연동 로그인/회원가입 페이지        |
-| **인증 미들웨어**      | ❌   | Next.js middleware — 보호 라우트 리다이렉트      |
-| **유실글 CRUD API**    | ❌   | `POST/GET/PATCH/DELETE /api/v1/lost-posts/*`     |
-| **유실글 UI**          | ❌   | 등록 폼, 목록, 상세, 상태 관리                   |
-| **추천 API**           | ❌   | `GET /api/v1/recommendations` — 벡터 검색 + 캐시 |
-| **임베딩 생성**        | ❌   | 제보/유실글 저장 시 text 임베딩 비동기 생성      |
-| **내 제보 목록**       | ❌   | `GET /api/v1/me/sightings`                       |
-| **내 유실글 목록**     | ❌   | `GET /api/v1/me/lost-posts`                      |
-| **SWR 통합**           | ❌   | 클라이언트 캐싱/재검증 라이브러리                |
-| **에러 바운더리**      | ❌   | 전역 에러 핸들링                                 |
-| **데이터 생명주기**    | ❌   | 28일 초과 데이터 아카이빙                        |
+| 영역                | 상태 | 필요 사항                                        |
+| ------------------- | ---- | ------------------------------------------------ |
+| **인증 미들웨어**   | ❌   | Next.js middleware — 보호 라우트 리다이렉트      |
+| **추천 API**        | ❌   | `GET /api/v1/recommendations` — 벡터 검색 + 캐시 |
+| **임베딩 생성**     | ❌   | 제보/유실글 저장 시 text 임베딩 비동기 생성      |
+| **내 제보 목록**    | ❌   | `GET /api/v1/me/sightings`                       |
+| **SWR 통합**        | ❌   | 클라이언트 캐싱/재검증 라이브러리                |
+| **에러 바운더리**   | ❌   | 전역 에러 핸들링                                 |
+| **데이터 생명주기** | ❌   | 28일 초과 데이터 아카이빙                        |
 
 ---
 
@@ -340,15 +341,15 @@ SightingForm에 추가합니다. DB의 `trait_color`, `trait_size`, `trait_state
 
 **변경 사항:**
 
-- [ ] `src/app/api/v1/lost-posts/route.ts` — POST (생성) + GET (내 목록)
+- [x] `src/app/api/v1/lost-posts/route.ts` — POST (생성) + GET (내 목록)
   - **POST**: 인증 필수, coverPhotoKey, lostAt, lostLocation, traits 저장
   - Idempotency-Key 지원
   - embeddingStatus=pending으로 생성
   - **GET**: 인증 필수, 본인 소유 유실글 목록 (created_at DESC, 페이지네이션)
-- [ ] `src/app/api/v1/lost-posts/[lostPostId]/route.ts` — GET / PATCH / DELETE
+- [x] `src/app/api/v1/lost-posts/[lostPostId]/route.ts` — GET / PATCH / DELETE
   - **GET**: 단건 상세 조회 (본인 소유만)
   - **PATCH**: 상태 변경 (searching → found → closed), traits 수정
-  - **DELETE**: 소프트 삭제 or 하드 삭제
+  - **DELETE**: 하드 삭제, 소유자 검증
   - 소유자 검증 로직
 
 **영향 범위:**
@@ -378,21 +379,22 @@ SightingForm에 추가합니다. DB의 `trait_color`, `trait_size`, `trait_state
 
 **변경 사항:**
 
-- [ ] `src/features/lost-posts/components/LostPostForm.tsx` — 유실글 등록 폼
+- [x] `src/features/lost-posts/components/LostPostForm.tsx` — 유실글 등록 폼
   - 대표 사진 업로드 (Presigned URL, purpose=lost_cover)
   - 유실 위치 (LocationPicker 재활용)
   - 유실 시각 (datetime-local)
-  - 색상, 크기, 상태 선택 (TraitSelector 재활용)
+  - 특징 입력 (색상, 크기, 상태 텍스트)
   - 인증 토큰 포함 요청
-- [ ] `src/features/lost-posts/components/LostPostCard.tsx` — 유실글 카드 컴포넌트
+- [x] `src/features/lost-posts/components/LostPostCard.tsx` — 유실글 카드 컴포넌트
   - 대표 사진 썸네일
   - 상태 뱃지 (searching / found / closed)
   - 유실 일시, 특징 요약
-- [ ] `src/features/lost-posts/components/LostPostList.tsx` — 유실글 목록
-  - SWR로 데이터 페칭
+- [x] `src/features/lost-posts/components/LostPostList.tsx` — 유실글 목록
+  - fetch + useEffect로 목록 페칭
   - 빈 상태 UI ("아직 등록된 유실글이 없습니다")
-- [ ] `src/app/(tabs)/my/lost-posts/new/page.tsx` — 유실글 등록 페이지 (AuthGuard)
-- [ ] `src/app/(tabs)/my/lost-posts/page.tsx` — 내 유실글 목록 페이지
+- [x] `src/app/(tabs)/my/lost-posts/new/page.tsx` — 유실글 등록 페이지 (AuthGuard)
+- [x] `src/app/(tabs)/my/lost-posts/page.tsx` — 내 유실글 목록 페이지
+- [x] `src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx` — 유실글 상세 (최소 조회용, 4-3에서 상태/삭제 UI 추가)
 
 **영향 범위:**
 
@@ -414,14 +416,14 @@ SightingForm에 추가합니다. DB의 `trait_color`, `trait_size`, `trait_state
 
 **변경 사항:**
 
-- [ ] `src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx` — 유실글 상세 페이지
+- [x] `src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx` — 유실글 상세 페이지
   - 대표 사진 (전체 크기)
   - 유실 정보 (위치, 시각, 특징)
   - 상태 변경 버튼 (searching → found → closed)
   - 삭제 버튼 (확인 다이얼로그)
   - "추천 보기" 링크 (→ `/recommend?lostPostId=xxx`)
-- [ ] `src/features/lost-posts/components/StatusBadge.tsx` — 상태 뱃지 컴포넌트
-- [ ] `src/features/lost-posts/hooks/useLostPost.ts` — 단건 조회 SWR 훅
+- [x] `src/features/lost-posts/components/StatusBadge.tsx` — 상태 뱃지 컴포넌트
+- [x] `src/features/lost-posts/hooks/useLostPost.ts` — 단건 조회 훅 (fetch + mutate)
 
 **영향 범위:**
 
@@ -446,13 +448,13 @@ SightingForm에 추가합니다. DB의 `trait_color`, `trait_size`, `trait_state
 
 **변경 사항:**
 
-- [ ] `src/app/(tabs)/my/page.tsx` 리팩토링
+- [x] `src/app/(tabs)/my/page.tsx` 리팩토링
   - `useAuth()` 훅으로 실제 사용자 정보 표시
-  - 로그인/비로그인 분기 UI
+  - 로그인/비로그인 분기 UI (AuthGuard + LoginPrompt)
   - 비로그인: 로그인 유도 UI
   - 로그인: 프로필 정보 + 메뉴 (내 유실글, 내 제보, 로그아웃)
-- [ ] 로그아웃 기능 (Supabase `signOut`)
-- [ ] `src/features/auth/components/LoginPrompt.tsx` — 로그인 유도 컴포넌트
+- [x] 로그아웃 기능 (Supabase `signOut`)
+- [x] `src/features/auth/components/LoginPrompt.tsx` — 로그인 유도 컴포넌트
 
 **영향 범위:**
 
@@ -473,14 +475,14 @@ SightingForm에 추가합니다. DB의 `trait_color`, `trait_size`, `trait_state
 
 **변경 사항:**
 
-- [ ] `src/app/api/v1/me/sightings/route.ts` — GET (내 제보 목록)
-  - 인증 필수 (userId 기반 조회)
-  - Pagination (cursor 기반 or offset)
-  - created_at DESC 정렬
-- [ ] `src/features/sightings/components/MySightingList.tsx` — 내 제보 목록 컴포넌트
-  - 제보 카드 (사진 썸네일 + 위치 + 시각)
-  - SWR 기반 데이터 페칭
-- [ ] `src/app/(tabs)/my/sightings/page.tsx` — 내 제보 목록 페이지
+- [x] `src/app/api/v1/me/sightings/route.ts` — GET (내 제보 목록)
+  - 인증 필수 (RLS로 본인 제보만 조회)
+  - Pagination (limit/offset), created_at DESC 정렬
+- [x] `src/features/sightings/components/MySightingList.tsx` — 내 제보 목록 컴포넌트
+- [x] `src/features/sightings/components/MySightingCard.tsx` — 제보 카드 (사진 썸네일 + 시각 + 지도에서 보기)
+  - fetch 기반 데이터 페칭 (SWR 미사용)
+- [x] `src/app/(tabs)/my/sightings/page.tsx` — 내 제보 목록 페이지 (딥링크용)
+- [x] 내 정보(My) 페이지 "내 제보" 드롭다운에 MySightingList 인라인 표시
 
 **영향 범위:**
 
@@ -499,6 +501,9 @@ SightingForm에 추가합니다. DB의 `trait_color`, `trait_size`, `trait_state
 ---
 
 ### Phase 6: 추천 시스템
+
+유실글에 대한 추천 목록 위계의 관계는, 유실글 삭제시 추천 목록이 사라지긴해야함?
+언제 벡터로 만들건지?
 
 #### Commit 6-1: 임베딩 생성 파이프라인
 
@@ -853,6 +858,30 @@ src/
         ├── Divider.tsx                       # ✅
         └── Container.tsx                     # ✅
 ```
+
+---
+
+## 5. 지도 컴포넌트 설계 (생명주기·API 최소화)
+
+> 일반적인 IT 기업 관점에서 지도 뷰의 부하를 줄이고 유지보수성을 높이기 위한 설계 원칙을 정리합니다.
+
+### 5.1 생명주기 관리
+
+- **싱글톤 지도 인스턴스**: `/map` 페이지에서 `NaverMap` 컴포넌트는 **한 번 마운트된 뒤 유지**합니다. URL 쿼리(`lat`, `lng`, `sightingId`)가 바뀌어도 컴포넌트를 `key`로 재생성하지 않습니다. 지도 인스턴스를 매번 destroy/create 하면 스크립트 로딩·이벤트 리스너·캐시가 초기화되어 불필요한 부하와 타이밍 이슈가 발생합니다.
+- **초기화 시점**: 네이버 지도 스크립트 로드 후 `initMap` 한 번 실행. 이미 `window.naver?.maps`와 DOM이 준비된 경우(탭 전환 등)에는 스크립트 재로드 없이 기존 인스턴스를 재사용합니다.
+- **클린업**: 컴포넌트 언마운트 시에만 `mapInstanceRef.current.destroy()` 및 idle 디바운스 타이머 해제를 수행합니다.
+
+### 5.2 API 요청 최소화
+
+- **마이페이지 → 지도에서 보기**: 내 제보 목록은 이미 인증된 사용자만 접근하므로, 목록 API 응답에 **위도·경도(lat, lng)** 를 포함합니다. "지도에서 보기" 클릭 시 **별도 단건 조회 API 없이** `lat`, `lng`를 쿼리 스트링(`/map?lat=...&lng=...`)으로 전달하고, 지도는 이를 **초기 중심 좌표**로만 사용합니다. (서울 시청 기본값을 해당 좌표로 치환.)
+- **인증 상태**: 마이페이지는 이미 `AuthGuard`로 보호되며, 인증 상태는 `AuthContext`로 전역 관리됩니다. 지도에서 마커/클러스터를 가져올 때는 이 전역 세션을 사용하며, 불필요한 중복 인증 체크나 단건 조회를 하지 않습니다.
+
+### 5.3 데이터 흐름 요약
+
+| 진입 경로           | 전달 데이터              | 지도 동작 |
+| ------------------- | ------------------------ | --------- |
+| 탭에서 `/map` 직접  | 없음                     | 기본 중심(서울 시청) 또는 현재 위치 |
+| 마이페이지 "지도에서 보기" | `lat`, `lng` (쿼리)      | 해당 좌표를 초기 중심으로 설정, 추가 API 없음 |
 
 ---
 

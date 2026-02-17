@@ -9,8 +9,14 @@ import { Toast } from "@/shared/ui/Toast";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { LostPostFormData } from "../model/types";
+import { DOG_BREEDS } from "@/features/sightings/constants/breeds";
 
 const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID || "";
+
+const inputBase =
+  "border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2";
+const selectBase =
+  "border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 pr-10 appearance-none cursor-pointer outline-none focus:ring-2 bg-no-repeat bg-[length:1.25rem] bg-[right_0.75rem_center] bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]";
 
 const initialFormData: LostPostFormData = {
   photo: null,
@@ -20,7 +26,7 @@ const initialFormData: LostPostFormData = {
   lostAt: new Date().toISOString().slice(0, 16),
   traitColor: "",
   traitSize: "",
-  traitState: "",
+  traitSpecies: "",
 };
 
 export function LostPostForm() {
@@ -141,7 +147,7 @@ export function LostPostForm() {
           lostLocation: { lat: formData.lat, lng: formData.lng },
           traitColor: formData.traitColor.trim() || undefined,
           traitSize: formData.traitSize.trim() || undefined,
-          traitState: formData.traitState.trim() || undefined,
+          traitSpecies: formData.traitSpecies.trim() || undefined,
         }),
       });
 
@@ -267,7 +273,7 @@ export function LostPostForm() {
 
         <section className="space-y-3">
           <Text variant="body" className="font-bold">
-            특징 (선택)
+            색상 · 크기 · 종 (선택)
           </Text>
           <input
             type="text"
@@ -275,24 +281,34 @@ export function LostPostForm() {
             value={formData.traitColor}
             onChange={handleChange}
             placeholder="색상"
-            className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2"
+            className={inputBase}
           />
-          <input
-            type="text"
-            name="traitSize"
-            value={formData.traitSize}
-            onChange={handleChange}
-            placeholder="크기"
-            className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2"
-          />
-          <input
-            type="text"
-            name="traitState"
-            value={formData.traitState}
-            onChange={handleChange}
-            placeholder="특징 (예: 목걸이 착용)"
-            className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2"
-          />
+          <div className="grid grid-cols-2 gap-3">
+            <select
+              name="traitSize"
+              value={formData.traitSize}
+              onChange={handleChange}
+              className={selectBase}
+            >
+              <option value="">크기</option>
+              <option value="소">소</option>
+              <option value="중">중</option>
+              <option value="대">대</option>
+            </select>
+            <select
+              name="traitSpecies"
+              value={formData.traitSpecies}
+              onChange={handleChange}
+              className={selectBase}
+            >
+              <option value="">견종</option>
+              {DOG_BREEDS.map((b) => (
+                <option key={b} value={b}>
+                  {b}
+                </option>
+              ))}
+            </select>
+          </div>
         </section>
 
         <Button

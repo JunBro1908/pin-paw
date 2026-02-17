@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/shared/supabase/server";
-import { getClientIp } from "@/shared/lib/ip";
 import { fail, notModified, ApiErrorCode } from "@/shared/lib/api-response";
 import crypto from "crypto";
 
@@ -49,11 +48,6 @@ export async function GET(request: Request) {
   }
 
   const supabase = createServerSupabase();
-
-  // 1.5. Rate Limit
-  // 인프라 레벨(Vercel Firewall/Rate Limiting)에서 처리 예정이므로 코드 레벨에서는 로깅만 수행합니다.
-  const ip = await getClientIp();
-  console.log(`[RateLimit] Request from IP: ${ip}`);
 
   try {
     // 2. 데이터 조회 및 클러스터링 (RPC 호출)

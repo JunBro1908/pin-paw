@@ -14,8 +14,16 @@ import {
 import { createClient, supabase } from "@/shared/supabase/client";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 
+const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
+
 interface NaverMapProps {
   clientId: string;
+  /** 마이페이지 등에서 전달한 초기 중심 좌표 (API 호출 없이 사용) */
+  initialCenter?: { lat: number; lng: number };
+  /** lat/lng 없이 제보 ID만 있을 때만 사용 — 단건 조회 후 중심 이동 (폴백) */
+  initialCenterSightingId?: string;
+  /** 이 ID에 해당하는 제보 상세 카드를 기본으로 열어 둠 (지도에서 보기 진입 시) */
+  initialFocusSightingId?: string;
 }
 
 // 클라이언트 캐시 타입
@@ -24,13 +32,19 @@ interface CacheValue {
   items: MapItem[];
 }
 
-export function NaverMap({ clientId }: NaverMapProps) {
+export function NaverMap({
+  clientId,
+  initialCenter,
+  initialCenterSightingId,
+  initialFocusSightingId,
+}: NaverMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // useAuth 훅을 사용하여 인증 상태 가져오기
   const { session, isLoading: isAuthLoading } = useAuth();
+  const hasCenteredSightingRef = useRef(false);
+  const hasAutoFocusedRef = useRef(false);
   const isAuthenticated = !!session;
 
   // 맵 인스턴스와 마커를 ref로 관리하여 리렌더링 시에도 유지
@@ -71,8 +85,6 @@ export function NaverMap({ clientId }: NaverMapProps) {
    * 현재 위치 찾기 및 지도 이동
    */
   const handleCurrentLocation = useCallback(() => {
-    console.log("handleCurrentLocation called"); // 디버깅용 로그
-
     if (!navigator.geolocation) {
       setToast({
         message: "위치 정보를 지원하지 않는 브라우저입니다.",
@@ -86,8 +98,6 @@ export function NaverMap({ clientId }: NaverMapProps) {
     navigator.geolocation.getCurrentPosition(
       (position) => {
         const { latitude, longitude } = position.coords;
-        console.log("Location found:", latitude, longitude); // 디버깅용 로그
-
         const currentLatLng = new window.naver.maps.LatLng(latitude, longitude);
 
         if (mapInstanceRef.current) {
@@ -274,7 +284,6 @@ export function NaverMap({ clientId }: NaverMapProps) {
    */
   const fetchClusters = useCallback(async () => {
     if (!mapInstanceRef.current) return;
-    // 인증 상태가 정해질 때까지 요청 보내지 않음 (잘못된 엔드포인트 호출 방지)
     if (isAuthLoading) return;
 
     const bounds = mapInstanceRef.current.getBounds();
@@ -332,13 +341,6 @@ export function NaverMap({ clientId }: NaverMapProps) {
         ? "/api/v1/auth/map/markers"
         : "/api/v1/public/map/clusters";
 
-      console.log(
-        "[NaverMap] isAuthenticated:",
-        isAuthenticated,
-        "endpoint:",
-        endpoint
-      );
-
       const response = await fetch(`${endpoint}?${params}`, {
         headers,
         credentials: "include", // 세션 쿠키 전달 (인증 API 401 방지)
@@ -394,21 +396,18 @@ export function NaverMap({ clientId }: NaverMapProps) {
   } | null>(null);
 
   /**
-   * 지도 초기화 함수
+   * 지도 초기화 함수 (싱글톤 — 한 번만 생성)
    */
   const initMap = useCallback(() => {
     if (!mapRef.current || !window.naver?.maps || mapInstanceRef.current)
       return;
 
     try {
-      // 1. 기본 옵션으로 지도 생성 (일단 시청역 중심)
+      const center = initialCenter ?? DEFAULT_CENTER;
       const mapOptions = {
-        center: new window.naver.maps.LatLng(37.5665, 126.978),
-        zoom: 13,
-        zoomControl: true,
-        zoomControlOptions: {
-          position: window.naver.maps.Position.RIGHT_CENTER,
-        },
+        center: new window.naver.maps.LatLng(center.lat, center.lng),
+        zoom: initialCenter ? 16 : 13,
+        zoomControl: false,
       };
 
       mapInstanceRef.current = new window.naver.maps.Map(
@@ -416,14 +415,12 @@ export function NaverMap({ clientId }: NaverMapProps) {
         mapOptions
       );
 
-      // 2. 이벤트 리스너 등록
       window.naver.maps.Event.addListener(
         mapInstanceRef.current,
         "idle",
         handleMapIdle
       );
 
-      // 지도 클릭 시 선택된 마커 해제
       window.naver.maps.Event.addListener(
         mapInstanceRef.current,
         "click",
@@ -434,13 +431,102 @@ export function NaverMap({ clientId }: NaverMapProps) {
 
       setIsLoaded(true);
 
-      // 3. 지도가 로드되면 즉시 내 위치 찾기 시도
-      handleCurrentLocation();
+      if (!initialCenter && !initialCenterSightingId) {
+        handleCurrentLocation();
+      }
     } catch (err) {
       console.error("Naver Map Init Error:", err);
       setError("지도를 초기화하는 중 오류가 발생했습니다.");
     }
-  }, [handleMapIdle, handleCurrentLocation]); // handleCurrentLocation을 dependency에 넣음
+  }, [
+    handleMapIdle,
+    handleCurrentLocation,
+    initialCenter,
+    initialCenterSightingId,
+  ]);
+
+  // initialCenter / initialCenterSightingId 변경 시 중심 이동 허용
+  useEffect(() => {
+    hasCenteredSightingRef.current = false;
+  }, [initialCenter, initialCenterSightingId]);
+
+  // initialFocusSightingId 변경 시 자동 포커스 리셋
+  useEffect(() => {
+    hasAutoFocusedRef.current = false;
+  }, [initialFocusSightingId]);
+
+  // 마커 로드 후 해당 제보 상세 카드를 기본으로 열기
+  useEffect(() => {
+    if (
+      !initialFocusSightingId ||
+      hasAutoFocusedRef.current ||
+      itemsInView.length === 0
+    )
+      return;
+    const point = itemsInView.find(
+      (item): item is MapItem & { type: "point"; id: string } =>
+        item.type === "point" && item.id === initialFocusSightingId
+    );
+    if (point) {
+      setSelectedSighting(point);
+      hasAutoFocusedRef.current = true;
+    }
+  }, [initialFocusSightingId, itemsInView]);
+
+  // initialCenter가 URL 등으로 바뀌면 기존 맵 인스턴스만 pan (추가 API 없음)
+  useEffect(() => {
+    if (!initialCenter || !mapInstanceRef.current || !window.naver?.maps)
+      return;
+    const center = new window.naver.maps.LatLng(
+      initialCenter.lat,
+      initialCenter.lng
+    );
+    mapInstanceRef.current.panTo(center);
+    mapInstanceRef.current.setZoom(16);
+  }, [initialCenter]);
+
+  // 폴백: lat/lng 없이 제보 ID만 있을 때 단건 조회 후 중심 이동
+  useEffect(() => {
+    if (
+      !isLoaded ||
+      !initialCenterSightingId ||
+      !mapInstanceRef.current ||
+      !window.naver?.maps ||
+      hasCenteredSightingRef.current
+    )
+      return;
+
+    const mapRef = mapInstanceRef.current;
+    const headers: HeadersInit = {};
+    if (session?.access_token)
+      headers["Authorization"] = `Bearer ${session.access_token}`;
+
+    fetch(`/api/v1/me/sightings/${initialCenterSightingId}`, {
+      credentials: "include",
+      headers,
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((json) => {
+        if (
+          json?.success &&
+          json?.data?.lat != null &&
+          json?.data?.lng != null &&
+          mapRef
+        ) {
+          const { lat, lng } = json.data;
+          const center = new window.naver.maps.LatLng(lat, lng);
+          // 지도가 완전히 준비된 뒤 이동 (한 프레임 대기)
+          requestAnimationFrame(() => {
+            if (mapInstanceRef.current) {
+              mapInstanceRef.current.panTo(center);
+              mapInstanceRef.current.setZoom(16);
+              hasCenteredSightingRef.current = true;
+            }
+          });
+        }
+      })
+      .catch(() => {});
+  }, [isLoaded, initialCenterSightingId, session?.access_token]);
 
   useEffect(() => {
     if (window.naver?.maps && !mapInstanceRef.current) {
@@ -449,7 +535,6 @@ export function NaverMap({ clientId }: NaverMapProps) {
 
     return () => {
       if (mapInstanceRef.current) {
-        // 이벤트 리스너 제거는 destroy()에서 자동으로 처리될 수 있지만 명시적으로 관리하는 것이 좋음
         if (window.naver?.maps?.Event) {
           window.naver.maps.Event.clearInstanceListeners(
             mapInstanceRef.current
@@ -464,12 +549,12 @@ export function NaverMap({ clientId }: NaverMapProps) {
     };
   }, [initMap]);
 
-  // 인증 상태 변경 시 클러스터 다시 가져오기
+  // 인증/로드 상태 변경 시 마커·클러스터 재요청 (전역 AuthContext 사용)
   useEffect(() => {
     if (mapInstanceRef.current && isLoaded) {
       fetchClusters();
     }
-  }, [isAuthenticated, fetchClusters, isLoaded]);
+  }, [isAuthenticated, isAuthLoading, fetchClusters, isLoaded]);
 
   if (error) {
     return (
@@ -488,6 +573,16 @@ export function NaverMap({ clientId }: NaverMapProps) {
 
       <div className="bg-surface relative h-full w-full">
         <div ref={mapRef} className="h-full w-full" />
+
+        {/* 상세 카드 열렸을 때 지도 영역 음영 (클릭 시 카드 닫기) */}
+        {selectedSighting && selectedSighting.type === "point" && (
+          <button
+            type="button"
+            aria-label="상세 닫기"
+            onClick={() => setSelectedSighting(null)}
+            className="absolute inset-0 z-40 bg-black/30 transition-opacity duration-200"
+          />
+        )}
 
         {/* 제보 상세 정보 카드 */}
         {selectedSighting && selectedSighting.type === "point" && (
@@ -540,59 +635,64 @@ export function NaverMap({ clientId }: NaverMapProps) {
                     </div>
                   )}
 
-                  <div className="p-6">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <Text variant="title" className="text-2xl font-black">
-                          {selectedSighting.author_type === "anon"
-                            ? "익명 제보자"
-                            : "회원 제보"}
-                        </Text>
-                        <Text
-                          variant="caption"
-                          color="caption"
-                          className="mt-1 block text-sm"
-                        >
-                          {selectedSighting.occurred_at
-                            ? new Date(
-                                selectedSighting.occurred_at
-                              ).toLocaleString("ko-KR", {
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : ""}
-                        </Text>
-                      </div>
-                    </div>
-
-                    <div className="mb-5 flex flex-wrap gap-2">
-                      {selectedSighting.trait_color && (
-                        <span className="bg-primary/10 text-primary rounded-xl px-3 py-1.5 text-xs font-bold">
-                          {selectedSighting.trait_color}
-                        </span>
-                      )}
-                      {selectedSighting.trait_size && (
-                        <span className="rounded-xl bg-gray-100 px-3 py-1.5 text-xs font-bold text-gray-600 dark:bg-gray-800 dark:text-gray-300">
-                          {selectedSighting.trait_size}
-                        </span>
-                      )}
-                      {selectedSighting.trait_state && (
-                        <span className="rounded-xl bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 dark:bg-amber-900/20 dark:text-amber-400">
-                          {selectedSighting.trait_state}
-                        </span>
-                      )}
-                    </div>
-
-                    <div className="rounded-2xl bg-gray-50 p-4 dark:bg-gray-900/50">
-                      <Text
-                        variant="body"
-                        className="text-[15px] leading-relaxed text-gray-700 dark:text-gray-300"
-                      >
-                        {selectedSighting.note || "상세 설명이 없습니다."}
+                  <div className="space-y-5 p-6">
+                    <div>
+                      <Text variant="title" className="text-xl font-bold">
+                        {selectedSighting.author_type === "anon"
+                          ? "익명 제보"
+                          : "회원 제보"}
                       </Text>
+                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                        {selectedSighting.occurred_at
+                          ? new Date(
+                              selectedSighting.occurred_at
+                            ).toLocaleString("ko-KR", {
+                              year: "numeric",
+                              month: "long",
+                              day: "numeric",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })
+                          : ""}
+                      </p>
+                    </div>
+
+                    {(selectedSighting.trait_color ||
+                      selectedSighting.trait_size ||
+                      selectedSighting.trait_species) && (
+                      <div>
+                        <p className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
+                          색상 · 크기 · 종
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedSighting.trait_color && (
+                            <span className="bg-primary/10 text-primary rounded-lg px-2.5 py-1 text-xs font-medium">
+                              {selectedSighting.trait_color}
+                            </span>
+                          )}
+                          {selectedSighting.trait_size && (
+                            <span className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                              {selectedSighting.trait_size}
+                            </span>
+                          )}
+                          {selectedSighting.trait_species && (
+                            <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                              {selectedSighting.trait_species}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    <div>
+                      <p className="mb-1.5 text-sm font-medium text-gray-500 dark:text-gray-400">
+                        추가 설명
+                      </p>
+                      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-900/50">
+                        <p className="text-[15px] leading-relaxed text-gray-800 dark:text-gray-200">
+                          {selectedSighting.note || "상세 설명이 없습니다."}
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -766,6 +866,11 @@ export function NaverMap({ clientId }: NaverMapProps) {
                               {item.trait_size && (
                                 <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap text-gray-500 dark:bg-gray-800">
                                   {item.trait_size}
+                                </span>
+                              )}
+                              {item.trait_species && (
+                                <span className="rounded-lg bg-amber-50 px-2 py-0.5 text-[10px] font-bold whitespace-nowrap text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                  {item.trait_species}
                                 </span>
                               )}
                             </div>

@@ -9,7 +9,7 @@ export interface LostPostFormData {
   lostAt: string;
   traitColor: string;
   traitSize: string;
-  traitState: string;
+  traitSpecies: string;
 }
 
 /**
@@ -22,7 +22,7 @@ export interface LostPostItem {
   lost_location?: unknown;
   trait_color: string | null;
   trait_size: string | null;
-  trait_state: string | null;
+  trait_species: string | null;
   status: "searching" | "found" | "closed";
   embedding_status: string;
   created_at: string;

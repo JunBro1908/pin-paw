@@ -1,8 +1,29 @@
+"use client";
+
+import { useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { Text } from "@/shared/ui/Text";
 import { NaverMap } from "@/features/map/components/NaverMap";
 
 export default function MapPage() {
   const clientId = process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
+  const searchParams = useSearchParams();
+  const latParam = searchParams.get("lat");
+  const lngParam = searchParams.get("lng");
+  const sightingId = searchParams.get("sightingId");
+
+  const initialCenter = useMemo(() => {
+    if (
+      latParam == null ||
+      lngParam == null ||
+      Number.isNaN(Number(latParam)) ||
+      Number.isNaN(Number(lngParam))
+    )
+      return undefined;
+    return { lat: Number(latParam), lng: Number(lngParam) };
+  }, [latParam, lngParam]);
+
+  const initialFocusSightingId = searchParams.get("sightingId") ?? undefined;
 
   return (
     <div className="relative h-[calc(100dvh-80px)] w-full overflow-hidden">
@@ -26,7 +47,14 @@ export default function MapPage() {
           </Text>
         </div>
       ) : (
-        <NaverMap clientId={clientId} />
+        <NaverMap
+          clientId={clientId}
+          initialCenter={initialCenter ?? undefined}
+          initialCenterSightingId={
+            initialCenter ? undefined : (sightingId ?? undefined)
+          }
+          initialFocusSightingId={initialFocusSightingId}
+        />
       )}
     </div>
   );

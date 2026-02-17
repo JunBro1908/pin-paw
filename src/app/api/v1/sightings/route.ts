@@ -8,7 +8,15 @@ export async function POST(request: Request) {
   const supabase = createServerSupabase();
 
   try {
-    const { photoKeys, location, occurredAt, note } = await request.json();
+    const {
+      photoKeys,
+      location,
+      occurredAt,
+      traitColor,
+      traitSize,
+      traitSpecies,
+      note,
+    } = await request.json();
 
     if (!photoKeys || !location || !occurredAt) {
       return fail(
@@ -71,7 +79,10 @@ export async function POST(request: Request) {
           occurred_at: occurredAt,
           location: geographyPoint,
           photo_keys: photoKeys,
-          note: note || null,
+          trait_color: traitColor ?? null,
+          trait_size: traitSize ?? null,
+          trait_species: traitSpecies ?? null,
+          note: note ?? null,
           embedding_status: "pending",
         },
       ])

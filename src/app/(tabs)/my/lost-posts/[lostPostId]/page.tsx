@@ -11,6 +11,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useLostPost } from "@/features/lost-posts/hooks/useLostPost";
 import { StatusBadge } from "@/features/lost-posts/components/StatusBadge";
 import { createClient } from "@/shared/supabase/client";
+import { DOG_BREEDS } from "@/features/sightings/constants/breeds";
 import { useState } from "react";
 
 function LostPostDetailContent() {
@@ -29,7 +30,7 @@ function LostPostDetailContent() {
   const [editForm, setEditForm] = useState({
     traitColor: "",
     traitSize: "",
-    traitState: "",
+    traitSpecies: "",
     status: "searching" as "searching" | "found" | "closed",
   });
 
@@ -119,7 +120,7 @@ function LostPostDetailContent() {
     setEditForm({
       traitColor: item.trait_color ?? "",
       traitSize: item.trait_size ?? "",
-      traitState: item.trait_state ?? "",
+      traitSpecies: item.trait_species ?? "",
       status: item.status,
     });
     setShowEditModal(true);
@@ -139,7 +140,7 @@ function LostPostDetailContent() {
         body: JSON.stringify({
           traitColor: editForm.traitColor.trim() || undefined,
           traitSize: editForm.traitSize.trim() || undefined,
-          traitState: editForm.traitState.trim() || undefined,
+          traitSpecies: editForm.traitSpecies.trim() || undefined,
           status: editForm.status,
         }),
       });
@@ -166,9 +167,10 @@ function LostPostDetailContent() {
   const lostAt = item.lost_at
     ? new Date(item.lost_at).toLocaleString("ko-KR")
     : "";
-  const traits = [item.trait_color, item.trait_size, item.trait_state]
+  const colorSize = [item.trait_color, item.trait_size]
     .filter(Boolean)
     .join(" · ");
+  const traitSpecies = item.trait_species?.trim() || null;
 
   return (
     <Container className="py-8">
@@ -206,7 +208,8 @@ function LostPostDetailContent() {
         </button>
       </div>
 
-      <div className="mb-4 overflow-hidden rounded-2xl bg-gray-100">
+      {/* 1. 사진 */}
+      <div className="overflow-hidden rounded-2xl bg-gray-100">
         {coverUrl ? (
           <img
             src={coverUrl}
@@ -220,39 +223,43 @@ function LostPostDetailContent() {
         )}
       </div>
 
-      <div className="mb-6">
-        <StatusBadge status={item.status} size="md" />
-      </div>
+      <div className="border-border-subtle my-6 border-t dark:border-gray-700" />
 
-      <Text variant="title" className="mb-2">
-        유실 일시
-      </Text>
-      <Text variant="body" className="mb-6">
-        {lostAt}
-      </Text>
+      {/* 2. 내용 + 버튼 */}
+      <div className="space-y-5">
+        {/* 1 row: 상태 뱃지만 */}
+        <div>
+          <StatusBadge status={item.status} size="md" />
+        </div>
 
-      {traits ? (
-        <>
-          <Text variant="body" className="mb-1 font-bold">
-            특징
-          </Text>
-          <Text variant="body" className="mb-6">
-            {traits}
-          </Text>
-        </>
-      ) : null}
+        {/* 아래 줄부터: 유실 일시, 색상·크기(dot), 특징(memo) */}
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+              유실 일시
+            </p>
+            <p className="mt-0.5 text-[15px] leading-snug">{lostAt}</p>
+          </div>
 
-      <Link href={`/recommend?lostPostId=${item.id}`} className="mb-6 block">
-        <Button variant="primary" className="w-full">
-          이 유실글의 추천 제보 보기
-        </Button>
-      </Link>
+          {colorSize ? (
+            <div>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                색상 · 크기
+              </p>
+              <p className="mt-0.5 text-[15px] leading-snug">{colorSize}</p>
+            </div>
+          ) : null}
 
-      {/* 상태 변경 */}
-      <section className="mb-6 space-y-2">
-        <Text variant="caption" color="caption" className="block">
-          상태 변경
-        </Text>
+          {traitSpecies ? (
+            <div>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                종
+              </p>
+              <p className="mt-0.5 text-[15px] leading-snug">{traitSpecies}</p>
+            </div>
+          ) : null}
+        </div>
+
         {item.status === "searching" && (
           <Button
             variant="secondary"
@@ -288,17 +295,26 @@ function LostPostDetailContent() {
           </Button>
         )}
         {item.status === "closed" && (
-          <Text variant="caption" color="caption">
+          <p className="text-sm text-gray-500 dark:text-gray-400">
             마감된 유실글입니다.
-          </Text>
+          </p>
         )}
-      </section>
 
-      <div className="border-t border-gray-200 pt-4 dark:border-gray-700">
+        <Link href={`/recommend?lostPostId=${item.id}`} className="block">
+          <Button variant="primary" className="w-full">
+            이 유실글의 추천 제보 보기
+          </Button>
+        </Link>
+      </div>
+
+      <div className="border-border-subtle my-6 border-t dark:border-gray-700" />
+
+      {/* 3. 삭제 */}
+      <div className="pt-1">
         <button
           type="button"
           onClick={() => setShowDeleteConfirm(true)}
-          className="text-sm font-medium text-red-600 hover:underline dark:text-red-400"
+          className="text-sm text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
         >
           유실글 삭제
         </button>
@@ -353,8 +369,7 @@ function LostPostDetailContent() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">크기</label>
-                <input
-                  type="text"
+                <select
                   value={editForm.traitSize}
                   onChange={(e) =>
                     setEditForm((prev) => ({
@@ -362,24 +377,33 @@ function LostPostDetailContent() {
                       traitSize: e.target.value,
                     }))
                   }
-                  placeholder="크기"
                   className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2"
-                />
+                >
+                  <option value="">선택</option>
+                  <option value="소">소</option>
+                  <option value="중">중</option>
+                  <option value="대">대</option>
+                </select>
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium">특징</label>
-                <input
-                  type="text"
-                  value={editForm.traitState}
+                <label className="mb-1 block text-sm font-medium">종</label>
+                <select
+                  value={editForm.traitSpecies}
                   onChange={(e) =>
                     setEditForm((prev) => ({
                       ...prev,
-                      traitState: e.target.value,
+                      traitSpecies: e.target.value,
                     }))
                   }
-                  placeholder="예: 목걸이 착용"
                   className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2"
-                />
+                >
+                  <option value="">선택</option>
+                  {DOG_BREEDS.map((b) => (
+                    <option key={b} value={b}>
+                      {b}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div className="flex gap-3 pt-2">
                 <Button
