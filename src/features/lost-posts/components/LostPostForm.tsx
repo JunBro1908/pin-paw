@@ -27,6 +27,7 @@ const initialFormData: LostPostFormData = {
   traitColor: "",
   traitSize: "",
   traitSpecies: "",
+  description: "",
 };
 
 export function LostPostForm() {
@@ -148,6 +149,7 @@ export function LostPostForm() {
           traitColor: formData.traitColor.trim() || undefined,
           traitSize: formData.traitSize.trim() || undefined,
           traitSpecies: formData.traitSpecies.trim() || undefined,
+          note: formData.description.trim() || undefined,
         }),
       });
 
@@ -309,6 +311,20 @@ export function LostPostForm() {
               ))}
             </select>
           </div>
+        </section>
+
+        <section className="space-y-3">
+          <Text variant="body" className="font-bold">
+            추가 설명 (선택)
+          </Text>
+          <textarea
+            name="description"
+            value={formData.description}
+            onChange={handleChange}
+            placeholder="상세 정보를 입력해주세요"
+            rows={4}
+            className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full resize-none rounded-xl border bg-white px-4 py-4 outline-none focus:ring-2"
+          />
         </section>
 
         <Button

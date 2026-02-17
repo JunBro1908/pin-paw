@@ -64,6 +64,15 @@ export function LostPostCard({ item, href }: LostPostCardProps) {
             {traits}
           </Text>
         ) : null}
+        {item.note?.trim() ? (
+          <Text
+            variant="caption"
+            color="caption"
+            className="mt-0.5 line-clamp-2 truncate"
+          >
+            {item.note}
+          </Text>
+        ) : null}
       </div>
     </Link>
   );

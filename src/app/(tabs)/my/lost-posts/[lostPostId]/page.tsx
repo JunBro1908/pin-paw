@@ -31,6 +31,7 @@ function LostPostDetailContent() {
     traitColor: "",
     traitSize: "",
     traitSpecies: "",
+    note: "",
     status: "searching" as "searching" | "found" | "closed",
   });
 
@@ -121,6 +122,7 @@ function LostPostDetailContent() {
       traitColor: item.trait_color ?? "",
       traitSize: item.trait_size ?? "",
       traitSpecies: item.trait_species ?? "",
+      note: item.note ?? "",
       status: item.status,
     });
     setShowEditModal(true);
@@ -141,6 +143,7 @@ function LostPostDetailContent() {
           traitColor: editForm.traitColor.trim() || undefined,
           traitSize: editForm.traitSize.trim() || undefined,
           traitSpecies: editForm.traitSpecies.trim() || undefined,
+          note: editForm.note.trim() || undefined,
           status: editForm.status,
         }),
       });
@@ -256,6 +259,17 @@ function LostPostDetailContent() {
                 종
               </p>
               <p className="mt-0.5 text-[15px] leading-snug">{traitSpecies}</p>
+            </div>
+          ) : null}
+
+          {item.note?.trim() ? (
+            <div>
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+                추가 설명
+              </p>
+              <p className="mt-0.5 text-[15px] leading-relaxed whitespace-pre-wrap text-gray-800 dark:text-gray-200">
+                {item.note}
+              </p>
             </div>
           ) : null}
         </div>
@@ -404,6 +418,20 @@ function LostPostDetailContent() {
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  추가 설명
+                </label>
+                <textarea
+                  value={editForm.note}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({ ...prev, note: e.target.value }))
+                  }
+                  placeholder="상세 정보를 입력해주세요"
+                  rows={4}
+                  className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full resize-none rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2"
+                />
               </div>
               <div className="flex gap-3 pt-2">
                 <Button

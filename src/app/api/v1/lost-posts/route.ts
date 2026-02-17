@@ -48,6 +48,7 @@ export async function POST(request: Request) {
       traitColor,
       traitSize,
       traitSpecies,
+      note,
     } = body;
 
     if (!coverPhotoKey || !lostAt || !lostLocation) {
@@ -79,6 +80,7 @@ export async function POST(request: Request) {
         traitColor: traitColor ?? null,
         traitSize: traitSize ?? null,
         traitSpecies: traitSpecies ?? null,
+        note: note ?? null,
       })
     );
 
@@ -113,6 +115,7 @@ export async function POST(request: Request) {
         trait_color: traitColor ?? null,
         trait_size: traitSize ?? null,
         trait_species: traitSpecies ?? null,
+        note: note ?? null,
         status: "searching",
         embedding_status: "pending",
       })
@@ -174,7 +177,7 @@ export async function GET(request: Request) {
   const { data: rows, error } = await supabaseAuth
     .from("lost_posts")
     .select(
-      "id, cover_photo_key, lost_at, lost_location, trait_color, trait_size, trait_species, status, embedding_status, created_at, updated_at"
+      "id, cover_photo_key, lost_at, lost_location, trait_color, trait_size, trait_species, note, status, embedding_status, created_at, updated_at"
     )
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);

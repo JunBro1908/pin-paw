@@ -41,7 +41,7 @@ export async function GET(request: Request, context: RouteContext) {
 
 /**
  * PATCH /api/v1/lost-posts/[lostPostId] — 상태·특징 수정 (본인 소유만)
- * Body: { status?, traitColor?, traitSize?, traitState? }
+ * Body: { status?, traitColor?, traitSize?, traitSpecies?, note? }
  */
 export async function PATCH(request: Request, context: RouteContext) {
   const { lostPostId } = await context.params;
@@ -86,6 +86,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (body.traitSize !== undefined) updates.trait_size = body.traitSize;
   if (body.traitSpecies !== undefined)
     updates.trait_species = body.traitSpecies;
+  if (body.note !== undefined) updates.note = body.note;
   if (Object.keys(updates).length === 0) {
     const { data: current } = await supabaseAuth
       .from("lost_posts")

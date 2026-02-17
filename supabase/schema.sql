@@ -70,6 +70,7 @@ create table if not exists public.lost_posts (
   trait_color text null,
   trait_size  text null,
   trait_species text null,
+  note text null,
 
   status lost_status not null default 'searching',
 
