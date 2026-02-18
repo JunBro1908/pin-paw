@@ -6,6 +6,7 @@ import { Button } from "@/shared/ui/Button";
 import { SightingFormData } from "../model/types";
 import { validateSightingForm } from "../lib/validators";
 import { cn } from "@/shared/lib/cn";
+import { toLocalDatetimeLocalString } from "@/shared/lib/date";
 import { Toast } from "@/shared/ui/Toast";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { supabase } from "@/shared/supabase/client";
@@ -22,7 +23,7 @@ export function SightingForm() {
     photoUrl: null,
     lat: 37.5665,
     lng: 126.978,
-    time: new Date().toISOString().slice(0, 16),
+    time: toLocalDatetimeLocalString(),
     traitColor: "",
     traitSize: "",
     traitSpecies: "",
@@ -406,7 +407,7 @@ export function SightingForm() {
               type="datetime-local"
               name="time"
               value={formData.time}
-              max={new Date().toISOString().slice(0, 16)}
+              max={toLocalDatetimeLocalString()}
               onChange={handleChange}
               className={cn(inputBase, "py-4")}
             />

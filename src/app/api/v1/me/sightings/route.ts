@@ -1,4 +1,7 @@
-import { createServerSupabaseClient } from "@/shared/supabase/server";
+import {
+  createServerSupabaseClient,
+  getAuthenticatedUser,
+} from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 
 /**
@@ -8,11 +11,8 @@ import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
  */
 export async function GET(request: Request) {
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabase);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",

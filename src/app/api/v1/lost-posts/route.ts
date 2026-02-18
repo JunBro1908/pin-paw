@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   createServerSupabase,
   createServerSupabaseClient,
+  getAuthenticatedUser,
 } from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 import { sha256 } from "@/shared/lib/hash";
@@ -25,11 +26,8 @@ function parseIdempotencyKey(header: string | null): string {
  */
 export async function POST(request: Request) {
   const supabaseAuth = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabaseAuth.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabaseAuth);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",
@@ -46,6 +44,7 @@ export async function POST(request: Request) {
       coverPhotoKey,
       lostAt,
       lostLocation,
+      petName,
       traitColor,
       traitSize,
       traitSpecies,
@@ -56,6 +55,14 @@ export async function POST(request: Request) {
       return fail(
         ApiErrorCode.VALIDATION_ERROR,
         "coverPhotoKey, lostAt, lostLocation은 필수입니다.",
+        400
+      );
+    }
+    const petNameTrimmed = typeof petName === "string" ? petName.trim() : "";
+    if (!petNameTrimmed) {
+      return fail(
+        ApiErrorCode.VALIDATION_ERROR,
+        "강아지 이름(petName)은 필수입니다.",
         400
       );
     }
@@ -78,6 +85,7 @@ export async function POST(request: Request) {
         coverPhotoKey,
         lostAt,
         lostLocation: { lat, lng },
+        petName: petNameTrimmed,
         traitColor: traitColor ?? null,
         traitSize: traitSize ?? null,
         traitSpecies: traitSpecies ?? null,
@@ -90,7 +98,7 @@ export async function POST(request: Request) {
       .select("response, request_hash")
       .eq("scope", SCOPE)
       .eq("key", idempotencyKey)
-      .eq("owner_id", session.user.id)
+      .eq("owner_id", user.id)
       .maybeSingle();
 
     if (cached) {
@@ -109,8 +117,9 @@ export async function POST(request: Request) {
     const { data: row, error } = await supabaseAuth
       .from("lost_posts")
       .insert({
-        owner_id: session.user.id,
+        owner_id: user.id,
         cover_photo_key: coverPhotoKey,
+        pet_name: petNameTrimmed,
         lost_at: lostAt,
         lost_location: lostLocationWkt,
         trait_color: traitColor ?? null,
@@ -136,7 +145,7 @@ export async function POST(request: Request) {
     await supabaseAdmin.from("idempotency_keys").insert({
       scope: SCOPE,
       key: idempotencyKey,
-      owner_id: session.user.id,
+      owner_id: user.id,
       ip_hash: null,
       request_hash: requestHash,
       response: responsePayload,
@@ -169,11 +178,8 @@ export async function POST(request: Request) {
  */
 export async function GET(request: Request) {
   const supabaseAuth = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabaseAuth.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabaseAuth);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",
@@ -191,7 +197,7 @@ export async function GET(request: Request) {
   const { data: rows, error } = await supabaseAuth
     .from("lost_posts")
     .select(
-      "id, cover_photo_key, lost_at, lost_location, trait_color, trait_size, trait_species, note, status, embedding_status, created_at, updated_at"
+      "id, cover_photo_key, pet_name, lost_at, lost_location, trait_color, trait_size, trait_species, note, status, embedding_status, created_at, updated_at"
     )
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);

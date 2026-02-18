@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import type { User } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
@@ -47,3 +48,22 @@ export const createServerSupabaseClient = async () => {
     }
   );
 };
+
+/**
+ * 쿠키 기반 Supabase 클라이언트에서 검증된 사용자 조회.
+ * getSession()의 user 대신 getUser(access_token)으로 Auth 서버 검증 후 반환합니다.
+ */
+export async function getAuthenticatedUser(
+  supabase: Awaited<ReturnType<typeof createServerSupabaseClient>>
+): Promise<{ user: User } | { user: null }> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session?.access_token) return { user: null };
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser(session.access_token);
+  if (error || !user) return { user: null };
+  return { user };
+}

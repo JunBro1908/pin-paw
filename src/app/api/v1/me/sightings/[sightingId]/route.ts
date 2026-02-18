@@ -1,4 +1,7 @@
-import { createServerSupabaseClient } from "@/shared/supabase/server";
+import {
+  createServerSupabaseClient,
+  getAuthenticatedUser,
+} from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 
 type RouteContext = { params: Promise<{ sightingId: string }> };
@@ -9,11 +12,8 @@ type RouteContext = { params: Promise<{ sightingId: string }> };
 export async function GET(request: Request, context: RouteContext) {
   const { sightingId } = await context.params;
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabase);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",
@@ -49,11 +49,8 @@ export async function GET(request: Request, context: RouteContext) {
 export async function DELETE(request: Request, context: RouteContext) {
   const { sightingId } = await context.params;
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabase);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",
@@ -76,7 +73,7 @@ export async function DELETE(request: Request, context: RouteContext) {
     return fail(ApiErrorCode.NOT_FOUND, "제보를 찾을 수 없습니다.", 404);
   }
 
-  if (existing.user_id !== session.user.id) {
+  if (existing.user_id !== user.id) {
     return fail(
       ApiErrorCode.FORBIDDEN,
       "본인이 등록한 제보만 삭제할 수 있습니다.",

@@ -1,4 +1,7 @@
-import { createServerSupabaseClient } from "@/shared/supabase/server";
+import {
+  createServerSupabaseClient,
+  getAuthenticatedUser,
+} from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 
 /**
@@ -10,11 +13,8 @@ export async function GET(
   { params }: { params: Promise<{ lostPostId: string }> }
 ) {
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabase);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",
@@ -31,7 +31,7 @@ export async function GET(
     .from("lost_posts")
     .select("id")
     .eq("id", lostPostId)
-    .eq("owner_id", session.user.id)
+    .eq("owner_id", user.id)
     .maybeSingle();
 
   if (!lostPost) {
@@ -65,11 +65,8 @@ export async function POST(
   { params }: { params: Promise<{ lostPostId: string }> }
 ) {
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabase);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",
@@ -86,7 +83,7 @@ export async function POST(
     .from("lost_posts")
     .select("id")
     .eq("id", lostPostId)
-    .eq("owner_id", session.user.id)
+    .eq("owner_id", user.id)
     .maybeSingle();
 
   if (!lostPost) {

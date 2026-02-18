@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import {
   createServerSupabase,
   createServerSupabaseClient,
+  getAuthenticatedUser,
 } from "@/shared/supabase/server";
 import { fail, notModified, ApiErrorCode } from "@/shared/lib/api-response";
 import crypto from "crypto";
@@ -11,13 +12,9 @@ import crypto from "crypto";
  * 인증된 사용자를 위한 상세 목격 제보 마커 데이터를 반환합니다.
  */
 export async function GET(request: Request) {
-  // 쿠키 기반 세션 확인
   const supabaseAuth = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabaseAuth.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabaseAuth);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",

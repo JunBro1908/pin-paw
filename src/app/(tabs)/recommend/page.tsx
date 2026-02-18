@@ -139,6 +139,7 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
   const calculatedAtLabel =
     recommendations?.calculatedAt && recommendations.status === "ready"
       ? new Date(recommendations.calculatedAt).toLocaleString("ko-KR", {
+          timeZone: "Asia/Seoul",
           month: "short",
           day: "numeric",
           hour: "2-digit",

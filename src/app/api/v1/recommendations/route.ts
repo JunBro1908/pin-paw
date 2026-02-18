@@ -1,6 +1,7 @@
 import {
   createServerSupabaseClient,
   createServerSupabase,
+  getAuthenticatedUser,
 } from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 
@@ -17,11 +18,8 @@ function buildCacheKey(radiusKm: number, days: number, topK: number): string {
  */
 export async function GET(request: Request) {
   const supabaseAuth = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabaseAuth.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabaseAuth);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",

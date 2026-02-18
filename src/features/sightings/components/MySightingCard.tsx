@@ -24,6 +24,7 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
 
   const occurredAt = item.occurred_at
     ? new Date(item.occurred_at).toLocaleString("ko-KR", {
+        timeZone: "Asia/Seoul",
         month: "short",
         day: "numeric",
         hour: "2-digit",

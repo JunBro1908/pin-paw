@@ -28,6 +28,7 @@ function LostPostDetailContent() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [editForm, setEditForm] = useState({
+    petName: "",
     traitColor: "",
     traitSize: "",
     traitSpecies: "",
@@ -119,6 +120,7 @@ function LostPostDetailContent() {
 
   const openEditModal = () => {
     setEditForm({
+      petName: item.pet_name ?? "",
       traitColor: item.trait_color ?? "",
       traitSize: item.trait_size ?? "",
       traitSpecies: item.trait_species ?? "",
@@ -140,6 +142,7 @@ function LostPostDetailContent() {
           Authorization: `Bearer ${session.access_token}`,
         },
         body: JSON.stringify({
+          petName: editForm.petName.trim(),
           traitColor: editForm.traitColor.trim() || undefined,
           traitSize: editForm.traitSize.trim() || undefined,
           traitSpecies: editForm.traitSpecies.trim() || undefined,
@@ -168,7 +171,9 @@ function LostPostDetailContent() {
     ? ref.getPublicUrl(item.cover_photo_key).data.publicUrl
     : "";
   const lostAt = item.lost_at
-    ? new Date(item.lost_at).toLocaleString("ko-KR")
+    ? new Date(item.lost_at).toLocaleString("ko-KR", {
+        timeZone: "Asia/Seoul",
+      })
     : "";
   const colorSize = [item.trait_color, item.trait_size]
     .filter(Boolean)
@@ -233,6 +238,16 @@ function LostPostDetailContent() {
         {/* 1 row: 상태 뱃지만 */}
         <div>
           <StatusBadge status={item.status} size="md" />
+        </div>
+
+        {/* 강아지 이름 */}
+        <div>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">
+            강아지 이름
+          </p>
+          <p className="mt-0.5 text-[15px] leading-snug font-medium">
+            {item.pet_name?.trim() || "미입력"}
+          </p>
         </div>
 
         {/* 아래 줄부터: 유실 일시, 색상·크기(dot), 특징(memo) */}
@@ -365,6 +380,24 @@ function LostPostDetailContent() {
                   <option value="found">찾았어요</option>
                   <option value="closed">마감</option>
                 </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  강아지 이름 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={editForm.petName}
+                  onChange={(e) =>
+                    setEditForm((prev) => ({
+                      ...prev,
+                      petName: e.target.value,
+                    }))
+                  }
+                  placeholder="예: 초코, 망고"
+                  className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2"
+                  required
+                />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">색상</label>

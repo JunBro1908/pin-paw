@@ -1,4 +1,7 @@
-import { createServerSupabaseClient } from "@/shared/supabase/server";
+import {
+  createServerSupabaseClient,
+  getAuthenticatedUser,
+} from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 
 /**
@@ -7,11 +10,8 @@ import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
  */
 export async function GET(request: Request) {
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabase);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",
@@ -47,7 +47,7 @@ export async function GET(request: Request) {
   const { data: rows, error } = await supabase
     .from("user_sighting_views")
     .select("sighting_id, seen_at")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .in("sighting_id", sightingIds);
 
   if (error) {
@@ -69,11 +69,8 @@ export async function GET(request: Request) {
  */
 export async function POST(request: Request) {
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabase);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",
@@ -96,7 +93,7 @@ export async function POST(request: Request) {
   const { data: existing } = await supabase
     .from("user_sighting_views")
     .select("seen_at")
-    .eq("user_id", session.user.id)
+    .eq("user_id", user.id)
     .eq("sighting_id", sightingId)
     .maybeSingle();
 
@@ -108,7 +105,7 @@ export async function POST(request: Request) {
         seen_at: existing.seen_at ?? now,
         updated_at: now,
       })
-      .eq("user_id", session.user.id)
+      .eq("user_id", user.id)
       .eq("sighting_id", sightingId);
     if (error) {
       console.error("[sighting-views] POST update error:", error);
@@ -116,7 +113,7 @@ export async function POST(request: Request) {
     }
   } else {
     const { error } = await supabase.from("user_sighting_views").insert({
-      user_id: session.user.id,
+      user_id: user.id,
       sighting_id: sightingId,
       seen_at: now,
       updated_at: now,

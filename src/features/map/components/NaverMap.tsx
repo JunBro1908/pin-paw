@@ -88,6 +88,23 @@ export function NaverMap({
   /** 7-5: 지도 상세 카드에서 인정/해제 버튼 상태 표시용 (포인트 id → 피드백) */
   const [sightingFeedbackMap, setSightingFeedbackMap] =
     useState<SightingFeedbackMap>({});
+  /** 7-5: lostPostId 없이 지도 진입 시, 내 유실글 목록 (북마크 모달에서 강아지 이름 표시) */
+  const [myLostPosts, setMyLostPosts] = useState<
+    { id: string; pet_name?: string; lost_at?: string }[]
+  >([]);
+  const [selectedLostPostIdForClaim, setSelectedLostPostIdForClaim] = useState<
+    string | null
+  >(null);
+  /** 7-5: 북마크 등록/해제 시 유실글 선택 모달 */
+  const [bookmarkModalOpen, setBookmarkModalOpen] = useState(false);
+  const [bookmarkModalMode, setBookmarkModalMode] = useState<
+    "register" | "unregister"
+  >("register");
+  /** 7-5: 북마크 해제 모달에서만 사용 — 이 제보를 북마크한 내 유실글 목록 */
+  const [claimedLostPostsForSighting, setClaimedLostPostsForSighting] =
+    useState<
+      { id: string; pet_name?: string; lost_at?: string | null }[] | null
+    >(null);
 
   /** 7-5: 지도에서 제보(마커) 클릭 시 "본 적 있음" 기록 */
   const recordSeen = useCallback(
@@ -502,6 +519,96 @@ export function NaverMap({
     type: "success" | "error";
   } | null>(null);
 
+  /** 7-5: 지도 상세 열림 + URL에 lostPostId 없을 때 내 유실글 목록 조회 (버튼 표시용) */
+  useEffect(() => {
+    if (
+      !isAuthenticated ||
+      !session?.access_token ||
+      !selectedSighting ||
+      initialLostPostId
+    )
+      return;
+    fetch("/api/v1/lost-posts?limit=50", {
+      credentials: "include",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then((r) => r.json())
+      .then((res) => {
+        if (res?.success && Array.isArray(res.data)) {
+          setMyLostPosts(
+            res.data.map(
+              (p: { id: string; pet_name?: string; lost_at?: string }) => ({
+                id: p.id,
+                pet_name: p.pet_name,
+                lost_at: p.lost_at,
+              })
+            )
+          );
+          if (res.data.length >= 1) {
+            setSelectedLostPostIdForClaim((prev) => prev || res.data[0].id);
+          }
+        }
+      })
+      .catch(() => setMyLostPosts([]));
+  }, [
+    isAuthenticated,
+    session?.access_token,
+    selectedSighting,
+    initialLostPostId,
+  ]);
+
+  /** 7-5.6.1: 추천 페이지 "지도에서 보기" 진입 시(initialLostPostId 있음) 해당 유실글 1건만 로드 → 북마크 별 노출 */
+  useEffect(() => {
+    if (
+      !initialLostPostId ||
+      !isAuthenticated ||
+      !session?.access_token ||
+      !selectedSighting
+    )
+      return;
+    fetch(`/api/v1/lost-posts/${initialLostPostId}`, {
+      credentials: "include",
+      headers: { Authorization: `Bearer ${session.access_token}` },
+    })
+      .then((r) => r.json())
+      .then((res) => {
+        if (res?.success && res.data?.id) {
+          const p = res.data as {
+            id: string;
+            pet_name?: string;
+            lost_at?: string;
+          };
+          setMyLostPosts([
+            { id: p.id, pet_name: p.pet_name, lost_at: p.lost_at },
+          ]);
+          setSelectedLostPostIdForClaim((prev) => prev || p.id);
+        }
+      })
+      .catch(() => {});
+  }, [
+    initialLostPostId,
+    isAuthenticated,
+    session?.access_token,
+    selectedSighting,
+  ]);
+
+  /** 7-5: 북마크 버튼에 사용할 유실글 ID (URL 기준 또는 내 유실글 1개 또는 선택값) */
+  const effectiveLostPostId =
+    initialLostPostId ??
+    (myLostPosts.length === 1
+      ? myLostPosts[0].id
+      : (selectedLostPostIdForClaim ?? myLostPosts[0]?.id));
+
+  /** 7-5: 북마크 모달 열려 있을 때 Escape로 닫기 */
+  useEffect(() => {
+    if (!bookmarkModalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setBookmarkModalOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [bookmarkModalOpen]);
+
   /**
    * 지도 초기화 함수 (싱글톤 — 한 번만 생성)
    */
@@ -757,25 +864,112 @@ export function NaverMap({
                   )}
 
                   <div className="space-y-5 p-6">
-                    <div>
-                      <Text variant="title" className="text-xl font-bold">
-                        {selectedSighting.author_type === "anon"
-                          ? "익명 제보"
-                          : "회원 제보"}
-                      </Text>
-                      <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        {selectedSighting.occurred_at
-                          ? new Date(
-                              selectedSighting.occurred_at
-                            ).toLocaleString("ko-KR", {
-                              year: "numeric",
-                              month: "long",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })
-                          : ""}
-                      </p>
+                    {/* 익명 제보·제보일과 같은 row에 북마크 별 */}
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <Text variant="title" className="text-xl font-bold">
+                          {selectedSighting.author_type === "anon"
+                            ? "익명 제보"
+                            : "회원 제보"}
+                        </Text>
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                          {selectedSighting.occurred_at
+                            ? new Date(
+                                selectedSighting.occurred_at
+                              ).toLocaleString("ko-KR", {
+                                timeZone: "Asia/Seoul",
+                                year: "numeric",
+                                month: "long",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : ""}
+                        </p>
+                      </div>
+                      {isAuthenticated &&
+                        session?.access_token &&
+                        "id" in selectedSighting &&
+                        myLostPosts.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              const sid = selectedSighting.id as string;
+                              const isClaimed =
+                                sightingFeedbackMap[normalizeSightingId(sid)]
+                                  ?.claimed;
+                              if (isClaimed) {
+                                setBookmarkModalMode("unregister");
+                                setBookmarkModalOpen(true);
+                                setClaimedLostPostsForSighting(null);
+                                fetch(
+                                  `/api/v1/me/sighting-claims/${encodeURIComponent(sid)}`,
+                                  {
+                                    credentials: "include",
+                                    headers: {
+                                      Authorization: `Bearer ${session.access_token}`,
+                                    },
+                                  }
+                                )
+                                  .then((r) => r.json())
+                                  .then((res) => {
+                                    if (
+                                      res?.success &&
+                                      Array.isArray(res.data?.lostPosts)
+                                    ) {
+                                      setClaimedLostPostsForSighting(
+                                        res.data.lostPosts
+                                      );
+                                    } else {
+                                      setClaimedLostPostsForSighting([]);
+                                    }
+                                  })
+                                  .catch(() =>
+                                    setClaimedLostPostsForSighting([])
+                                  );
+                              } else {
+                                setBookmarkModalMode("register");
+                                setClaimedLostPostsForSighting(null);
+                                setBookmarkModalOpen(true);
+                              }
+                            }}
+                            className="shrink-0 rounded-full p-2 transition-transform active:scale-95"
+                            aria-label={
+                              sightingFeedbackMap[
+                                normalizeSightingId(
+                                  selectedSighting.id as string
+                                )
+                              ]?.claimed
+                                ? "북마크 해제"
+                                : "북마크 등록"
+                            }
+                          >
+                            {sightingFeedbackMap[
+                              normalizeSightingId(selectedSighting.id as string)
+                            ]?.claimed ? (
+                              <svg
+                                className="h-8 w-8 text-yellow-500"
+                                viewBox="0 0 24 24"
+                                fill="currentColor"
+                              >
+                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                              </svg>
+                            ) : (
+                              <svg
+                                className="h-8 w-8 text-gray-400"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              >
+                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 20.27 12 17.77 5.82 20.27 7 14.14 2 9.27 8.91 8.26 12 2" />
+                              </svg>
+                            )}
+                          </button>
+                        )}
                     </div>
 
                     {(selectedSighting.trait_color ||
@@ -815,68 +1009,190 @@ export function NaverMap({
                         </p>
                       </div>
                     </div>
-
-                    {/* 7-5: 지도 상세에서 "내 강아지로 인정" 버튼 (유실글 컨텍스트 시) */}
-                    {isAuthenticated &&
-                      session?.access_token &&
-                      "id" in selectedSighting &&
-                      initialLostPostId && (
-                        <div className="flex flex-wrap gap-2 pt-2">
-                          <Button
-                            type="button"
-                            variant={
-                              sightingFeedbackMap[
-                                normalizeSightingId(
-                                  selectedSighting.id as string
-                                )
-                              ]?.claimed
-                                ? "secondary"
-                                : "primary"
-                            }
-                            className="py-2 text-sm"
-                            onClick={async (e) => {
-                              e.preventDefault();
-                              const sid = selectedSighting.id as string;
-                              const url = `/api/v1/me/lost-posts/${initialLostPostId}/sighting-claims`;
-                              const isClaimed =
-                                sightingFeedbackMap[normalizeSightingId(sid)]
-                                  ?.claimed;
-                              if (isClaimed) {
-                                await fetch(`${url}/${sid}`, {
-                                  method: "DELETE",
-                                  credentials: "include",
-                                  headers: {
-                                    Authorization: `Bearer ${session.access_token}`,
-                                  },
-                                });
-                              } else {
-                                await fetch(url, {
-                                  method: "POST",
-                                  credentials: "include",
-                                  headers: {
-                                    "Content-Type": "application/json",
-                                    Authorization: `Bearer ${session.access_token}`,
-                                  },
-                                  body: JSON.stringify({ sightingId: sid }),
-                                });
-                              }
-                              fetchClusters();
-                            }}
-                          >
-                            {sightingFeedbackMap[
-                              normalizeSightingId(selectedSighting.id as string)
-                            ]?.claimed
-                              ? "인정 해제"
-                              : "내 강아지로 인정"}
-                          </Button>
-                        </div>
-                      )}
                   </div>
                 </div>
               </div>
             </div>
           </div>
         )}
+
+        {/* 7-5: 북마크 등록/해제 — 유실글 선택 모달 */}
+        {bookmarkModalOpen &&
+          selectedSighting &&
+          "id" in selectedSighting &&
+          session?.access_token && (
+            <div
+              className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4"
+              onClick={() => {
+                setBookmarkModalOpen(false);
+                setClaimedLostPostsForSighting(null);
+              }}
+              role="dialog"
+              aria-modal="true"
+              aria-label="유실글 선택"
+            >
+              <div
+                className="bg-surface flex max-h-[85vh] w-full max-w-lg flex-col rounded-2xl border border-gray-200 shadow-xl dark:border-gray-700"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className="border-border-subtle flex items-center justify-between border-b px-6 py-5">
+                  <Text variant="title" className="text-lg">
+                    {bookmarkModalMode === "unregister"
+                      ? "해제할 대상을 선택하세요"
+                      : "등록할 대상을 선택하세요"}
+                  </Text>
+                  <button
+                    type="button"
+                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
+                    onClick={() => {
+                      setBookmarkModalOpen(false);
+                      setClaimedLostPostsForSighting(null);
+                    }}
+                    aria-label="닫기"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-6">
+                  {bookmarkModalMode === "unregister" ? (
+                    <ul className="flex flex-col gap-3">
+                      {claimedLostPostsForSighting === null ? (
+                        <li className="py-4 text-center text-gray-500 dark:text-gray-400">
+                          불러오는 중…
+                        </li>
+                      ) : claimedLostPostsForSighting.length === 0 ? (
+                        <li className="py-4 text-center text-gray-500 dark:text-gray-400">
+                          이 제보를 북마크한 유실글이 없습니다.
+                        </li>
+                      ) : (
+                        claimedLostPostsForSighting.map((p) => (
+                          <li key={p.id}>
+                            <div className="bg-muted/50 hover:bg-muted flex w-full items-center justify-between gap-4 rounded-xl border border-gray-200 px-5 py-4 dark:border-gray-600 dark:hover:bg-gray-700/50">
+                              <span className="flex min-w-0 flex-1 items-center gap-3">
+                                <span className="text-xl">🐕</span>
+                                <span className="text-base font-medium text-gray-800 dark:text-gray-200">
+                                  <span className="text-gray-500 dark:text-gray-400">
+                                    강아지 이름{" "}
+                                  </span>
+                                  {p.pet_name?.trim() || "미입력"}
+                                  {p.lost_at ? (
+                                    <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                                      ·{" "}
+                                      {new Date(p.lost_at).toLocaleDateString(
+                                        "ko-KR",
+                                        {
+                                          timeZone: "Asia/Seoul",
+                                        }
+                                      )}
+                                    </span>
+                                  ) : null}
+                                </span>
+                              </span>
+                              <button
+                                type="button"
+                                className="text-primary hover:bg-primary/10 shrink-0 rounded-lg px-3 py-1.5 text-sm font-medium"
+                                onClick={async () => {
+                                  const sid = selectedSighting.id as string;
+                                  const res = await fetch(
+                                    `/api/v1/me/lost-posts/${encodeURIComponent(p.id)}/sighting-claims/${encodeURIComponent(sid)}`,
+                                    {
+                                      method: "DELETE",
+                                      credentials: "include",
+                                      headers: {
+                                        Authorization: `Bearer ${session.access_token}`,
+                                      },
+                                    }
+                                  );
+                                  const data = await res.json();
+                                  if (data?.success) {
+                                    setClaimedLostPostsForSighting((prev) =>
+                                      prev
+                                        ? prev.filter((x) => x.id !== p.id)
+                                        : []
+                                    );
+                                    fetchClusters();
+                                    if (
+                                      claimedLostPostsForSighting?.length <= 1
+                                    ) {
+                                      setBookmarkModalOpen(false);
+                                      setClaimedLostPostsForSighting(null);
+                                    }
+                                  }
+                                }}
+                              >
+                                해제
+                              </button>
+                            </div>
+                          </li>
+                        ))
+                      )}
+                    </ul>
+                  ) : (
+                    <ul className="flex flex-col gap-3">
+                      {myLostPosts
+                        .filter((p) => {
+                          const sightingOccurredAt =
+                            selectedSighting &&
+                            "occurred_at" in selectedSighting
+                              ? selectedSighting.occurred_at
+                              : null;
+                          if (!sightingOccurredAt || !p.lost_at) return true;
+                          return (
+                            new Date(p.lost_at).getTime() <=
+                            new Date(sightingOccurredAt).getTime()
+                          );
+                        })
+                        .map((p) => (
+                          <li key={p.id}>
+                            <button
+                              type="button"
+                              className="bg-muted/50 hover:bg-muted flex w-full items-center gap-4 rounded-xl border border-gray-200 px-5 py-4 text-left transition-colors dark:border-gray-600 dark:hover:bg-gray-700/50"
+                              onClick={async () => {
+                                const sid = selectedSighting.id as string;
+                                await fetch(
+                                  `/api/v1/me/lost-posts/${p.id}/sighting-claims`,
+                                  {
+                                    method: "POST",
+                                    credentials: "include",
+                                    headers: {
+                                      "Content-Type": "application/json",
+                                      Authorization: `Bearer ${session.access_token}`,
+                                    },
+                                    body: JSON.stringify({ sightingId: sid }),
+                                  }
+                                );
+                                setBookmarkModalOpen(false);
+                                setClaimedLostPostsForSighting(null);
+                                fetchClusters();
+                              }}
+                            >
+                              <span className="text-xl">🐕</span>
+                              <span className="text-base font-medium text-gray-800 dark:text-gray-200">
+                                <span className="text-gray-500 dark:text-gray-400">
+                                  강아지 이름{" "}
+                                </span>
+                                {p.pet_name?.trim() || "미입력"}
+                                {p.lost_at ? (
+                                  <span className="ml-2 text-sm text-gray-500 dark:text-gray-400">
+                                    ·{" "}
+                                    {new Date(p.lost_at).toLocaleDateString(
+                                      "ko-KR",
+                                      {
+                                        timeZone: "Asia/Seoul",
+                                      }
+                                    )}
+                                  </span>
+                                ) : null}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
 
         {/* 목록 보기 하단 시트 */}
         {isListViewOpen && (
@@ -1023,7 +1339,9 @@ export function NaverMap({
                                   {item.occurred_at
                                     ? new Date(
                                         item.occurred_at
-                                      ).toLocaleDateString()
+                                      ).toLocaleDateString("ko-KR", {
+                                        timeZone: "Asia/Seoul",
+                                      })
                                     : "날짜 정보 없음"}
                                 </Text>
                               </div>

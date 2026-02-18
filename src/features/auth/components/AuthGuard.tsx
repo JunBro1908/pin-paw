@@ -23,8 +23,8 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
     return (
       <>
         {fallback ?? (
-          <div className="flex min-h-[60vh] items-center justify-center">
-            <p className="text-gray-600">로딩 중...</p>
+          <div className="flex min-h-[60vh] flex-col items-center justify-center px-5">
+            <p className="text-text-sub text-center text-sm">로딩 중...</p>
           </div>
         )}
       </>

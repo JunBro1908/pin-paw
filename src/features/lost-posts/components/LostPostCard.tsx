@@ -21,6 +21,7 @@ export function LostPostCard({ item, href }: LostPostCardProps) {
 
   const lostAt = item.lost_at
     ? new Date(item.lost_at).toLocaleString("ko-KR", {
+        timeZone: "Asia/Seoul",
         month: "short",
         day: "numeric",
         hour: "2-digit",
@@ -56,7 +57,13 @@ export function LostPostCard({ item, href }: LostPostCardProps) {
         <span className="mb-1 block">
           <StatusBadge status={item.status} size="sm" />
         </span>
-        <Text variant="body" className="font-medium">
+        <Text variant="body" className="font-semibold">
+          {item.pet_name?.trim() || "미입력"}
+        </Text>
+        <Text
+          variant="body"
+          className="text-sm text-gray-600 dark:text-gray-400"
+        >
           {lostAt}
         </Text>
         {traits ? (

@@ -6,6 +6,7 @@ export interface LostPostFormData {
   photoUrl: string | null;
   lat: number;
   lng: number;
+  petName: string;
   lostAt: string;
   traitColor: string;
   traitSize: string;
@@ -19,6 +20,7 @@ export interface LostPostFormData {
 export interface LostPostItem {
   id: string;
   cover_photo_key: string;
+  pet_name: string;
   lost_at: string;
   lost_location?: unknown;
   trait_color: string | null;

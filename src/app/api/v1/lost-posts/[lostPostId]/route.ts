@@ -1,6 +1,7 @@
 import {
   createServerSupabaseClient,
   createServerSupabase,
+  getAuthenticatedUser,
 } from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 import { triggerEmbeddingsProcess } from "@/shared/lib/embeddings-worker";
@@ -13,11 +14,8 @@ type RouteContext = { params: Promise<{ lostPostId: string }> };
 export async function GET(request: Request, context: RouteContext) {
   const { lostPostId } = await context.params;
   const supabaseAuth = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabaseAuth.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabaseAuth);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",
@@ -50,11 +48,8 @@ export async function GET(request: Request, context: RouteContext) {
 export async function PATCH(request: Request, context: RouteContext) {
   const { lostPostId } = await context.params;
   const supabaseAuth = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabaseAuth.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabaseAuth);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",
@@ -85,6 +80,17 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
     updates.status = status;
+  }
+  if (body.petName !== undefined) {
+    const v = String(body.petName).trim();
+    if (!v) {
+      return fail(
+        ApiErrorCode.VALIDATION_ERROR,
+        "강아지 이름은 비워둘 수 없습니다.",
+        400
+      );
+    }
+    updates.pet_name = v;
   }
   if (body.traitColor !== undefined) updates.trait_color = body.traitColor;
   if (body.traitSize !== undefined) updates.trait_size = body.traitSize;
@@ -135,11 +141,8 @@ export async function PATCH(request: Request, context: RouteContext) {
 export async function DELETE(request: Request, context: RouteContext) {
   const { lostPostId } = await context.params;
   const supabaseAuth = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabaseAuth.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabaseAuth);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",

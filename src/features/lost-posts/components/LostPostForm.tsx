@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { cn } from "@/shared/lib/cn";
+import { toLocalDatetimeLocalString } from "@/shared/lib/date";
 import { Toast } from "@/shared/ui/Toast";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -18,22 +19,24 @@ const inputBase =
 const selectBase =
   "border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 pr-10 appearance-none cursor-pointer outline-none focus:ring-2 bg-no-repeat bg-[length:1.25rem] bg-[right_0.75rem_center] bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]";
 
-const initialFormData: LostPostFormData = {
+const getInitialFormData = (): LostPostFormData => ({
   photo: null,
   photoUrl: null,
   lat: 37.5665,
   lng: 126.978,
-  lostAt: new Date().toISOString().slice(0, 16),
+  petName: "",
+  lostAt: toLocalDatetimeLocalString(),
   traitColor: "",
   traitSize: "",
   traitSpecies: "",
   description: "",
-};
+});
 
 export function LostPostForm() {
   const router = useRouter();
   const { session } = useAuth();
-  const [formData, setFormData] = useState<LostPostFormData>(initialFormData);
+  const [formData, setFormData] =
+    useState<LostPostFormData>(getInitialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
@@ -144,6 +147,7 @@ export function LostPostForm() {
         },
         body: JSON.stringify({
           coverPhotoKey: fileKey,
+          petName: formData.petName.trim(),
           lostAt: new Date(formData.lostAt).toISOString(),
           lostLocation: { lat: formData.lat, lng: formData.lng },
           traitColor: formData.traitColor.trim() || undefined,
@@ -229,6 +233,21 @@ export function LostPostForm() {
 
         <section className="space-y-3">
           <Text variant="body" className="font-bold">
+            강아지 이름 <span className="text-primary">*</span>
+          </Text>
+          <input
+            type="text"
+            name="petName"
+            value={formData.petName}
+            onChange={handleChange}
+            placeholder="예: 초코, 망고"
+            className={inputBase}
+            maxLength={50}
+          />
+        </section>
+
+        <section className="space-y-3">
+          <Text variant="body" className="font-bold">
             유실 위치 <span className="text-primary">*</span>
           </Text>
           <button
@@ -267,7 +286,7 @@ export function LostPostForm() {
             type="datetime-local"
             name="lostAt"
             value={formData.lostAt}
-            max={new Date().toISOString().slice(0, 16)}
+            max={toLocalDatetimeLocalString()}
             onChange={handleChange}
             className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-4 outline-none focus:ring-2"
           />

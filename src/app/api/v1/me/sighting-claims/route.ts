@@ -1,4 +1,7 @@
-import { createServerSupabaseClient } from "@/shared/supabase/server";
+import {
+  createServerSupabaseClient,
+  getAuthenticatedUser,
+} from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 
 /**
@@ -8,11 +11,8 @@ import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
  */
 export async function GET() {
   const supabase = await createServerSupabaseClient();
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  if (!session) {
+  const { user } = await getAuthenticatedUser(supabase);
+  if (!user) {
     return fail(
       ApiErrorCode.UNAUTHORIZED,
       "로그인이 필요한 서비스입니다.",
@@ -23,7 +23,7 @@ export async function GET() {
   const { data: myLostPosts, error: lostError } = await supabase
     .from("lost_posts")
     .select("id")
-    .eq("owner_id", session.user.id);
+    .eq("owner_id", user.id);
 
   if (lostError || !myLostPosts?.length) {
     return ok({ sightingIds: [] });
@@ -44,4 +44,54 @@ export async function GET() {
     ...new Set((rows ?? []).map((r) => r.sighting_id as string)),
   ];
   return ok({ sightingIds });
+}
+
+/**
+ * DELETE /api/v1/me/sighting-claims
+ * body: { sightingId: string }
+ * 해당 제보를 내 유실글 북마크에서 해제 (어느 유실글이든 1건만 있어도 삭제).
+ */
+export async function DELETE(request: Request) {
+  const supabase = await createServerSupabaseClient();
+  const { user } = await getAuthenticatedUser(supabase);
+  if (!user) {
+    return fail(
+      ApiErrorCode.UNAUTHORIZED,
+      "로그인이 필요한 서비스입니다.",
+      401
+    );
+  }
+
+  let body: { sightingId?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return fail(ApiErrorCode.VALIDATION_ERROR, "JSON 본문이 필요합니다.", 400);
+  }
+  const sightingId = body.sightingId;
+  if (!sightingId || typeof sightingId !== "string") {
+    return fail(ApiErrorCode.VALIDATION_ERROR, "sightingId가 필요합니다.", 400);
+  }
+
+  const { data: myLostPosts, error: lostError } = await supabase
+    .from("lost_posts")
+    .select("id")
+    .eq("owner_id", user.id);
+
+  if (lostError || !myLostPosts?.length) {
+    return ok({ success: true });
+  }
+
+  const lostPostIds = myLostPosts.map((p) => p.id);
+  const { error } = await supabase
+    .from("lost_post_sighting_claims")
+    .delete()
+    .eq("sighting_id", sightingId)
+    .in("lost_post_id", lostPostIds);
+
+  if (error) {
+    console.error("[sighting-claims] DELETE error:", error);
+    return fail(ApiErrorCode.INTERNAL_ERROR, "해제에 실패했습니다.", 500);
+  }
+  return ok({ success: true });
 }

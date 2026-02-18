@@ -12,13 +12,13 @@ export function LoginPrompt() {
   const { signInWithKakao } = useAuth();
 
   return (
-    <div className="flex min-h-[60vh] items-center justify-center px-4">
-      <div className="w-full max-w-sm space-y-6 text-center">
-        <div>
+    <div className="flex min-h-[60vh] flex-col items-center justify-center px-5 py-10">
+      <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center">
+        <div className="flex flex-col items-center gap-2">
           <Text variant="title" className="block">
             로그인이 필요합니다
           </Text>
-          <Text variant="caption" color="caption" className="mt-2 block">
+          <Text variant="caption" color="caption" className="block">
             유실글 등록, 내 제보 확인 등 서비스를 이용하려면 로그인해 주세요.
           </Text>
         </div>
@@ -26,7 +26,7 @@ export function LoginPrompt() {
         <button
           type="button"
           onClick={signInWithKakao}
-          className="mx-auto block transition-opacity hover:opacity-90"
+          className="flex w-full justify-center transition-opacity hover:opacity-90"
           aria-label="카카오 로그인"
         >
           <Image
