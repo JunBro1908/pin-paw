@@ -150,6 +150,7 @@ create table if not exists public.embeddings (
   model text not null default 'text-embedding-3-small',
 
   status embedding_status not null default 'pending',
+  retry_count integer not null default 0,
 
   -- NOTE: dim은 모델에 맞춰 변경. 예: text-embedding-3-small = 1536
   embedding vector(1536) null,

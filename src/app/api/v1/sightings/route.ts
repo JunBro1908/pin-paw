@@ -3,6 +3,7 @@ import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 import { getClientIp } from "@/shared/lib/ip";
 import { sha256 } from "@/shared/lib/hash";
 import { checkRateLimit, RateLimitPresets } from "@/shared/lib/rate-limit";
+import { triggerEmbeddingsProcess } from "@/shared/lib/embeddings-worker";
 
 export async function POST(request: Request) {
   const supabase = createServerSupabase();
@@ -115,6 +116,19 @@ export async function POST(request: Request) {
         expires_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(), // 24시간
       });
     }
+
+    // 임베딩: pending 삽입 후 worker fire-and-forget
+    await supabase.from("embeddings").upsert(
+      {
+        entity_type: "sighting",
+        entity_id: data.id,
+        modality: "text",
+        status: "pending",
+        retry_count: 0,
+      },
+      { onConflict: "entity_type,entity_id,modality" }
+    );
+    triggerEmbeddingsProcess(request);
 
     return ok(data);
   } catch (err) {

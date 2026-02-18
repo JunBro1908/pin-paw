@@ -5,6 +5,7 @@ import {
 } from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 import { sha256 } from "@/shared/lib/hash";
+import { triggerEmbeddingsProcess } from "@/shared/lib/embeddings-worker";
 
 const SCOPE = "lost-posts:create";
 const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24h
@@ -141,6 +142,19 @@ export async function POST(request: Request) {
       response: responsePayload,
       expires_at: new Date(now.getTime() + IDEMPOTENCY_TTL_MS).toISOString(),
     });
+
+    // 임베딩: pending 삽입 후 worker fire-and-forget
+    await supabaseAdmin.from("embeddings").upsert(
+      {
+        entity_type: "lost_post",
+        entity_id: row.id,
+        modality: "text",
+        status: "pending",
+        retry_count: 0,
+      },
+      { onConflict: "entity_type,entity_id,modality" }
+    );
+    triggerEmbeddingsProcess(request);
 
     return NextResponse.json(responsePayload, { status: 201 });
   } catch (err) {

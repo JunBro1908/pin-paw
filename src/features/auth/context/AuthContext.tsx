@@ -89,6 +89,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const signInWithKakao = useCallback(async () => {
     if (!supabase) return;
     const currentPath = window.location.pathname;
+
     await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: {

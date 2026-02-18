@@ -1,5 +1,9 @@
-import { createServerSupabaseClient } from "@/shared/supabase/server";
+import {
+  createServerSupabaseClient,
+  createServerSupabase,
+} from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
+import { triggerEmbeddingsProcess } from "@/shared/lib/embeddings-worker";
 
 type RouteContext = { params: Promise<{ lostPostId: string }> };
 
@@ -108,6 +112,20 @@ export async function PATCH(request: Request, context: RouteContext) {
     return fail(ApiErrorCode.INTERNAL_ERROR, "수정에 실패했습니다.", 500);
   }
 
+  // 특징/메모 수정 시 임베딩 재생성: pending upsert 후 worker 호출
+  const supabaseAdmin = createServerSupabase();
+  await supabaseAdmin.from("embeddings").upsert(
+    {
+      entity_type: "lost_post",
+      entity_id: lostPostId,
+      modality: "text",
+      status: "pending",
+      retry_count: 0,
+    },
+    { onConflict: "entity_type,entity_id,modality" }
+  );
+  triggerEmbeddingsProcess(request);
+
   return ok(row);
 }
 
@@ -138,6 +156,13 @@ export async function DELETE(request: Request, context: RouteContext) {
   if (!existing) {
     return fail(ApiErrorCode.NOT_FOUND, "유실글을 찾을 수 없습니다.", 404);
   }
+
+  const supabaseAdmin = createServerSupabase();
+  await supabaseAdmin
+    .from("embeddings")
+    .delete()
+    .eq("entity_type", "lost_post")
+    .eq("entity_id", lostPostId);
 
   const { error } = await supabaseAuth
     .from("lost_posts")
