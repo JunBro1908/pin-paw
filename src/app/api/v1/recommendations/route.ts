@@ -75,17 +75,43 @@ export async function GET(request: Request) {
     .gt("expires_at", now.toISOString())
     .maybeSingle();
 
+  type RecoItem = {
+    sightingId: string;
+    similarity: number;
+    photoKeys: string[];
+    occurredAt: string;
+    lat: number;
+    lng: number;
+  };
+
+  const applyFeedback = async (
+    rawItems: RecoItem[]
+  ): Promise<(RecoItem & { claimedAsMyDog: boolean })[]> => {
+    if (rawItems.length === 0) return [];
+    const { data: claimsRows } = await supabaseAuth
+      .from("lost_post_sighting_claims")
+      .select("sighting_id")
+      .eq("lost_post_id", lostPostId);
+
+    const claimedSet = new Set(
+      (claimsRows ?? []).map((r) => r.sighting_id as string)
+    );
+    const claimedFirst = [
+      ...rawItems.filter((i) => claimedSet.has(i.sightingId)),
+      ...rawItems.filter((i) => !claimedSet.has(i.sightingId)),
+    ];
+    return claimedFirst.map((i) => ({
+      ...i,
+      claimedAsMyDog: claimedSet.has(i.sightingId),
+    }));
+  };
+
   if (!cacheError && cached?.result) {
+    const rawItems = cached.result as RecoItem[];
+    const items = await applyFeedback(rawItems);
     return ok({
       status: "ready" as const,
-      items: cached.result as Array<{
-        sightingId: string;
-        similarity: number;
-        photoKeys: string[];
-        occurredAt: string;
-        lat: number;
-        lng: number;
-      }>,
+      items,
       calculatedAt: cached.calculated_at ?? undefined,
     });
   }
@@ -109,7 +135,9 @@ export async function GET(request: Request) {
     return ok({ status: "pending" as const, items: [] });
   }
 
-  const result = Array.isArray(items) ? items : (items as unknown[]);
+  const result = Array.isArray(items)
+    ? items
+    : (items as unknown[] as RecoItem[]);
 
   await supabaseAdmin.from("recommendation_cache").upsert(
     {
@@ -122,16 +150,10 @@ export async function GET(request: Request) {
     { onConflict: "lost_post_id,cache_key" }
   );
 
+  const itemsWithFeedback = await applyFeedback(result);
   return ok({
     status: "ready" as const,
-    items: result as Array<{
-      sightingId: string;
-      similarity: number;
-      photoKeys: string[];
-      occurredAt: string;
-      lat: number;
-      lng: number;
-    }>,
+    items: itemsWithFeedback,
     calculatedAt: now.toISOString(),
   });
 }

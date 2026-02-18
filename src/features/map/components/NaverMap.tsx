@@ -5,6 +5,7 @@ import Script from "next/script";
 import { Loading } from "@/shared/ui/Loading";
 import { Text } from "@/shared/ui/Text";
 import { Toast } from "@/shared/ui/Toast";
+import { Button } from "@/shared/ui/Button";
 import Image from "next/image";
 import { MapItem, ClusterResponse } from "../types/naver";
 import {
@@ -16,6 +17,17 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
+/** 7-5: 지도 마커 테두리 색상용 피드백 (본/인정) */
+export type SightingFeedbackMap = Record<
+  string,
+  { seen: boolean; claimed: boolean }
+>;
+
+/** UUID/ID 비교 시 대소문자·공백 통일 (API/DB 포맷 차이 대비) */
+function normalizeSightingId(id: string): string {
+  return String(id).toLowerCase().trim();
+}
+
 interface NaverMapProps {
   clientId: string;
   /** 마이페이지 등에서 전달한 초기 중심 좌표 (API 호출 없이 사용) */
@@ -24,6 +36,8 @@ interface NaverMapProps {
   initialCenterSightingId?: string;
   /** 이 ID에 해당하는 제보 상세 카드를 기본으로 열어 둠 (지도에서 보기 진입 시) */
   initialFocusSightingId?: string;
+  /** 7-5: 유실글 컨텍스트 — 이 ID가 있으면 "내 강아지 인정" 제보를 초록 마커로 표시 */
+  initialLostPostId?: string;
 }
 
 // 클라이언트 캐시 타입
@@ -37,6 +51,7 @@ export function NaverMap({
   initialCenter,
   initialCenterSightingId,
   initialFocusSightingId,
+  initialLostPostId,
 }: NaverMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -70,6 +85,26 @@ export function NaverMap({
   // 목록 보기 상태
   const [isListViewOpen, setIsListViewOpen] = useState(false);
   const [itemsInView, setItemsInView] = useState<MapItem[]>([]);
+  /** 7-5: 지도 상세 카드에서 인정/해제 버튼 상태 표시용 (포인트 id → 피드백) */
+  const [sightingFeedbackMap, setSightingFeedbackMap] =
+    useState<SightingFeedbackMap>({});
+
+  /** 7-5: 지도에서 제보(마커) 클릭 시 "본 적 있음" 기록 */
+  const recordSeen = useCallback(
+    (sightingId: string) => {
+      if (!session?.access_token) return;
+      fetch("/api/v1/me/sighting-views", {
+        method: "POST",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ sightingId }),
+      }).catch(() => {});
+    },
+    [session?.access_token]
+  );
 
   /**
    * 이미지 URL 생성 헬퍼
@@ -154,9 +189,10 @@ export function NaverMap({
 
   /**
    * 마커 및 클러스터 렌더링 함수
+   * 7-5: feedback 있으면 포인트별 본/인정 상태에 따라 테두리 색상 적용 (빨강/회색/초록)
    */
   const renderClusters = useCallback(
-    (items: MapItem[]) => {
+    (items: MapItem[], feedback?: SightingFeedbackMap) => {
       if (!mapInstanceRef.current || !window.naver?.maps) return;
 
       // 1. 기존 마커 제거
@@ -193,19 +229,27 @@ export function NaverMap({
           </div>
         `;
         } else {
-          // 포인트: 핀 이미지 내부에 제보 사진 썸네일 표시
+          // 포인트: 7-5 피드백에 따라 테두리 색상 — 인정=초록, 본=회색, 기본=빨강 (ID 정규화로 API/DB 포맷 차이 대비)
+          const pointId = "id" in item ? (item.id as string) : "";
+          const fb = pointId
+            ? feedback?.[normalizeSightingId(pointId)]
+            : undefined;
+          const borderColor = fb?.claimed
+            ? "#22c55e"
+            : fb?.seen
+              ? "#6b7280"
+              : "#FF4D4D";
           const thumbnailUrl = item.photo_keys?.[0]
             ? getImageUrl(item.photo_keys[0])
             : "/icons/marker.png";
 
           content = `
           <div style="cursor: pointer; position: relative; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
-            <!-- 외부 핀 배경 (marker.png 스타일 반영) -->
             <div style="
               width: 44px;
               height: 44px;
               background: white;
-              border: 2.5px solid #FF4D4D;
+              border: 2.5px solid ${borderColor};
               border-radius: 50% 50% 50% 0;
               transform: rotate(-45deg);
               display: flex;
@@ -213,7 +257,6 @@ export function NaverMap({
               justify-content: center;
               overflow: hidden;
             ">
-              <!-- 내부 사진 썸네일 -->
               <div style="
                 width: 34px;
                 height: 34px;
@@ -225,11 +268,10 @@ export function NaverMap({
                 border: 1px solid rgba(0,0,0,0.1);
               "></div>
             </div>
-            <!-- 핀 꼬리 부분 (CSS로 구현) -->
             <div style="
               width: 2px;
               height: 6px;
-              background: #FF4D4D;
+              background: ${borderColor};
               margin-top: -2px;
             "></div>
           </div>
@@ -264,9 +306,10 @@ export function NaverMap({
               );
             }
           } else {
-            // 포인트 클릭 시 정보 팝업 표시
+            // 포인트 클릭 시 "본 적 있음" 기록 후 정보 팝업 표시
+            if ("id" in item && typeof item.id === "string")
+              recordSeen(item.id);
             setSelectedSighting(item);
-            // 선택된 마커가 중앙에 오도록 이동 (부드럽게)
             mapInstanceRef.current.panTo(marker.getPosition());
           }
         });
@@ -276,7 +319,7 @@ export function NaverMap({
 
       markersRef.current = newMarkers;
     },
-    [getImageUrl, setSelectedSighting]
+    [getImageUrl, setSelectedSighting, recordSeen]
   );
 
   /**
@@ -317,10 +360,70 @@ export function NaverMap({
     const cacheKey = `${isAuthenticated}:${snap(minLat)},${snap(minLng)},${snap(maxLat)},${snap(maxLng)},${zoom}`;
     const cached = cacheRef.current.get(cacheKey);
 
-    // 캐시가 있으면 즉시 렌더링 (SWR 패턴)
+    const applyFeedbackAndRender = async (rawItems: MapItem[]) => {
+      if (!isAuthenticated || !session?.access_token) {
+        setSightingFeedbackMap({});
+        renderClusters(rawItems);
+        setItemsInView(rawItems);
+        return;
+      }
+      const pointItems = rawItems.filter(
+        (i): i is MapItem & { type: "point"; id: string } =>
+          i.type === "point" && "id" in i && typeof i.id === "string"
+      );
+      const pointIds = pointItems.map((i) => i.id);
+      if (pointIds.length === 0) {
+        setSightingFeedbackMap({});
+        renderClusters(rawItems);
+        setItemsInView(rawItems);
+        return;
+      }
+      try {
+        const claimsUrl = initialLostPostId
+          ? `/api/v1/me/lost-posts/${initialLostPostId}/sighting-claims`
+          : "/api/v1/me/sighting-claims";
+        const [viewsRes, claimsRes] = await Promise.all([
+          fetch(`/api/v1/me/sighting-views?sightingIds=${pointIds.join(",")}`, {
+            credentials: "include",
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }).then((r) => r.json()),
+          fetch(claimsUrl, {
+            credentials: "include",
+            headers: { Authorization: `Bearer ${session.access_token}` },
+          }).then((r) => r.json()),
+        ]);
+        const views: Record<string, { seen: boolean }> =
+          viewsRes.success && viewsRes.data?.views ? viewsRes.data.views : {};
+        const claimedIds =
+          claimsRes.success && claimsRes.data?.sightingIds
+            ? new Set(
+                (claimsRes.data.sightingIds as string[]).map(
+                  normalizeSightingId
+                )
+              )
+            : new Set<string>();
+        const feedbackMap: SightingFeedbackMap = {};
+        pointIds.forEach((id) => {
+          const n = normalizeSightingId(id);
+          const v = views[id] ?? views[n];
+          feedbackMap[n] = {
+            seen: v?.seen ?? false,
+            claimed: claimedIds.has(n),
+          };
+        });
+        setSightingFeedbackMap(feedbackMap);
+        renderClusters(rawItems, feedbackMap);
+        setItemsInView(rawItems);
+      } catch (e) {
+        console.error("Feedback fetch error:", e);
+        setSightingFeedbackMap({});
+        renderClusters(rawItems);
+        setItemsInView(rawItems);
+      }
+    };
+
     if (cached) {
-      renderClusters(cached.items);
-      setItemsInView(cached.items);
+      applyFeedbackAndRender(cached.items);
     }
 
     try {
@@ -343,7 +446,7 @@ export function NaverMap({
 
       const response = await fetch(`${endpoint}?${params}`, {
         headers,
-        credentials: "include", // 세션 쿠키 전달 (인증 API 401 방지)
+        credentials: "include",
       });
 
       if (response.status === 304) {
@@ -357,10 +460,8 @@ export function NaverMap({
         const etag = response.headers.get("ETag") || "";
         const items = result.data.clusters;
 
-        // 캐시 업데이트 및 렌더링
         cacheRef.current.set(cacheKey, { etag, items });
-        renderClusters(items);
-        setItemsInView(items);
+        await applyFeedbackAndRender(items);
       }
     } catch (err) {
       console.error("Fetch clusters error:", err);
@@ -373,7 +474,13 @@ export function NaverMap({
         type: "error",
       });
     }
-  }, [renderClusters, isAuthenticated, isAuthLoading]);
+  }, [
+    renderClusters,
+    isAuthenticated,
+    isAuthLoading,
+    session?.access_token,
+    initialLostPostId,
+  ]);
 
   /**
    * 지도의 idle 이벤트 핸들러 (이동/줌 완료 시 발생)
@@ -454,6 +561,20 @@ export function NaverMap({
   useEffect(() => {
     hasAutoFocusedRef.current = false;
   }, [initialFocusSightingId]);
+
+  // 7-5: 지도에서 제보 링크로 진입 시 "본 적 있음" 기록
+  useEffect(() => {
+    if (!initialFocusSightingId || !session?.access_token) return;
+    fetch("/api/v1/me/sighting-views", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ sightingId: initialFocusSightingId }),
+    }).catch(() => {});
+  }, [initialFocusSightingId, session?.access_token]);
 
   // 마커 로드 후 해당 제보 상세 카드를 기본으로 열기
   useEffect(() => {
@@ -694,6 +815,62 @@ export function NaverMap({
                         </p>
                       </div>
                     </div>
+
+                    {/* 7-5: 지도 상세에서 "내 강아지로 인정" 버튼 (유실글 컨텍스트 시) */}
+                    {isAuthenticated &&
+                      session?.access_token &&
+                      "id" in selectedSighting &&
+                      initialLostPostId && (
+                        <div className="flex flex-wrap gap-2 pt-2">
+                          <Button
+                            type="button"
+                            variant={
+                              sightingFeedbackMap[
+                                normalizeSightingId(
+                                  selectedSighting.id as string
+                                )
+                              ]?.claimed
+                                ? "secondary"
+                                : "primary"
+                            }
+                            className="py-2 text-sm"
+                            onClick={async (e) => {
+                              e.preventDefault();
+                              const sid = selectedSighting.id as string;
+                              const url = `/api/v1/me/lost-posts/${initialLostPostId}/sighting-claims`;
+                              const isClaimed =
+                                sightingFeedbackMap[normalizeSightingId(sid)]
+                                  ?.claimed;
+                              if (isClaimed) {
+                                await fetch(`${url}/${sid}`, {
+                                  method: "DELETE",
+                                  credentials: "include",
+                                  headers: {
+                                    Authorization: `Bearer ${session.access_token}`,
+                                  },
+                                });
+                              } else {
+                                await fetch(url, {
+                                  method: "POST",
+                                  credentials: "include",
+                                  headers: {
+                                    "Content-Type": "application/json",
+                                    Authorization: `Bearer ${session.access_token}`,
+                                  },
+                                  body: JSON.stringify({ sightingId: sid }),
+                                });
+                              }
+                              fetchClusters();
+                            }}
+                          >
+                            {sightingFeedbackMap[
+                              normalizeSightingId(selectedSighting.id as string)
+                            ]?.claimed
+                              ? "인정 해제"
+                              : "내 강아지로 인정"}
+                          </Button>
+                        </div>
+                      )}
                   </div>
                 </div>
               </div>

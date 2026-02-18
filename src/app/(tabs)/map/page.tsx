@@ -24,6 +24,7 @@ export default function MapPage() {
   }, [latParam, lngParam]);
 
   const initialFocusSightingId = searchParams.get("sightingId") ?? undefined;
+  const initialLostPostId = searchParams.get("lostPostId") ?? undefined;
 
   return (
     <div className="relative h-[calc(100dvh-80px)] w-full overflow-hidden">
@@ -54,6 +55,7 @@ export default function MapPage() {
             initialCenter ? undefined : (sightingId ?? undefined)
           }
           initialFocusSightingId={initialFocusSightingId}
+          initialLostPostId={initialLostPostId}
         />
       )}
     </div>

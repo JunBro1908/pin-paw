@@ -325,7 +325,13 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
           ) : (
             <div className="flex flex-col gap-4">
               {recommendations?.items?.map((item) => (
-                <RecommendationCard key={item.sightingId} item={item} />
+                <RecommendationCard
+                  key={item.sightingId}
+                  item={item}
+                  lostPostId={lostPostId}
+                  onFeedbackChange={refetchRecommendations}
+                  accessToken={session?.access_token}
+                />
               ))}
             </div>
           )}
