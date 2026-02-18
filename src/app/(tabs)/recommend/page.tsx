@@ -13,6 +13,8 @@ import { StatusBadge } from "@/features/lost-posts/components/StatusBadge";
 import { createClient } from "@/shared/supabase/client";
 import { useEffect, useState } from "react";
 import type { LostPostItem } from "@/features/lost-posts/model/types";
+import { useRecommendations } from "@/features/recommendations/hooks/useRecommendations";
+import { RecommendationCard } from "@/features/recommendations/components/RecommendationCard";
 
 function RecommendContent() {
   const searchParams = useSearchParams();
@@ -93,8 +95,32 @@ function RecommendContent() {
   return <RecommendWithLostPost lostPostId={lostPostId} />;
 }
 
+const RADIUS_OPTIONS = [1, 2, 5, 8, 10, 20, 50, 100] as const;
+const DAYS_OPTIONS = [1, 3, 7, 8, 14, 30] as const;
+const TOP_K_OPTIONS = [5, 10, 20, 30] as const;
+
+const DEFAULT_RADIUS_KM = 8;
+const DEFAULT_DAYS = 8;
+const DEFAULT_TOP_K = 10;
+
 function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
+  const { session } = useAuth();
+  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
+  const [days, setDays] = useState(DEFAULT_DAYS);
+  const [topK, setTopK] = useState(DEFAULT_TOP_K);
+
   const { data: post, isLoading, error } = useLostPost(lostPostId);
+  const {
+    data: recommendations,
+    error: recoError,
+    isLoading: recoLoading,
+    mutate: refetchRecommendations,
+  } = useRecommendations(lostPostId, session?.access_token, {
+    radiusKm,
+    days,
+    topK,
+  });
+
   const client = createClient();
   const storageRef = client?.storage?.from("lost");
   const coverUrl =
@@ -109,6 +135,16 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
         minute: "2-digit",
       })
     : "";
+
+  const calculatedAtLabel =
+    recommendations?.calculatedAt && recommendations.status === "ready"
+      ? new Date(recommendations.calculatedAt).toLocaleString("ko-KR", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : null;
 
   return (
     <Container className="py-10">
@@ -132,7 +168,7 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
       ) : error || !post ? (
         <div className="border-border-subtle mb-6 rounded-2xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
           <Text variant="caption" color="caption">
-            유실글을 불러올 수 없습니다.
+            유실글을 찾을 수 없습니다. 다른 유실글을 선택해 주세요.
           </Text>
         </div>
       ) : (
@@ -177,27 +213,124 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
         </div>
       )}
 
-      <Text variant="caption" color="caption" className="mb-4 block">
-        이 유실글과 유사한 목격 제보입니다. (준비 중)
-      </Text>
-      <div className="flex flex-col gap-4">
-        {[1, 2, 3].map((item) => (
-          <div
-            key={item}
-            className="border-border-subtle rounded-xl border p-5"
-          >
-            <Text variant="body" className="font-bold">
-              추천 제보 {item}
+      {error || !post ? null : (
+        <>
+          <details className="border-border-subtle bg-surface mb-6 rounded-xl border shadow-sm">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+              <Text variant="caption" color="caption">
+                추천 조건: 반경 {radiusKm}km · {days}일 · {topK}개
+              </Text>
+              <span className="text-caption shrink-0 select-none" aria-hidden>
+                ▼
+              </span>
+            </summary>
+            <div className="border-t border-gray-200 px-4 pt-3 pb-4 dark:border-gray-700">
+              <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                <label className="flex items-center gap-1.5">
+                  <Text variant="caption" color="caption">
+                    반경
+                  </Text>
+                  <select
+                    value={radiusKm}
+                    onChange={(e) => setRadiusKm(Number(e.target.value))}
+                    className="border-border-subtle focus:ring-primary min-w-0 rounded-md border bg-transparent px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
+                  >
+                    {RADIUS_OPTIONS.map((v) => (
+                      <option key={v} value={v}>
+                        {v}km
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <Text variant="caption" color="caption">
+                    기간
+                  </Text>
+                  <select
+                    value={days}
+                    onChange={(e) => setDays(Number(e.target.value))}
+                    className="border-border-subtle focus:ring-primary min-w-0 rounded-md border bg-transparent px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
+                  >
+                    {DAYS_OPTIONS.map((v) => (
+                      <option key={v} value={v}>
+                        {v}일
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex items-center gap-1.5">
+                  <Text variant="caption" color="caption">
+                    개수
+                  </Text>
+                  <select
+                    value={topK}
+                    onChange={(e) => setTopK(Number(e.target.value))}
+                    className="border-border-subtle focus:ring-primary min-w-0 rounded-md border bg-transparent px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
+                  >
+                    {TOP_K_OPTIONS.map((v) => (
+                      <option key={v} value={v}>
+                        {v}개
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+              <Button
+                variant="primary"
+                className="w-full py-2 text-sm"
+                onClick={() => refetchRecommendations()}
+              >
+                조회
+              </Button>
+            </div>
+          </details>
+
+          <div className="mb-4 flex flex-wrap items-center gap-2">
+            <Text variant="caption" color="caption">
+              이 유실글과 유사한 목격 제보입니다.
             </Text>
-            <Text variant="caption" className="mb-3">
-              가능성이 높은 제보입니다.
-            </Text>
-            <Button variant="secondary" className="w-full py-2 text-sm">
-              상세보기
+            {calculatedAtLabel && (
+              <Text variant="caption" color="caption">
+                · {calculatedAtLabel} 기준
+              </Text>
+            )}
+            <Button
+              variant="secondary"
+              className="ml-auto py-1.5 text-sm"
+              onClick={() => refetchRecommendations()}
+            >
+              새로고침
             </Button>
           </div>
-        ))}
-      </div>
+
+          {recoError ? (
+            <div className="border-border-subtle mb-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+              <Text variant="caption" color="caption">
+                추천을 불러오는 중 오류가 났습니다.
+              </Text>
+            </div>
+          ) : recoLoading || recommendations?.status === "pending" ? (
+            <div className="border-border-subtle rounded-xl border p-6 text-center">
+              <Text variant="body" color="caption">
+                추천 준비중...
+              </Text>
+            </div>
+          ) : recommendations?.status === "ready" &&
+            (!recommendations.items || recommendations.items.length === 0) ? (
+            <div className="border-border-subtle rounded-xl border p-6 text-center">
+              <Text variant="body" color="caption">
+                아직 유사한 목격 제보가 없습니다.
+              </Text>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {recommendations?.items?.map((item) => (
+                <RecommendationCard key={item.sightingId} item={item} />
+              ))}
+            </div>
+          )}
+        </>
+      )}
     </Container>
   );
 }
