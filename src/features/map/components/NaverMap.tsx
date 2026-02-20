@@ -28,6 +28,33 @@ function normalizeSightingId(id: string): string {
   return String(id).toLowerCase().trim();
 }
 
+/** 지도 마커 레이어 필터 */
+export type MapLayer =
+  | "default" // 전체
+  | "unseen" // 제보 중 안 본 것
+  | "bookmark"; // 내 유실글 + 그 유실글에 해당하는 북마크
+
+function getFilteredItems(
+  rawItems: MapItem[],
+  feedbackMap: SightingFeedbackMap,
+  layer: MapLayer
+): MapItem[] {
+  if (layer === "default") return rawItems;
+  return rawItems.filter((item) => {
+    if (item.type !== "point" || !("id" in item)) return false;
+    const n = normalizeSightingId(item.id as string);
+    const fb = feedbackMap[n];
+    switch (layer) {
+      case "unseen":
+        return fb ? !fb.seen : true; // 피드백 없으면 미확인으로 간주
+      case "bookmark":
+        return fb?.claimed ?? false;
+      default:
+        return true;
+    }
+  });
+}
+
 interface NaverMapProps {
   clientId: string;
   /** 마이페이지 등에서 전달한 초기 중심 좌표 (API 호출 없이 사용) */
@@ -106,6 +133,49 @@ export function NaverMap({
       { id: string; pet_name?: string; lost_at?: string | null }[] | null
     >(null);
 
+  /** 지도 마커 레이어 필터 (전체 / 안 본 것 / 북마크 / 북마크+안 본 것) */
+  const [mapLayer, setMapLayer] = useState<MapLayer>("default");
+  /** 레이어 선택 메뉴 열림 */
+  const [layerMenuOpen, setLayerMenuOpen] = useState(false);
+  /** 필터 재적용용: 마지막으로 받은 원본 아이템 (mapLayer 변경 시 재필터) */
+  const lastRawItemsRef = useRef<MapItem[]>([]);
+  /** fetchClusters가 mapLayer에 의존하지 않도록 ref 사용 → 레이어 변경 시 지도 인스턴스/불필요 재요청 방지 */
+  const mapLayerRef = useRef<MapLayer>(mapLayer);
+  const prevMapLayerRef = useRef<MapLayer>(mapLayer);
+  useEffect(() => {
+    mapLayerRef.current = mapLayer;
+  }, [mapLayer]);
+  /** "내 유실글 + 북마크" 레이어용: 유실글 목록(위치·표시용 필드) */
+  const [lostPostsForMap, setLostPostsForMap] = useState<
+    {
+      id: string;
+      pet_name?: string;
+      lost_at?: string;
+      cover_photo_key?: string;
+      trait_color?: string;
+      trait_size?: string;
+      trait_species?: string;
+      note?: string;
+      lat: number;
+      lng: number;
+    }[]
+  >([]);
+  /** 유실글 마커 (북마크 레이어에서만 표시) */
+  const lostPostMarkersRef = useRef<any[]>([]);
+  /** 유실글 마커 터치 시 카드용 (제보 카드와 별도) */
+  const [selectedLostPostForCard, setSelectedLostPostForCard] = useState<{
+    id: string;
+    pet_name?: string;
+    lost_at?: string;
+    cover_photo_key?: string;
+    trait_color?: string;
+    trait_size?: string;
+    trait_species?: string;
+    note?: string;
+    lat: number;
+    lng: number;
+  } | null>(null);
+
   /** 7-5: 지도에서 제보(마커) 클릭 시 "본 적 있음" 기록 */
   const recordSeen = useCallback(
     (sightingId: string) => {
@@ -124,13 +194,21 @@ export function NaverMap({
   );
 
   /**
-   * 이미지 URL 생성 헬퍼
+   * 이미지 URL 생성 헬퍼 (제보)
    */
   const getImageUrl = useCallback((key: string) => {
     const client = createClient();
     if (!client?.storage) return "";
     const { data } = client.storage.from("sightings").getPublicUrl(key);
     return data.publicUrl;
+  }, []);
+
+  /** 유실글 커버 이미지 URL — 유실글 상세페이지와 동일: lost 버킷 getPublicUrl */
+  const getLostPostImageUrl = useCallback((key: string) => {
+    const client = createClient();
+    const ref = client?.storage?.from("lost");
+    if (!ref) return "";
+    return ref.getPublicUrl(key).data.publicUrl;
   }, []);
 
   /**
@@ -326,6 +404,7 @@ export function NaverMap({
             // 포인트 클릭 시 "본 적 있음" 기록 후 정보 팝업 표시
             if ("id" in item && typeof item.id === "string")
               recordSeen(item.id);
+            setSelectedLostPostForCard(null);
             setSelectedSighting(item);
             mapInstanceRef.current.panTo(marker.getPosition());
           }
@@ -336,7 +415,7 @@ export function NaverMap({
 
       markersRef.current = newMarkers;
     },
-    [getImageUrl, setSelectedSighting, recordSeen]
+    [getImageUrl, setSelectedSighting, setSelectedLostPostForCard, recordSeen]
   );
 
   /**
@@ -356,6 +435,10 @@ export function NaverMap({
     const maxLat = ne.lat();
     const maxLng = ne.lng();
 
+    // 북마크 레이어: 클러스터 없이 포인트만 필요 → 서버에 zoom 17로 요청해 포인트 단위 응답 받음
+    const layer = mapLayerRef.current;
+    const requestZoom = layer === "bookmark" ? Math.max(zoom, 17) : zoom;
+
     // 1. 서버(SQL)의 클러스터링 격자 크기와 동일하게 정의
     const getGridSize = (z: number, isAuth: boolean) => {
       const effectiveZoom = isAuth ? z : Math.min(z, 14);
@@ -370,18 +453,20 @@ export function NaverMap({
     };
 
     // 2. 좌표를 특정 격자 인덱스로
-    const gridSize = getGridSize(zoom, isAuthenticated);
+    const gridSize = getGridSize(requestZoom, isAuthenticated);
     const snap = (num: number) => Math.floor(num / gridSize);
 
-    // 3. Grid ID 기반의 캐시 키 생성 (인증 여부별로 캐시 분리)
-    const cacheKey = `${isAuthenticated}:${snap(minLat)},${snap(minLng)},${snap(maxLat)},${snap(maxLng)},${zoom}`;
+    // 3. Grid ID 기반의 캐시 키 생성 (인증·레이어별 분리; 북마크는 포인트 전용 요청이라 별도 캐시)
+    const cacheKey = `${isAuthenticated}:${layer}:${snap(minLat)},${snap(minLng)},${snap(maxLat)},${snap(maxLng)},${requestZoom}`;
     const cached = cacheRef.current.get(cacheKey);
 
     const applyFeedbackAndRender = async (rawItems: MapItem[]) => {
       if (!isAuthenticated || !session?.access_token) {
         setSightingFeedbackMap({});
-        renderClusters(rawItems);
-        setItemsInView(rawItems);
+        lastRawItemsRef.current = rawItems;
+        const filtered = getFilteredItems(rawItems, {}, layer);
+        renderClusters(filtered, {});
+        setItemsInView(filtered);
         return;
       }
       const pointItems = rawItems.filter(
@@ -391,8 +476,10 @@ export function NaverMap({
       const pointIds = pointItems.map((i) => i.id);
       if (pointIds.length === 0) {
         setSightingFeedbackMap({});
-        renderClusters(rawItems);
-        setItemsInView(rawItems);
+        lastRawItemsRef.current = rawItems;
+        const filtered = getFilteredItems(rawItems, {}, layer);
+        renderClusters(filtered, {});
+        setItemsInView(filtered);
         return;
       }
       try {
@@ -429,13 +516,17 @@ export function NaverMap({
           };
         });
         setSightingFeedbackMap(feedbackMap);
-        renderClusters(rawItems, feedbackMap);
-        setItemsInView(rawItems);
+        lastRawItemsRef.current = rawItems;
+        const filtered = getFilteredItems(rawItems, feedbackMap, layer);
+        renderClusters(filtered, feedbackMap);
+        setItemsInView(filtered);
       } catch (e) {
         console.error("Feedback fetch error:", e);
         setSightingFeedbackMap({});
-        renderClusters(rawItems);
-        setItemsInView(rawItems);
+        lastRawItemsRef.current = rawItems;
+        const filtered = getFilteredItems(rawItems, {}, layer);
+        renderClusters(filtered, {});
+        setItemsInView(filtered);
       }
     };
 
@@ -449,7 +540,7 @@ export function NaverMap({
         minLng: minLng.toString(),
         maxLat: maxLat.toString(),
         maxLng: maxLng.toString(),
-        zoom: zoom.toString(),
+        zoom: requestZoom.toString(),
       });
 
       const headers: Record<string, string> = {};
@@ -784,6 +875,175 @@ export function NaverMap({
     }
   }, [isAuthenticated, isAuthLoading, fetchClusters, isLoaded]);
 
+  // 레이어 필터 변경 시: 북마크 진입/이탈이면 API 재요청, default↔unseen은 재필터만 (지도 인스턴스 유지)
+  useEffect(() => {
+    if (!mapInstanceRef.current || !isLoaded) return;
+    const prev = prevMapLayerRef.current;
+    prevMapLayerRef.current = mapLayer;
+
+    const enteringOrLeavingBookmark =
+      mapLayer === "bookmark" || prev === "bookmark";
+    if (enteringOrLeavingBookmark) {
+      fetchClusters();
+      return;
+    }
+    // default ↔ unseen: 재요청 없이 마지막 raw로 재필터만
+    if (lastRawItemsRef.current.length === 0) return;
+    const raw = lastRawItemsRef.current;
+    const filtered = getFilteredItems(raw, sightingFeedbackMap, mapLayer);
+    renderClusters(filtered, sightingFeedbackMap);
+    setItemsInView(filtered);
+  }, [mapLayer]); // eslint-disable-line react-hooks/exhaustive-deps -- sightingFeedbackMap/renderClusters/fetchClusters는 최신 클로저로 사용
+
+  // "내 유실글 + 북마크" 레이어 선택 시 유실글 목록(위치) 조회.
+  // 지도 RPC에 cover_photo_key가 없을 수 있으므로, 내 유실글 목록 API(GET /api/v1/lost-posts)로 보강해 이미지/특징을 채운다.
+  useEffect(() => {
+    if (mapLayer !== "bookmark" || !isAuthenticated || !session?.access_token) {
+      if (mapLayer !== "bookmark") setLostPostsForMap([]);
+      return;
+    }
+    const token = session.access_token;
+    const headers = { Authorization: `Bearer ${token}` };
+    Promise.all([
+      fetch("/api/v1/me/lost-posts/map?limit=50", {
+        credentials: "include",
+        headers,
+      }).then((r) => r.json()),
+      fetch("/api/v1/lost-posts?limit=100", {
+        credentials: "include",
+        headers,
+      }).then((r) => r.json()),
+    ])
+      .then(([mapRes, listRes]) => {
+        const mapData =
+          mapRes?.success && Array.isArray(mapRes.data) ? mapRes.data : [];
+        const listRows =
+          listRes?.success && Array.isArray(listRes.data) ? listRes.data : [];
+        const listById: Record<
+          string,
+          {
+            cover_photo_key?: string;
+            trait_color?: string;
+            trait_size?: string;
+            trait_species?: string;
+            note?: string;
+            pet_name?: string;
+            lost_at?: string;
+          }
+        > = {};
+        listRows.forEach(
+          (row: {
+            id: string;
+            cover_photo_key?: string;
+            trait_color?: string;
+            trait_size?: string;
+            trait_species?: string;
+            note?: string;
+            pet_name?: string;
+            lost_at?: string;
+          }) => {
+            listById[row.id] = {
+              cover_photo_key: row.cover_photo_key,
+              trait_color: row.trait_color,
+              trait_size: row.trait_size,
+              trait_species: row.trait_species,
+              note: row.note,
+              pet_name: row.pet_name,
+              lost_at: row.lost_at,
+            };
+          }
+        );
+        setLostPostsForMap(
+          mapData.map(
+            (p: {
+              id: string;
+              pet_name?: string;
+              lost_at?: string;
+              cover_photo_key?: string;
+              trait_color?: string;
+              trait_size?: string;
+              trait_species?: string;
+              note?: string;
+              lat: number;
+              lng: number;
+            }) => {
+              const fromList = listById[p.id];
+              return {
+                id: p.id,
+                pet_name: p.pet_name ?? fromList?.pet_name,
+                lost_at: p.lost_at ?? fromList?.lost_at,
+                cover_photo_key: p.cover_photo_key ?? fromList?.cover_photo_key,
+                trait_color: p.trait_color ?? fromList?.trait_color,
+                trait_size: p.trait_size ?? fromList?.trait_size,
+                trait_species: p.trait_species ?? fromList?.trait_species,
+                note: p.note ?? fromList?.note,
+                lat: p.lat,
+                lng: p.lng,
+              };
+            }
+          )
+        );
+      })
+      .catch(() => setLostPostsForMap([]));
+  }, [mapLayer, isAuthenticated, session?.access_token]);
+
+  // 북마크 레이어일 때만 유실글 마커 표시, 해제 시 제거
+  useEffect(() => {
+    if (!window.naver?.maps || !mapInstanceRef.current) return;
+    lostPostMarkersRef.current.forEach((m) => m.setMap(null));
+    lostPostMarkersRef.current = [];
+    if (mapLayer !== "bookmark" || lostPostsForMap.length === 0) return;
+    const map = mapInstanceRef.current;
+    const newMarkers = lostPostsForMap.map((lp) => {
+      const borderColor = "#f59e0b";
+      const thumbnailUrl = lp.cover_photo_key
+        ? getLostPostImageUrl(lp.cover_photo_key)
+        : "/icons/marker.png";
+      const content = `
+        <div style="cursor: pointer; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+          <div style="
+            width: 44px;
+            height: 44px;
+            background: white;
+            border: 2.5px solid ${borderColor};
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            box-sizing: border-box;
+          ">
+            <div style="
+              width: 36px;
+              height: 36px;
+              border-radius: 8px;
+              background-image: url('${thumbnailUrl}');
+              background-size: cover;
+              background-position: center;
+              border: 1px solid rgba(0,0,0,0.08);
+            "></div>
+          </div>
+        </div>
+      `;
+      const marker = new window.naver.maps.Marker({
+        position: new window.naver.maps.LatLng(lp.lat, lp.lng),
+        map,
+        icon: {
+          content,
+          anchor: new window.naver.maps.Point(22, 44),
+        },
+        title: lp.pet_name?.trim() || "유실 장소",
+      });
+      window.naver.maps.Event.addListener(marker, "click", () => {
+        map.panTo(marker.getPosition());
+        setSelectedSighting(null);
+        setSelectedLostPostForCard(lp);
+      });
+      return marker;
+    });
+    lostPostMarkersRef.current = newMarkers;
+  }, [mapLayer, lostPostsForMap, getLostPostImageUrl]);
+
   if (error) {
     return (
       <div className="bg-surface flex h-full items-center justify-center">
@@ -803,13 +1063,146 @@ export function NaverMap({
         <div ref={mapRef} className="h-full w-full" />
 
         {/* 상세 카드 열렸을 때 지도 영역 음영 (클릭 시 카드 닫기) */}
-        {selectedSighting && selectedSighting.type === "point" && (
+        {(selectedSighting?.type === "point" || selectedLostPostForCard) && (
           <button
             type="button"
             aria-label="상세 닫기"
-            onClick={() => setSelectedSighting(null)}
+            onClick={() => {
+              setSelectedSighting(null);
+              setSelectedLostPostForCard(null);
+            }}
             className="absolute inset-0 z-40 bg-black/30 transition-opacity duration-200"
           />
+        )}
+
+        {/* 유실글 카드 (제보 카드와 동일 레이아웃: 사진 + 정보) */}
+        {selectedLostPostForCard && (
+          <div
+            className="animate-in slide-in-from-bottom-6 absolute inset-x-0 bottom-[104px] z-50 px-4 duration-300"
+            onMouseDown={stopPropagation}
+            onMouseUp={stopPropagation}
+            onMouseMove={stopPropagation}
+            onTouchStart={stopPropagation}
+            onTouchMove={stopPropagation}
+            onTouchEnd={stopPropagation}
+            onWheel={stopPropagation}
+          >
+            <div className="bg-surface relative overflow-hidden rounded-[32px] shadow-[0_8px_40px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:ring-white/10">
+              <button
+                onClick={() => setSelectedLostPostForCard(null)}
+                className="absolute top-4 right-4 z-30 rounded-full bg-black/20 p-2 text-white backdrop-blur-md transition-colors hover:bg-black/40"
+                aria-label="닫기"
+              >
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+              <div className="max-h-[60vh] overflow-y-auto">
+                <div className="flex flex-col">
+                  {/* 유실글 대표 사진 영역 — 항상 표시(없으면 플레이스홀더) */}
+                  <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+                    {selectedLostPostForCard.cover_photo_key ? (
+                      <>
+                        <Image
+                          src={getLostPostImageUrl(
+                            selectedLostPostForCard.cover_photo_key
+                          )}
+                          alt="유실글 대표 사진"
+                          fill
+                          sizes="(max-width: 768px) 100vw, 50vw"
+                          className="object-cover transition-transform duration-500 hover:scale-105"
+                          priority
+                        />
+                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+                      </>
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-gray-400 dark:text-gray-500">
+                        <svg
+                          className="h-16 w-16"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={1.5}
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                          />
+                        </svg>
+                        <span className="sr-only">대표 사진 없음</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="space-y-5 p-6">
+                    <div>
+                      <Text
+                        variant="title"
+                        className="text-xl font-bold text-amber-600 dark:text-amber-400"
+                      >
+                        유실글
+                      </Text>
+                      <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">
+                        {selectedLostPostForCard.pet_name?.trim() ||
+                          "이름 없음"}
+                      </p>
+                      {selectedLostPostForCard.lost_at && (
+                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                          유실일:{" "}
+                          {new Date(
+                            selectedLostPostForCard.lost_at
+                          ).toLocaleString("ko-KR", {
+                            timeZone: "Asia/Seoul",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                      )}
+                    </div>
+                    {(selectedLostPostForCard.trait_color ||
+                      selectedLostPostForCard.trait_size ||
+                      selectedLostPostForCard.trait_species) && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {selectedLostPostForCard.trait_color && (
+                          <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
+                            {selectedLostPostForCard.trait_color}
+                          </span>
+                        )}
+                        {selectedLostPostForCard.trait_size && (
+                          <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-700 dark:bg-gray-800 dark:text-gray-300">
+                            {selectedLostPostForCard.trait_size}
+                          </span>
+                        )}
+                        {selectedLostPostForCard.trait_species && (
+                          <span className="rounded-lg bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">
+                            {selectedLostPostForCard.trait_species}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {selectedLostPostForCard.note?.trim() && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
+                        {selectedLostPostForCard.note}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* 제보 상세 정보 카드 */}
@@ -1381,6 +1774,87 @@ export function NaverMap({
 
         {/* 하단 컨트롤러 */}
         <div className="absolute right-5 bottom-24 z-10 flex flex-col gap-3">
+          {/* 레이어 필터 (로그인 시에만) */}
+          {isAuthenticated && (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setLayerMenuOpen((o) => !o)}
+                className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-xl transition-transform active:scale-95 ${
+                  mapLayer !== "default"
+                    ? "bg-primary text-white"
+                    : "bg-white dark:bg-gray-800"
+                }`}
+                aria-expanded={layerMenuOpen}
+                aria-haspopup="true"
+                aria-label="표시 레이어 선택"
+              >
+                <svg
+                  width="22"
+                  height="22"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                  <polyline points="2 17 12 22 22 17"></polyline>
+                </svg>
+              </button>
+              {layerMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-[5]"
+                    aria-hidden="true"
+                    onClick={() => setLayerMenuOpen(false)}
+                  />
+                  <div
+                    className="absolute right-0 bottom-full z-10 mb-2 w-52 rounded-2xl border border-gray-200 bg-white py-2 shadow-xl dark:border-gray-700 dark:bg-gray-800"
+                    role="menu"
+                  >
+                    {(
+                      [
+                        { value: "default" as MapLayer, label: "전체" },
+                        { value: "unseen" as MapLayer, label: "안 본 제보" },
+                        {
+                          value: "bookmark" as MapLayer,
+                          label: "내 유실글 + 북마크",
+                        },
+                      ] as const
+                    ).map(({ value, label }) => (
+                      <button
+                        key={value}
+                        type="button"
+                        role="menuitemradio"
+                        aria-checked={mapLayer === value}
+                        onClick={() => {
+                          setMapLayer(value);
+                          setLayerMenuOpen(false);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                      >
+                        {mapLayer === value && (
+                          <span className="text-primary">●</span>
+                        )}
+                        <span
+                          className={
+                            mapLayer === value
+                              ? "font-semibold text-gray-900 dark:text-white"
+                              : "text-gray-600 dark:text-gray-300"
+                          }
+                        >
+                          {label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
           {/* 목록 보기 버튼 */}
           <button
             onClick={() => setIsListViewOpen(true)}
