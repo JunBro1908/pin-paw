@@ -41,7 +41,7 @@ export function SightingForm() {
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID || "";
+  const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || "";
 
   // 초기 렌더링 시 현재 위치 가져오기
   useEffect(() => {
@@ -94,7 +94,9 @@ export function SightingForm() {
   };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
@@ -395,6 +397,8 @@ export function SightingForm() {
               setIsLocationSet(true);
             }}
             onClose={() => setIsMapOpen(false)}
+            title="목격 위치 선택"
+            guideMessage="지도를 클릭하거나 주소 검색으로 목격 위치를 선택하세요"
           />
         )}
 

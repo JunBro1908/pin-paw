@@ -12,7 +12,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { LostPostFormData } from "../model/types";
 import { DOG_BREEDS } from "@/features/sightings/constants/breeds";
 
-const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID || "";
+const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || "";
 
 const inputBase =
   "border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2";
@@ -247,21 +247,45 @@ export function LostPostForm() {
         </section>
 
         <section className="space-y-3">
-          <Text variant="body" className="font-bold">
-            유실 위치 <span className="text-primary">*</span>
-          </Text>
+          <div>
+            <Text variant="body" className="font-bold">
+              유실 위치 <span className="text-primary">*</span>
+            </Text>
+            <Text
+              variant="caption"
+              className="text-text-caption mt-1 block text-[11px] leading-relaxed opacity-80"
+            >
+              지도에서 위치를 선택하거나 변경 버튼으로 수정할 수 있습니다.
+            </Text>
+          </div>
           <button
             type="button"
             onClick={() => setIsMapOpen(true)}
-            className="border-border-subtle hover:border-primary/50 w-full rounded-xl border bg-white px-4 py-4 text-left"
+            className="border-border-subtle hover:border-primary/50 focus:ring-primary/10 flex w-full items-center justify-between rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2 active:scale-[0.99]"
           >
-            <Text variant="body">
-              {isLocating
-                ? "위치 확인 중..."
-                : isLocationSet
-                  ? `${formData.lat.toFixed(5)}, ${formData.lng.toFixed(5)}`
-                  : "지도에서 위치 선택"}
-            </Text>
+            <div className="flex items-center gap-2">
+              <Text
+                variant="body"
+                className={cn(
+                  "font-medium",
+                  !isLocationSet && !isLocating
+                    ? "text-error"
+                    : "text-text-main",
+                  isLocating && "text-text-caption"
+                )}
+              >
+                {isLocating
+                  ? "위치 확인 중..."
+                  : isLocationSet
+                    ? `${formData.lat.toFixed(6)}, ${formData.lng.toFixed(6)}`
+                    : "위치를 설정해주세요"}
+              </Text>
+            </div>
+            <div className="bg-primary-soft flex items-center gap-1 rounded-lg px-3 py-1.5">
+              <Text variant="caption" className="text-primary font-bold">
+                <span className="text-lg">🐾</span> 변경
+              </Text>
+            </div>
           </button>
         </section>
 
@@ -275,6 +299,8 @@ export function LostPostForm() {
               setIsLocationSet(true);
             }}
             onClose={() => setIsMapOpen(false)}
+            title="유실 위치 선택"
+            guideMessage="지도를 클릭하거나 주소 검색으로 유실 위치를 선택하세요"
           />
         )}
 

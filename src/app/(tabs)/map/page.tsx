@@ -6,7 +6,7 @@ import { Text } from "@/shared/ui/Text";
 import { NaverMap } from "@/features/map/components/NaverMap";
 
 export default function MapPage() {
-  const clientId = process.env.NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID;
+  const clientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID;
   const searchParams = useSearchParams();
   const latParam = searchParams.get("lat");
   const lngParam = searchParams.get("lng");
@@ -43,8 +43,8 @@ export default function MapPage() {
       {!clientId ? (
         <div className="bg-surface flex h-full items-center justify-center p-10 text-center">
           <Text color="error">
-            Naver Maps Client ID가 설정되지 않았습니다. <br />
-            .env 파일에 NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID를 설정해주세요.
+            Naver Client ID가 설정되지 않았습니다. <br />
+            .env 파일에 NEXT_PUBLIC_NAVER_CLIENT_ID를 설정해주세요.
           </Text>
         </div>
       ) : (

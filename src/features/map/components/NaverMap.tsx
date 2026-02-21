@@ -14,6 +14,9 @@ import {
 } from "@/shared/lib/api-response";
 import { createClient, supabase } from "@/shared/supabase/client";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { SightingDetailCard } from "@/features/sightings/components/SightingDetailCard";
+import type { SightingDetailData } from "@/features/sightings/components/SightingDetailCard";
+import { SightingDetailSheet } from "@/features/sightings/components/SightingDetailSheet";
 
 const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
@@ -1205,208 +1208,98 @@ export function NaverMap({
           </div>
         )}
 
-        {/* 제보 상세 정보 카드 */}
+        {/* 제보 상세 정보 카드 (공통 SightingDetailSheet + SightingDetailCard) */}
         {selectedSighting && selectedSighting.type === "point" && (
-          <div
-            className="animate-in slide-in-from-bottom-6 absolute inset-x-0 bottom-[104px] z-50 px-4 duration-300"
-            onMouseDown={stopPropagation}
-            onMouseUp={stopPropagation}
-            onMouseMove={stopPropagation}
-            onTouchStart={stopPropagation}
-            onTouchMove={stopPropagation}
-            onTouchEnd={stopPropagation}
-            onWheel={stopPropagation}
+          <SightingDetailSheet
+            onClose={() => setSelectedSighting(null)}
+            bottomOffset={104}
           >
-            <div className="bg-surface relative overflow-hidden rounded-[32px] shadow-[0_8px_40px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:ring-white/10">
-              {/* 닫기 버튼 (카드 상단 고정) */}
-              <button
-                onClick={() => setSelectedSighting(null)}
-                className="absolute top-4 right-4 z-30 rounded-full bg-black/20 p-2 text-white backdrop-blur-md transition-colors hover:bg-black/40"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-
-              {/* 스크롤 가능한 내용 영역 */}
-              <div className="max-h-[60vh] overflow-y-auto">
-                <div className="flex flex-col">
-                  {/* 큰 사진 영역 */}
-                  {selectedSighting.photo_keys?.[0] && (
-                    <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
-                      <Image
-                        src={getImageUrl(selectedSighting.photo_keys[0])}
-                        alt="목격 사진"
-                        fill
-                        sizes="(max-width: 768px) 100vw, 50vw"
-                        className="object-cover transition-transform duration-500 hover:scale-105"
-                        priority
-                      />
-                      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                    </div>
-                  )}
-
-                  <div className="space-y-5 p-6">
-                    {/* 익명 제보·제보일과 같은 row에 북마크 별 */}
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <Text variant="title" className="text-xl font-bold">
-                          {selectedSighting.author_type === "anon"
-                            ? "익명 제보"
-                            : "회원 제보"}
-                        </Text>
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                          {selectedSighting.occurred_at
-                            ? new Date(
-                                selectedSighting.occurred_at
-                              ).toLocaleString("ko-KR", {
-                                timeZone: "Asia/Seoul",
-                                year: "numeric",
-                                month: "long",
-                                day: "numeric",
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })
-                            : ""}
-                        </p>
-                      </div>
-                      {isAuthenticated &&
-                        session?.access_token &&
-                        "id" in selectedSighting &&
-                        myLostPosts.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              const sid = selectedSighting.id as string;
-                              const isClaimed =
-                                sightingFeedbackMap[normalizeSightingId(sid)]
-                                  ?.claimed;
-                              if (isClaimed) {
-                                setBookmarkModalMode("unregister");
-                                setBookmarkModalOpen(true);
-                                setClaimedLostPostsForSighting(null);
-                                fetch(
-                                  `/api/v1/me/sighting-claims/${encodeURIComponent(sid)}`,
-                                  {
-                                    credentials: "include",
-                                    headers: {
-                                      Authorization: `Bearer ${session.access_token}`,
-                                    },
-                                  }
-                                )
-                                  .then((r) => r.json())
-                                  .then((res) => {
-                                    if (
-                                      res?.success &&
-                                      Array.isArray(res.data?.lostPosts)
-                                    ) {
-                                      setClaimedLostPostsForSighting(
-                                        res.data.lostPosts
-                                      );
-                                    } else {
-                                      setClaimedLostPostsForSighting([]);
-                                    }
-                                  })
-                                  .catch(() =>
-                                    setClaimedLostPostsForSighting([])
-                                  );
-                              } else {
-                                setBookmarkModalMode("register");
-                                setClaimedLostPostsForSighting(null);
-                                setBookmarkModalOpen(true);
-                              }
-                            }}
-                            className="shrink-0 rounded-full p-2 transition-transform active:scale-95"
-                            aria-label={
-                              sightingFeedbackMap[
-                                normalizeSightingId(
-                                  selectedSighting.id as string
-                                )
-                              ]?.claimed
-                                ? "북마크 해제"
-                                : "북마크 등록"
+            <SightingDetailCard
+              sighting={selectedSighting as SightingDetailData}
+              getImageUrl={getImageUrl}
+              onClose={() => setSelectedSighting(null)}
+              rightSlot={
+                isAuthenticated &&
+                session?.access_token &&
+                "id" in selectedSighting &&
+                myLostPosts.length > 0 ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      const sid = selectedSighting.id as string;
+                      const isClaimed =
+                        sightingFeedbackMap[normalizeSightingId(sid)]?.claimed;
+                      if (isClaimed) {
+                        setBookmarkModalMode("unregister");
+                        setBookmarkModalOpen(true);
+                        setClaimedLostPostsForSighting(null);
+                        fetch(
+                          `/api/v1/me/sighting-claims/${encodeURIComponent(sid)}`,
+                          {
+                            credentials: "include",
+                            headers: {
+                              Authorization: `Bearer ${session.access_token}`,
+                            },
+                          }
+                        )
+                          .then((r) => r.json())
+                          .then((res) => {
+                            if (
+                              res?.success &&
+                              Array.isArray(res.data?.lostPosts)
+                            ) {
+                              setClaimedLostPostsForSighting(
+                                res.data.lostPosts
+                              );
+                            } else {
+                              setClaimedLostPostsForSighting([]);
                             }
-                          >
-                            {sightingFeedbackMap[
-                              normalizeSightingId(selectedSighting.id as string)
-                            ]?.claimed ? (
-                              <svg
-                                className="h-8 w-8 text-yellow-500"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                              >
-                                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                              </svg>
-                            ) : (
-                              <svg
-                                className="h-8 w-8 text-gray-400"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                strokeWidth="1.5"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                              >
-                                <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 20.27 12 17.77 5.82 20.27 7 14.14 2 9.27 8.91 8.26 12 2" />
-                              </svg>
-                            )}
-                          </button>
-                        )}
-                    </div>
-
-                    {(selectedSighting.trait_color ||
-                      selectedSighting.trait_size ||
-                      selectedSighting.trait_species) && (
-                      <div>
-                        <p className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                          색상 · 크기 · 종
-                        </p>
-                        <div className="flex flex-wrap gap-2">
-                          {selectedSighting.trait_color && (
-                            <span className="bg-primary/10 text-primary rounded-lg px-2.5 py-1 text-xs font-medium">
-                              {selectedSighting.trait_color}
-                            </span>
-                          )}
-                          {selectedSighting.trait_size && (
-                            <span className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                              {selectedSighting.trait_size}
-                            </span>
-                          )}
-                          {selectedSighting.trait_species && (
-                            <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                              {selectedSighting.trait_species}
-                            </span>
-                          )}
-                        </div>
-                      </div>
+                          })
+                          .catch(() => setClaimedLostPostsForSighting([]));
+                      } else {
+                        setBookmarkModalMode("register");
+                        setClaimedLostPostsForSighting(null);
+                        setBookmarkModalOpen(true);
+                      }
+                    }}
+                    className="shrink-0 rounded-full p-2 transition-transform active:scale-95"
+                    aria-label={
+                      sightingFeedbackMap[
+                        normalizeSightingId(selectedSighting.id as string)
+                      ]?.claimed
+                        ? "북마크 해제"
+                        : "북마크 등록"
+                    }
+                  >
+                    {sightingFeedbackMap[
+                      normalizeSightingId(selectedSighting.id as string)
+                    ]?.claimed ? (
+                      <svg
+                        className="h-8 w-8 text-yellow-500"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                      >
+                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                      </svg>
+                    ) : (
+                      <svg
+                        className="h-8 w-8 text-gray-400"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 20.27 12 17.77 5.82 20.27 7 14.14 2 9.27 8.91 8.26 12 2" />
+                      </svg>
                     )}
-
-                    <div>
-                      <p className="mb-1.5 text-sm font-medium text-gray-500 dark:text-gray-400">
-                        추가 설명
-                      </p>
-                      <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-900/50">
-                        <p className="text-[15px] leading-relaxed text-gray-800 dark:text-gray-200">
-                          {selectedSighting.note || "상세 설명이 없습니다."}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+                  </button>
+                ) : undefined
+              }
+            />
+          </SightingDetailSheet>
         )}
 
         {/* 7-5: 북마크 등록/해제 — 유실글 선택 모달 */}

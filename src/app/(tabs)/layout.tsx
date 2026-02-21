@@ -18,7 +18,7 @@ export default function TabsLayout({
   const pathname = usePathname();
 
   return (
-    <div className="flex min-h-[100dvh] flex-col">
+    <div className="flex min-h-[100dvh] w-full flex-col">
       <main className="flex-1 pb-20">{children}</main>
 
       <nav
