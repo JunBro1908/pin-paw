@@ -11,6 +11,7 @@ import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { LostPostFormData } from "../model/types";
 import { DOG_BREEDS } from "@/features/sightings/constants/breeds";
+import { TRAIT_COLOR_OPTIONS } from "@/shared/constants/traitColors";
 
 const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || "";
 
@@ -322,14 +323,23 @@ export function LostPostForm() {
           <Text variant="body" className="font-bold">
             색상 · 크기 · 종 (선택)
           </Text>
-          <input
-            type="text"
+          <select
             name="traitColor"
-            value={formData.traitColor}
+            value={
+              TRAIT_COLOR_OPTIONS.includes(formData.traitColor as (typeof TRAIT_COLOR_OPTIONS)[number])
+                ? formData.traitColor
+                : ""
+            }
             onChange={handleChange}
-            placeholder="색상"
-            className={inputBase}
-          />
+            className={selectBase}
+          >
+            <option value="">색상</option>
+            {TRAIT_COLOR_OPTIONS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
           <div className="grid grid-cols-2 gap-3">
             <select
               name="traitSize"

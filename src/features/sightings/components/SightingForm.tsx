@@ -11,6 +11,7 @@ import { Toast } from "@/shared/ui/Toast";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { supabase } from "@/shared/supabase/client";
 import { DOG_BREEDS } from "../constants/breeds";
+import { TRAIT_COLOR_OPTIONS } from "@/shared/constants/traitColors";
 
 const inputBase =
   "w-full rounded-xl border bg-white px-4 py-3 text-[15px] shadow-sm transition-all outline-none focus:ring-2 focus:ring-primary/20 border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100";
@@ -421,14 +422,23 @@ export function SightingForm() {
             <Text variant="body" className="text-text-main font-bold">
               색상 · 크기 · 종 (선택)
             </Text>
-            <input
-              type="text"
+            <select
               name="traitColor"
-              value={formData.traitColor}
+              value={
+                TRAIT_COLOR_OPTIONS.includes(formData.traitColor as (typeof TRAIT_COLOR_OPTIONS)[number])
+                  ? formData.traitColor
+                  : ""
+              }
               onChange={handleChange}
-              placeholder="예: 흰색, 검정"
-              className={inputBase}
-            />
+              className={cn(selectBase, "bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]")}
+            >
+              <option value="">색상</option>
+              {TRAIT_COLOR_OPTIONS.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
             <div className="grid grid-cols-2 gap-3">
               <div className="relative">
                 <select

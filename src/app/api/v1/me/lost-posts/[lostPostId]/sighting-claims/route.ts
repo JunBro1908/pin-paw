@@ -1,5 +1,6 @@
 import {
   createServerSupabaseClient,
+  createServerSupabase,
   getAuthenticatedUser,
 } from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
@@ -119,6 +120,13 @@ export async function POST(
     console.error("[sighting-claims] POST error:", error);
     return fail(ApiErrorCode.INTERNAL_ERROR, "저장에 실패했습니다.", 500);
   }
+
+  // 추천 캐시 무효화: 다음 추천 조회 시 최신 북마크 반영
+  const supabaseAdmin = createServerSupabase();
+  await supabaseAdmin
+    .from("recommendation_cache")
+    .delete()
+    .eq("lost_post_id", lostPostId);
 
   return ok({ success: true });
 }
