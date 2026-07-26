@@ -15,10 +15,13 @@ import { SightingDetailCard } from "@/features/sightings/components/SightingDeta
 import type { SightingDetailData } from "@/features/sightings/components/SightingDetailCard";
 import { SightingDetailSheet } from "@/features/sightings/components/SightingDetailSheet";
 import {
+  DEFAULT_MAP_CENTER,
+  DEFAULT_MAP_WARM_ZOOM,
   getBookmarkPathCoordinates,
   interpolatePath,
   normalizeSightingId,
   readStoredMapLayer,
+  resolveMapLayerForSession,
   writeStoredMapLayer,
 } from "../lib/map-domain";
 import type { MapLayer, SightingFeedbackMap } from "../lib/map-domain";
@@ -32,8 +35,6 @@ import {
   type MapLayerRenderer,
 } from "../lib/map-layer-renderer";
 import { useMapData } from "../hooks/use-map-data";
-
-const DEFAULT_CENTER = { lat: 37.5665, lng: 126.978 };
 
 interface NaverMapProps {
   clientId: string;
@@ -162,6 +163,16 @@ export function NaverMap({
     mapLayerRef.current = mapLayer;
     writeStoredMapLayer(mapLayer);
   }, [mapLayer]);
+
+  // Guests cannot use unseen/bookmark; restore public clusters after logout.
+  useEffect(() => {
+    if (isAuthLoading) return;
+    const nextLayer = resolveMapLayerForSession(mapLayer, isAuthenticated);
+    if (nextLayer !== mapLayer) {
+      setMapLayer(nextLayer);
+    }
+  }, [isAuthLoading, isAuthenticated, mapLayer]);
+
   /** 유실글 마커 터치 시 카드용 (제보 카드와 별도) */
   const [selectedLostPostForCard, setSelectedLostPostForCard] = useState<{
     id: string;
@@ -327,7 +338,10 @@ export function NaverMap({
           if (item.type === "cluster") {
             const currentZoom = map.getZoom();
             if (currentZoom >= 16) {
-              setIsListViewOpen(true);
+              // Guests only receive masked clusters — opening the point list is empty/noise.
+              if (isAuthenticated) {
+                setIsListViewOpen(true);
+              }
               map.panTo(marker.getPosition());
             } else {
               map.morph(marker.getPosition(), currentZoom + 2);
@@ -342,7 +356,13 @@ export function NaverMap({
         },
       });
     },
-    [getImageUrl, setSelectedSighting, setSelectedLostPostForCard, recordSeen]
+    [
+      getImageUrl,
+      isAuthenticated,
+      setSelectedSighting,
+      setSelectedLostPostForCard,
+      recordSeen,
+    ]
   );
 
   /**
@@ -401,10 +421,10 @@ export function NaverMap({
       return;
 
     try {
-      const center = initialCenter ?? DEFAULT_CENTER;
+      const center = initialCenter ?? DEFAULT_MAP_CENTER;
       const mapOptions = {
         center: new window.naver.maps.LatLng(center.lat, center.lng),
-        zoom: initialCenter ? 16 : 13,
+        zoom: initialCenter ? 16 : DEFAULT_MAP_WARM_ZOOM,
         zoomControl: false,
       };
 
@@ -1076,9 +1096,6 @@ export function NaverMap({
                                     message: "북마크를 해제했습니다.",
                                     type: "success",
                                   });
-                                  if (mapLayer === "bookmark") {
-                                    void fetchBookmarkLayerData();
-                                  }
 
                                   try {
                                     const res = await fetch(
@@ -1108,6 +1125,11 @@ export function NaverMap({
                                       if (mapLayer === "bookmark") {
                                         void fetchBookmarkLayerData();
                                       }
+                                      return;
+                                    }
+                                    // Refetch after mutation succeeds so paths/markers match DB.
+                                    if (mapLayer === "bookmark") {
+                                      void fetchBookmarkLayerData();
                                     }
                                   } catch {
                                     patchFeedback(sid, {
@@ -1120,6 +1142,9 @@ export function NaverMap({
                                       message: "북마크 해제에 실패했습니다.",
                                       type: "error",
                                     });
+                                    if (mapLayer === "bookmark") {
+                                      void fetchBookmarkLayerData();
+                                    }
                                   }
                                 }}
                               >
@@ -1170,8 +1195,6 @@ export function NaverMap({
                                 setClaimedLostPostsForSighting(null);
                                 if (switchToBookmark) {
                                   setMapLayer("bookmark");
-                                } else {
-                                  void fetchBookmarkLayerData();
                                 }
                                 setToast({
                                   message:
@@ -1208,18 +1231,19 @@ export function NaverMap({
                                         "북마크 등록에 실패했습니다.",
                                       type: "error",
                                     });
-                                    if (!switchToBookmark) {
-                                      void fetchBookmarkLayerData();
-                                    }
-                                  } else if (!switchToBookmark) {
+                                    // Layer may already be bookmark; resync to drop optimistic state.
                                     void fetchBookmarkLayerData();
+                                    return;
                                   }
+                                  // Always refetch after success — layer switch effect can race before POST.
+                                  void fetchBookmarkLayerData();
                                 } catch {
                                   patchFeedback(sid, { claimed: false });
                                   setToast({
                                     message: "북마크 등록에 실패했습니다.",
                                     type: "error",
                                   });
+                                  void fetchBookmarkLayerData();
                                 }
                               }}
                             >
@@ -1253,7 +1277,7 @@ export function NaverMap({
           )}
 
         {/* 목록 보기 하단 시트 */}
-        {isListViewOpen && (
+        {isAuthenticated && isListViewOpen && (
           <div
             className="animate-in fade-in fixed inset-0 z-[110] flex flex-col justify-end bg-black/40 backdrop-blur-sm transition-all duration-300"
             onMouseDown={stopPropagation}
@@ -1527,29 +1551,32 @@ export function NaverMap({
             </div>
           )}
 
-          {/* 목록 보기 버튼 */}
-          <button
-            onClick={() => setIsListViewOpen(true)}
-            className="bg-primary flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-xl transition-transform active:scale-95"
-          >
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          {/* 목록 보기 버튼 — 로그인 사용자만 (게스트는 point 상세가 없음) */}
+          {isAuthenticated && (
+            <button
+              onClick={() => setIsListViewOpen(true)}
+              className="bg-primary flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-xl transition-transform active:scale-95"
+              aria-label="제보 목록 보기"
             >
-              <line x1="8" y1="6" x2="21" y2="6"></line>
-              <line x1="8" y1="12" x2="21" y2="12"></line>
-              <line x1="8" y1="18" x2="21" y2="18"></line>
-              <line x1="3" y1="6" x2="3.01" y2="6"></line>
-              <line x1="3" y1="12" x2="3.01" y2="12"></line>
-              <line x1="3" y1="18" x2="3.01" y2="18"></line>
-            </svg>
-          </button>
+              <svg
+                width="22"
+                height="22"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <line x1="8" y1="6" x2="21" y2="6"></line>
+                <line x1="8" y1="12" x2="21" y2="12"></line>
+                <line x1="8" y1="18" x2="21" y2="18"></line>
+                <line x1="3" y1="6" x2="3.01" y2="6"></line>
+                <line x1="3" y1="12" x2="3.01" y2="12"></line>
+                <line x1="3" y1="18" x2="3.01" y2="18"></line>
+              </svg>
+            </button>
+          )}
 
           {/* 현재 위치 버튼 */}
           <button

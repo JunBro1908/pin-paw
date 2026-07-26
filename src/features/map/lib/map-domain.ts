@@ -9,6 +9,12 @@ export type MapLayer = "default" | "unseen" | "bookmark";
 
 export const MAP_LAYER_STORAGE_KEY = "pinpaw.mapLayer";
 
+/** Default map center (Seoul City Hall) — shared by map init and auth warm prefetch. */
+export const DEFAULT_MAP_CENTER = { lat: 37.5665, lng: 126.978 } as const;
+export const DEFAULT_MAP_WARM_ZOOM = 13;
+/** Half-span for warm bbox; full span stays well under the 2° public/auth guard. */
+export const DEFAULT_MAP_WARM_HALF_SPAN = 0.06;
+
 const MAP_LAYERS: readonly MapLayer[] = ["default", "unseen", "bookmark"];
 
 export function isMapLayer(value: unknown): value is MapLayer {
@@ -47,6 +53,17 @@ export function writeStoredMapLayer(
   } catch {
     // Ignore quota / private-mode failures; preference is best-effort.
   }
+}
+
+/**
+ * Guests only see masked public clusters. Auth-only layers (unseen/bookmark)
+ * must not stick via localStorage after logout, or the map renders empty.
+ */
+export function resolveMapLayerForSession(
+  layer: MapLayer,
+  authenticated: boolean
+): MapLayer {
+  return authenticated || layer === "default" ? layer : "default";
 }
 
 export interface Coordinate {

@@ -23,5 +23,26 @@ test("NaverMap restores and writes map layer preference", async () => {
 
   assert.match(source, /readStoredMapLayer/);
   assert.match(source, /writeStoredMapLayer/);
+  assert.match(source, /resolveMapLayerForSession/);
   assert.match(source, /useState<MapLayer>\(\(\) => readStoredMapLayer\(\)\)/);
+});
+
+test("NaverMap refetches bookmark layer after claim mutations succeed", async () => {
+  const source = await readFile(
+    "src/features/map/components/NaverMap.tsx",
+    "utf8"
+  );
+
+  assert.match(
+    source,
+    /Refetch after mutation succeeds so paths\/markers match DB/
+  );
+  assert.match(
+    source,
+    /Always refetch after success — layer switch effect can race before POST/
+  );
+  assert.doesNotMatch(
+    source,
+    /setToast\(\{[\s\S]*북마크를 해제했습니다\.[\s\S]*if \(mapLayer === "bookmark"\) \{\s*void fetchBookmarkLayerData\(\);\s*\}\s*try \{/
+  );
 });

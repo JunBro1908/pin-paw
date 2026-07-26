@@ -125,3 +125,22 @@ test("persists map layer preference in localStorage-compatible storage", () => {
   assert.equal(mapDomain.isMapLayer?.("unseen"), true);
   assert.equal(mapDomain.isMapLayer?.("paths"), false);
 });
+
+test("guests cannot keep auth-only layers that would hide public clusters", () => {
+  assert.equal(
+    mapDomain.resolveMapLayerForSession?.("bookmark", false),
+    "default"
+  );
+  assert.equal(
+    mapDomain.resolveMapLayerForSession?.("unseen", false),
+    "default"
+  );
+  assert.equal(
+    mapDomain.resolveMapLayerForSession?.("default", false),
+    "default"
+  );
+  assert.equal(
+    mapDomain.resolveMapLayerForSession?.("bookmark", true),
+    "bookmark"
+  );
+});
