@@ -1,0 +1,113 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { readFile } from "node:fs/promises";
+
+import {
+  assertSharePreviewIsSafe,
+  buildLostPostSharePreview,
+  buildOpenGraphDescription,
+} from "../../src/shared/lib/share-preview.ts";
+
+const migrationPath =
+  "supabase/migrations/20260725140000_public_lost_post_share_preview.sql";
+
+test("share preview masks precise coordinates and omits note/owner fields", () => {
+  const preview = buildLostPostSharePreview({
+    id: "8db61ddf-bce2-4b51-b531-0b93093053d1",
+    status: "searching",
+    pet_name: "초코",
+    lost_at: "2026-07-25T00:00:00.000Z",
+    trait_color: "갈색",
+    trait_size: "중형",
+    trait_species: "믹스",
+    trait_tags: ["목줄"],
+    cover_photo_key: "lost_cover/20260725/example.jpg",
+    hidden_at: null,
+    archived_at: null,
+    lat: 37.5665,
+    lng: 126.978,
+    note: "집 근처 골목, 전화 010-0000-0000",
+    owner_id: "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee",
+  });
+
+  assert.ok(preview);
+  assert.equal(preview.approximateArea?.lat, 37.575);
+  assert.equal(preview.approximateArea?.lng, 126.975);
+  assert.equal(preview.approximateArea?.locationPrecision, "approximate");
+  assert.equal(preview.petName, "초코");
+  assert.equal("note" in preview, false);
+  assert.equal("owner_id" in preview, false);
+  assert.equal("lat" in preview, false);
+  assert.equal("lng" in preview, false);
+  assertSharePreviewIsSafe(preview);
+});
+
+test("share preview hides closed, hidden, or archived posts", () => {
+  assert.equal(
+    buildLostPostSharePreview({
+      id: "8db61ddf-bce2-4b51-b531-0b93093053d1",
+      status: "closed",
+      pet_name: "초코",
+      lost_at: null,
+      trait_color: null,
+      trait_size: null,
+      trait_species: null,
+      trait_tags: null,
+      cover_photo_key: null,
+      hidden_at: null,
+      archived_at: null,
+    }),
+    null
+  );
+  assert.equal(
+    buildLostPostSharePreview({
+      id: "8db61ddf-bce2-4b51-b531-0b93093053d1",
+      status: "searching",
+      pet_name: "초코",
+      lost_at: null,
+      trait_color: null,
+      trait_size: null,
+      trait_species: null,
+      trait_tags: null,
+      cover_photo_key: null,
+      hidden_at: "2026-07-25T00:00:00.000Z",
+      archived_at: null,
+    }),
+    null
+  );
+});
+
+test("open graph description never embeds private notes", () => {
+  const preview = buildLostPostSharePreview({
+    id: "8db61ddf-bce2-4b51-b531-0b93093053d1",
+    status: "searching",
+    pet_name: "초코",
+    lost_at: null,
+    trait_color: "갈색",
+    trait_size: null,
+    trait_species: null,
+    trait_tags: null,
+    cover_photo_key: null,
+    hidden_at: null,
+    archived_at: null,
+    lat: 37.5665,
+    lng: 126.978,
+    note: "SECRET_NOTE",
+  });
+  const description = buildOpenGraphDescription(preview);
+  assert.doesNotMatch(description, /SECRET_NOTE/);
+  assert.match(description, /초코/);
+});
+
+test("share preview SQL uses lost_location grid and never selects note", async () => {
+  const sql = await readFile(migrationPath, "utf8");
+  assert.match(sql, /get_public_lost_post_share_preview/i);
+  assert.match(sql, /lost_location/i);
+  assert.match(sql, /0\.05/);
+  assert.doesNotMatch(sql, /\blp\.note\b/i);
+  assert.doesNotMatch(sql, /\bowner_id\b/i);
+  assert.match(
+    sql,
+    /grant execute on function public\.get_public_lost_post_share_preview\(uuid\)[\s\S]*?to anon/i
+  );
+});
