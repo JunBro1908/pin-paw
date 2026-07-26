@@ -1,0 +1,13 @@
+id,meaning_group,content_type,text_to_embed,tag_ids,note
+1,A,free_text,이 유실 반려동물에 대한 메모는 목줄을 하고 있었어요. 검은색 목줄이에요.,,비정형
+2,A,tag_sentence,이 유실 반려동물에 대한 메모는 목줄 있음입니다.,collar,동일 의미 정형
+3,B,free_text,이 유실 반려동물에 대한 메모는 꼬리가 짧고 잘렸어요. 한쪽 눈이 안 보여요.,,비정형
+4,B,tag_sentence,"이 유실 반려동물에 대한 메모는 꼬리 특이, 눈/귀 특이입니다.",tail_trait;eye_ear_trait,동일 의미 정형
+5,C,free_text,이 유실 반려동물에 대한 메모는 옷 입고 있었고 사람 잘 따릅니다.,,비정형
+6,C,tag_sentence,"이 유실 반려동물에 대한 메모는 옷 착용, 사람을 잘 따름입니다.",wearing_clothes;follows_people,동일 의미 정형
+7,D,free_text,이 유실 반려동물에 대한 메모는 흉터가 있어요.,,비정형
+8,D,tag_sentence,이 유실 반려동물에 대한 메모는 흉터입니다.,scar,동일 의미 정형
+9,E,free_text,이 유실 반려동물에 대한 메모는 겁이 많아서 도망가요. 짖어요.,,비정형
+10,E,tag_sentence,"이 유실 반려동물에 대한 메모는 경계심 큼/도망감, 공격성/짖음입니다.",wary_runs;aggressive_barks,동일 의미 정형
+11,F,free_text,이 유실 반려동물에 대한 메모는 하네스 메쉬형이에요.,,비정형
+12,F,tag_sentence,이 유실 반려동물에 대한 메모는 하네스 있음입니다.,harness,동일 의미 정형
