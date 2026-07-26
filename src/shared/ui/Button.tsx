@@ -17,7 +17,7 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    "flex items-center justify-center rounded-lg px-4 py-3 font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100";
+    "flex items-center justify-center rounded-lg px-4 py-3 font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
   const variants = {
     primary: "bg-primary text-white",
@@ -30,13 +30,18 @@ export function Button({
     <button
       className={cn(baseStyles, variantStyles, className)}
       disabled={disabled || isLoading}
+      aria-busy={Boolean(isLoading)}
       {...props}
     >
       {isLoading ? (
-        <span className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        <span
+          className="h-5 w-5 animate-spin rounded-full border-2 border-current border-t-transparent"
+          aria-hidden="true"
+        />
       ) : (
         children
       )}
+      {isLoading ? <span className="sr-only" aria-live="polite">로딩 중</span> : null}
     </button>
   );
 }

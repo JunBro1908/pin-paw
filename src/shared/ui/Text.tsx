@@ -1,10 +1,8 @@
 import { cn } from "@/shared/lib/cn";
 
-interface TextProps {
-  children: React.ReactNode;
+interface TextProps extends React.ComponentPropsWithoutRef<"p"> {
   variant?: "title" | "body" | "caption";
   color?: "main" | "sub" | "caption" | "error" | "primary";
-  className?: string;
 }
 
 /**
@@ -15,6 +13,7 @@ export function Text({
   variant = "body",
   color,
   className,
+  ...props
 }: TextProps) {
   const variantStyles = {
     title: "text-xl font-bold",
@@ -40,7 +39,10 @@ export function Text({
   const finalColorStyle = color ? colorStyles[color] : defaultColors[variant];
 
   return (
-    <p className={cn(variantStyles[variant], finalColorStyle, className)}>
+    <p
+      className={cn(variantStyles[variant], finalColorStyle, className)}
+      {...props}
+    >
       {children}
     </p>
   );

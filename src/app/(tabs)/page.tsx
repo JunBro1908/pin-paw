@@ -1,6 +1,8 @@
+import { Suspense } from "react";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { SightingForm } from "@/features/sightings/components/SightingForm";
+import { AuthFeedbackBanner } from "@/features/auth/components/AuthFeedbackBanner";
 
 /**
  * 홈 페이지: 가장 빠른 목격 제보(10초 제보) 흐름을 제공합니다.
@@ -17,10 +19,12 @@ export default function HomePage() {
         </Text>
       </header>
 
-      {/* 제보 폼 섹션 */}
+      <Suspense fallback={null}>
+        <AuthFeedbackBanner />
+      </Suspense>
+
       <SightingForm />
 
-      {/* 하단 안내 문구 */}
       <footer className="mt-12 pb-8 text-center">
         <Text variant="caption" className="text-text-caption">
           허위 제보 시 서비스 이용이 제한될 수 있습니다.

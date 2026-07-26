@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Text } from "@/shared/ui/Text";
 
@@ -10,6 +11,17 @@ import { Text } from "@/shared/ui/Text";
  */
 export function LoginPrompt() {
   const { signInWithKakao } = useAuth();
+  const [pending, setPending] = useState(false);
+
+  const handleLogin = async () => {
+    if (pending) return;
+    setPending(true);
+    try {
+      await signInWithKakao();
+    } finally {
+      setPending(false);
+    }
+  };
 
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-5 py-10">
@@ -25,9 +37,11 @@ export function LoginPrompt() {
 
         <button
           type="button"
-          onClick={signInWithKakao}
-          className="flex w-full justify-center transition-opacity hover:opacity-90"
+          onClick={() => void handleLogin()}
+          disabled={pending}
+          className="flex w-full justify-center transition-opacity hover:opacity-90 disabled:opacity-60"
           aria-label="카카오 로그인"
+          aria-busy={pending}
         >
           <Image
             src="/images/kakao_login_medium_narrow.png"

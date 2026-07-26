@@ -9,6 +9,25 @@ import {
 } from "react";
 import type { User, Session } from "@supabase/supabase-js";
 import { createClient } from "@/shared/supabase/client";
+import { getOAuthReturnPath } from "@/shared/lib/oauth-return-path";
+import {
+  invalidateMyLostPostsCache,
+  prefetchMyLostPosts,
+} from "@/features/lost-posts/hooks/useMyLostPosts";
+import {
+  invalidateMySightingsCache,
+  prefetchMySightings,
+} from "@/features/sightings/hooks/useMySightings";
+
+function warmAuthenticatedCaches(accessToken: string | undefined) {
+  if (!accessToken) {
+    invalidateMyLostPostsCache();
+    invalidateMySightingsCache();
+    return;
+  }
+  void prefetchMyLostPosts(accessToken);
+  void prefetchMySightings(accessToken);
+}
 
 export interface AuthState {
   user: User | null;
@@ -27,11 +46,6 @@ const defaultState: AuthState = {
   user: null,
   session: null,
   isLoading: true,
-};
-
-const defaultActions: AuthActions = {
-  signInWithKakao: async () => {},
-  signOut: async () => {},
 };
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -64,6 +78,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
         } = await supabase.auth.getSession();
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
+        warmAuthenticatedCaches(currentSession?.access_token);
       } catch (error) {
         console.error("[AuthProvider] Error fetching session:", error);
       } finally {
@@ -79,6 +94,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setSession(newSession);
       setUser(newSession?.user ?? null);
       setIsLoading(false);
+      warmAuthenticatedCaches(newSession?.access_token);
     });
 
     return () => {
@@ -87,15 +103,31 @@ export function AuthProvider({ children }: AuthProviderProps) {
   }, [supabase]);
 
   const signInWithKakao = useCallback(async () => {
-    if (!supabase) return;
-    const currentPath = window.location.pathname;
+    if (!supabase) {
+      console.error("[AuthProvider] Supabase client is unavailable");
+      return;
+    }
 
-    await supabase.auth.signInWithOAuth({
+    const currentPath = getOAuthReturnPath(
+      window.location.pathname,
+      window.location.search
+    );
+
+    const { error } = await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: {
         redirectTo: `${window.location.origin}/auth/callback?redirect=${encodeURIComponent(currentPath)}`,
       },
     });
+    if (error) {
+      console.error("[AuthProvider] Kakao OAuth failed:", error.message);
+      const providerDisabled = /provider is not enabled/i.test(error.message);
+      window.alert(
+        providerDisabled
+          ? "카카오 로그인이 아직 켜져 있지 않습니다.\n\nSupabase Dashboard → Authentication → Providers → Kakao를 활성화하고,\nRedirect URL에 현재 앱의 /auth/callback 을 추가한 뒤 다시 시도해주세요."
+          : `카카오 로그인을 시작할 수 없습니다.\n${error.message}`
+      );
+    }
   }, [supabase]);
 
   const signOut = useCallback(async () => {
