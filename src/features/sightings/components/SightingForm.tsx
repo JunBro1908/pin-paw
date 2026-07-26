@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { SightingFormData } from "../model/types";
@@ -10,9 +11,27 @@ import { toLocalDatetimeLocalString } from "@/shared/lib/date";
 import { Toast } from "@/shared/ui/Toast";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { supabase } from "@/shared/supabase/client";
-import { DOG_BREEDS } from "../constants/breeds";
-import { TRAIT_COLOR_OPTIONS } from "@/shared/constants/traitColors";
+import {
+  DOG_BREEDS,
+  getBreedLabel,
+  SPECIES_UNKNOWN,
+} from "../constants/breeds";
+import {
+  SIZE_LABELS,
+  SIZE_VALUES,
+  type SizeValue,
+} from "@/shared/constants/traitSizes";
+import { TRAIT_TAGS } from "@/shared/constants/traitTags";
+import {
+  completeSubmission,
+  fingerprintUploadFile,
+  markUploadCompleted,
+  prepareSubmission,
+  rememberUploadIntent,
+  type FormSubmissionAttempt,
+} from "@/shared/lib/form-submission-lifecycle";
 
+const MAX_TAG_SELECT_SIGHTING = 5;
 const inputBase =
   "w-full rounded-xl border bg-white px-4 py-3 text-[15px] shadow-sm transition-all outline-none focus:ring-2 focus:ring-primary/20 border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100";
 const selectBase =
@@ -26,8 +45,9 @@ export function SightingForm() {
     lng: 126.978,
     time: toLocalDatetimeLocalString(),
     traitColor: "",
-    traitSize: "",
-    traitSpecies: "",
+    traitSize: "unknown",
+    traitSpecies: SPECIES_UNKNOWN,
+    traitTags: [],
     description: "",
   });
 
@@ -42,39 +62,50 @@ export function SightingForm() {
   } | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || "";
+  const submissionAttemptRef = useRef<FormSubmissionAttempt | null>(null);
+  const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
 
   // 초기 렌더링 시 현재 위치 가져오기
   useEffect(() => {
-    if ("geolocation" in navigator) {
-      setIsLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setFormData((prev) => ({
-            ...prev,
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          }));
-          setIsLocationSet(true);
-          setIsLocating(false);
-        },
-        (error) => {
-          console.error("Geolocation error:", error);
-          setIsLocating(false);
+    if (!("geolocation" in navigator)) return;
 
-          let msg = "위치 정보를 가져오지 못했습니다.";
-          if (error.code === error.PERMISSION_DENIED) {
-            msg = "위치 권한을 허용해주세요.";
-          } else if (error.code === error.TIMEOUT) {
-            msg = "측정 시간이 초과되었습니다. 다시 시도해주세요.";
-          } else if (error.code === error.POSITION_UNAVAILABLE) {
-            msg = "현재 위치 정보를 사용할 수 없습니다.";
-          }
-          setToast({ message: msg, type: "error" });
-        },
-        { enableHighAccuracy: false, timeout: 10000 }
-      );
-    }
+    setIsLocating(true);
+    const onSuccess = (position: GeolocationPosition) => {
+      setFormData((prev) => ({
+        ...prev,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      }));
+      setIsLocationSet(true);
+      setIsLocating(false);
+    };
+    const onError = (error: GeolocationPositionError, retried: boolean) => {
+      if (error.code === error.TIMEOUT && !retried) {
+        navigator.geolocation.getCurrentPosition(
+          onSuccess,
+          (retryError) => onError(retryError, true),
+          { enableHighAccuracy: false, timeout: 20000, maximumAge: 120000 }
+        );
+        return;
+      }
+      console.error("Geolocation error:", error);
+      setIsLocating(false);
+      let msg = "위치 정보를 가져오지 못했습니다.";
+      if (error.code === error.PERMISSION_DENIED) {
+        msg = "위치 권한을 허용해주세요.";
+      } else if (error.code === error.TIMEOUT) {
+        msg = "측정 시간이 초과되었습니다. 다시 시도해주세요.";
+      } else if (error.code === error.POSITION_UNAVAILABLE) {
+        msg = "현재 위치 정보를 사용할 수 없습니다.";
+      }
+      setToast({ message: msg, type: "error" });
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      onSuccess,
+      (error) => onError(error, false),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+    );
   }, []);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,6 +139,7 @@ export function SightingForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!isValid || !formData.photo) {
       setShowErrors(true);
       return;
@@ -122,16 +154,46 @@ export function SightingForm() {
     setIsSubmitting(true);
 
     try {
+      const domainPayload = {
+        location: { lat: formData.lat, lng: formData.lng },
+        occurredAt: new Date(formData.time).toISOString(),
+        traitColor: formData.traitColor?.trim() || null,
+        traitSize: formData.traitSize,
+        traitSpecies: formData.traitSpecies,
+        traitTags: formData.traitTags?.length ? formData.traitTags : null,
+        note: formData.description?.trim() || null,
+      };
+      const payloadFingerprint = JSON.stringify({
+        file: await fingerprintUploadFile(formData.photo),
+        domainPayload,
+      });
+      const attempt = prepareSubmission(
+        submissionAttemptRef.current,
+        payloadFingerprint,
+        () => crypto.randomUUID()
+      );
+      submissionAttemptRef.current = attempt;
+
       // 2. 사진 업로드 (Presigned URL 발급 + Storage 업로드)
-      const fileKey = await uploadPhoto(formData.photo);
+      const fileKey = await uploadPhoto(formData.photo, attempt);
+      const currentAttempt = submissionAttemptRef.current ?? attempt;
 
       // 3. 목격 제보 저장
-      await registerSighting(fileKey, formData);
+      await registerSighting(
+        fileKey,
+        domainPayload,
+        currentAttempt.submissionIdempotencyKey
+      );
+      submissionAttemptRef.current = completeSubmission();
 
       setToast({
         message: "제보가 성공적으로 등록되었습니다!",
         type: "success",
       });
+      const { invalidateMySightingsCache } = await import(
+        "@/features/sightings/hooks/useMySightings"
+      );
+      invalidateMySightingsCache();
 
       // 폼 초기화
       resetForm();
@@ -148,50 +210,71 @@ export function SightingForm() {
   /**
    * 사진을 업로드하고 fileKey를 반환합니다.
    */
-  const uploadPhoto = async (photo: File): Promise<string> => {
+  const uploadPhoto = async (
+    photo: File,
+    initialAttempt: FormSubmissionAttempt
+  ): Promise<string> => {
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      let attempt = initialAttempt;
+
       // 1-1. Presigned URL 요청
-      const presignRes = await fetch("/api/v1/uploads/presign", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Idempotency-Key": crypto.randomUUID(),
-        },
-        body: JSON.stringify({
-          purpose: "sighting_photo",
-          files: [{ contentType: photo.type, sizeBytes: photo.size }],
-        }),
-      });
+      if (!attempt.uploadIntent) {
+        const presignRes = await fetch("/api/v1/uploads/presign", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Idempotency-Key": attempt.uploadIdempotencyKey,
+            ...(session?.access_token && {
+              Authorization: `Bearer ${session.access_token}`,
+            }),
+          },
+          body: JSON.stringify({
+            purpose: "sighting_photo",
+            files: [{ contentType: photo.type, sizeBytes: photo.size }],
+          }),
+        });
 
-      // HTTP 상태 코드 체크
-      if (!presignRes.ok) {
-        const errorData = await presignRes.json();
-        const errorMessage =
-          errorData.error?.message || "이미지 업로드에 실패했습니다.";
-        throw new Error(errorMessage);
+        // HTTP 상태 코드 체크
+        if (!presignRes.ok) {
+          const errorData = await presignRes.json();
+          const errorMessage =
+            errorData.error?.message || "이미지 업로드에 실패했습니다.";
+          throw new Error(errorMessage);
+        }
+
+        const presignResult = await presignRes.json();
+        if (!presignResult.success || !presignResult.data?.uploads?.[0]) {
+          const errorMessage =
+            presignResult.error?.message || "이미지 업로드에 실패했습니다.";
+          throw new Error(errorMessage);
+        }
+
+        attempt = rememberUploadIntent(attempt, presignResult.data.uploads[0]);
+        submissionAttemptRef.current = attempt;
       }
 
-      const presignResult = await presignRes.json();
-      if (!presignResult.success) {
-        const errorMessage =
-          presignResult.error?.message || "이미지 업로드에 실패했습니다.";
-        throw new Error(errorMessage);
-      }
-
-      const { uploadUrl, fileKey } = presignResult.data.uploads[0];
+      const uploadIntent = attempt.uploadIntent;
+      if (!uploadIntent) throw new Error("이미지 업로드에 실패했습니다.");
 
       // 1-2. Storage로 직접 업로드 (PUT)
-      const uploadRes = await fetch(uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": photo.type },
-        body: photo,
-      });
+      if (!uploadIntent.uploaded) {
+        const uploadRes = await fetch(uploadIntent.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": photo.type },
+          body: photo,
+        });
 
-      if (!uploadRes.ok) {
-        throw new Error("이미지 업로드에 실패했습니다.");
+        if (!uploadRes.ok) {
+          throw new Error("이미지 업로드에 실패했습니다.");
+        }
+        attempt = markUploadCompleted(attempt);
+        submissionAttemptRef.current = attempt;
       }
 
-      return fileKey;
+      return uploadIntent.fileKey;
     } catch (err) {
       const message =
         err instanceof Error && err.message && err.message !== "Failed to fetch"
@@ -204,7 +287,19 @@ export function SightingForm() {
   /**
    * 제보 정보를 서버에 저장합니다.
    */
-  const registerSighting = async (fileKey: string, data: SightingFormData) => {
+  const registerSighting = async (
+    fileKey: string,
+    data: {
+      location: { lat: number; lng: number };
+      occurredAt: string;
+      traitColor: string | null;
+      traitSize: string;
+      traitSpecies: string;
+      traitTags: string[] | null;
+      note: string | null;
+    },
+    idempotencyKey: string
+  ) => {
     try {
       const {
         data: { session },
@@ -212,6 +307,7 @@ export function SightingForm() {
 
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
+        "Idempotency-Key": idempotencyKey,
       };
 
       if (session?.access_token) {
@@ -223,12 +319,13 @@ export function SightingForm() {
         headers,
         body: JSON.stringify({
           photoKeys: [fileKey],
-          location: { lat: data.lat, lng: data.lng },
-          occurredAt: new Date(data.time).toISOString(),
-          traitColor: data.traitColor?.trim() || null,
-          traitSize: data.traitSize?.trim() || null,
-          traitSpecies: data.traitSpecies?.trim() || null,
-          note: data.description?.trim() || null,
+          location: data.location,
+          occurredAt: data.occurredAt,
+          traitColor: data.traitColor,
+          traitSize: data.traitSize,
+          traitSpecies: data.traitSpecies,
+          traitTags: data.traitTags,
+          note: data.note,
         }),
       });
 
@@ -274,8 +371,9 @@ export function SightingForm() {
       lng: 126.978,
       time: new Date().toISOString().slice(0, 16),
       traitColor: "",
-      traitSize: "",
-      traitSpecies: "",
+      traitSize: "unknown",
+      traitSpecies: SPECIES_UNKNOWN,
+      traitTags: [],
       description: "",
     });
     setIsLocationSet(false);
@@ -310,10 +408,13 @@ export function SightingForm() {
           >
             {formData.photoUrl ? (
               <>
-                <img
+                <Image
                   src={formData.photoUrl}
                   alt="Preview"
-                  className="h-full w-full object-contain p-2"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  unoptimized
+                  className="object-contain p-2"
                 />
                 <button
                   type="button"
@@ -359,7 +460,17 @@ export function SightingForm() {
           </div>
           <button
             type="button"
-            onClick={() => setIsMapOpen(true)}
+            onClick={() => {
+              if (!naverMapsClientId) {
+                setToast({
+                  message:
+                    "지도 설정(NEXT_PUBLIC_NAVER_MAP_CLIENT_ID)이 없어 위치를 변경할 수 없습니다.",
+                  type: "error",
+                });
+                return;
+              }
+              setIsMapOpen(true);
+            }}
             className="border-border-subtle hover:border-primary/50 focus:ring-primary/10 flex w-full items-center justify-between rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2 active:scale-[0.99]"
           >
             <div className="flex items-center gap-2">
@@ -388,7 +499,7 @@ export function SightingForm() {
           </button>
         </section>
 
-        {isMapOpen && (
+        {isMapOpen && naverMapsClientId ? (
           <LocationPicker
             clientId={naverMapsClientId}
             initialLat={formData.lat}
@@ -401,7 +512,7 @@ export function SightingForm() {
             title="목격 위치 선택"
             guideMessage="지도를 클릭하거나 주소 검색으로 목격 위치를 선택하세요"
           />
-        )}
+        ) : null}
 
         <section className="space-y-6">
           <div className="space-y-3">
@@ -422,23 +533,15 @@ export function SightingForm() {
             <Text variant="body" className="text-text-main font-bold">
               색상 · 크기 · 종 (선택)
             </Text>
-            <select
+            <input
+              type="text"
               name="traitColor"
-              value={
-                TRAIT_COLOR_OPTIONS.includes(formData.traitColor as (typeof TRAIT_COLOR_OPTIONS)[number])
-                  ? formData.traitColor
-                  : ""
-              }
+              value={formData.traitColor}
               onChange={handleChange}
-              className={cn(selectBase, "bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]")}
-            >
-              <option value="">색상</option>
-              {TRAIT_COLOR_OPTIONS.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+              placeholder="예: 갈색, 흰색 얼룩, 검정·흰색"
+              maxLength={100}
+              className={inputBase}
+            />
             <div className="grid grid-cols-2 gap-3">
               <div className="relative">
                 <select
@@ -450,10 +553,11 @@ export function SightingForm() {
                     "bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]"
                   )}
                 >
-                  <option value="">크기</option>
-                  <option value="소">소</option>
-                  <option value="중">중</option>
-                  <option value="대">대</option>
+                  {SIZE_VALUES.map((v) => (
+                    <option key={v} value={v}>
+                      {SIZE_LABELS[v as SizeValue]}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div className="relative">
@@ -466,13 +570,56 @@ export function SightingForm() {
                     "bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]"
                   )}
                 >
-                  <option value="">견종</option>
                   {DOG_BREEDS.map((breed) => (
                     <option key={breed} value={breed}>
-                      {breed}
+                      {getBreedLabel(breed)}
                     </option>
                   ))}
                 </select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Text variant="caption" color="caption">
+                특이사항 (최대 {MAX_TAG_SELECT_SIGHTING}개)
+              </Text>
+              <div className="flex flex-wrap gap-2">
+                {TRAIT_TAGS.map((tag) => {
+                  const selected = formData.traitTags.includes(tag.id);
+                  const disabled =
+                    !selected &&
+                    formData.traitTags.length >= MAX_TAG_SELECT_SIGHTING;
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => {
+                        if (selected) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            traitTags: prev.traitTags.filter(
+                              (id) => id !== tag.id
+                            ),
+                          }));
+                        } else if (!disabled) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            traitTags: [...prev.traitTags, tag.id],
+                          }));
+                        }
+                      }}
+                      disabled={disabled}
+                      className={cn(
+                        "rounded-full px-3 py-1.5 text-sm transition-colors",
+                        selected
+                          ? "bg-primary text-white"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80",
+                        disabled && "cursor-not-allowed opacity-50"
+                      )}
+                    >
+                      {tag.labelKo}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>

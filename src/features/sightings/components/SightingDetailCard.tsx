@@ -9,6 +9,7 @@ export interface SightingDetailData {
   photo_keys?: string[];
   occurred_at?: string;
   author_type?: "anon" | "user";
+  author_user_id?: string | null;
   trait_color?: string;
   trait_size?: string;
   trait_species?: string;
@@ -40,13 +41,13 @@ export function SightingDetailCard({
 }: SightingDetailCardProps) {
   return (
     <div
-      className={`bg-surface relative overflow-hidden rounded-[32px] shadow-[0_8px_40px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:ring-white/10 ${className}`}
+      className={`bg-surface relative mx-auto w-full max-w-md overflow-hidden rounded-[28px] shadow-[0_8px_40px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:ring-white/10 ${className}`}
     >
       {showCloseButton && (
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 z-30 rounded-full bg-black/20 p-2 text-white backdrop-blur-md transition-colors hover:bg-black/40"
+          className="absolute top-3 right-3 z-30 rounded-full bg-black/25 p-2 text-white backdrop-blur-md transition-colors hover:bg-black/40"
           aria-label="닫기"
         >
           <svg
@@ -65,26 +66,26 @@ export function SightingDetailCard({
         </button>
       )}
 
-      <div className="max-h-[60vh] overflow-y-auto">
+      <div className="max-h-[min(70vh,640px)] overflow-y-auto">
         <div className="flex flex-col">
           {sighting.photo_keys?.[0] && (
-            <div className="relative aspect-[4/3] w-full overflow-hidden bg-gray-100 dark:bg-gray-800">
+            <div className="relative aspect-[4/3] w-full max-h-56 overflow-hidden bg-gray-100 sm:max-h-64 dark:bg-gray-800">
               <Image
                 src={getImageUrl(sighting.photo_keys[0])}
                 alt="목격 사진"
                 fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover transition-transform duration-500 hover:scale-105"
+                sizes="(max-width: 768px) 100vw, 28rem"
+                className="object-cover"
                 priority
               />
               <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
             </div>
           )}
 
-          <div className="space-y-5 p-6">
+          <div className="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <Text variant="title" className="text-xl font-bold">
+                <Text variant="title" className="text-lg font-bold sm:text-xl">
                   {sighting.author_type === "anon" ? "익명 제보" : "회원 제보"}
                 </Text>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -134,14 +135,14 @@ export function SightingDetailCard({
               <p className="mb-1.5 text-sm font-medium text-gray-500 dark:text-gray-400">
                 추가 설명
               </p>
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-gray-600 dark:bg-gray-900/50">
-                <p className="text-[15px] leading-relaxed text-gray-800 dark:text-gray-200">
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3.5 sm:p-4 dark:border-gray-600 dark:bg-gray-900/50">
+                <p className="text-[15px] leading-relaxed break-words text-gray-800 dark:text-gray-200">
                   {sighting.note || "상세 설명이 없습니다."}
                 </p>
               </div>
             </div>
 
-            {footer != null && <div className="pt-2">{footer}</div>}
+            {footer != null && <div className="pt-1">{footer}</div>}
           </div>
         </div>
       </div>

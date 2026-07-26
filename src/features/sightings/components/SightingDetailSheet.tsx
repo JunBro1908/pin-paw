@@ -3,7 +3,6 @@
 import { useCallback } from "react";
 
 interface SightingDetailSheetProps {
-  onClose: () => void;
   children: React.ReactNode;
   /** 지도 컨트롤 등 하단 여백(px) */
   bottomOffset?: number;
@@ -14,7 +13,6 @@ interface SightingDetailSheetProps {
  * 추천 페이지 등은 팝업 모달(중앙 배치)을 사용하면 됨.
  */
 export function SightingDetailSheet({
-  onClose,
   children,
   bottomOffset = 104,
 }: SightingDetailSheetProps) {
@@ -24,7 +22,7 @@ export function SightingDetailSheet({
 
   return (
     <div
-      className="animate-in slide-in-from-bottom-6 absolute inset-x-0 z-50 px-4 duration-300"
+      className="animate-in slide-in-from-bottom-6 absolute inset-x-0 z-50 flex justify-center px-4 duration-300 sm:px-6"
       style={{ bottom: `${bottomOffset}px` }}
       onMouseDown={stopPropagation}
       onMouseUp={stopPropagation}
@@ -35,7 +33,7 @@ export function SightingDetailSheet({
       onWheel={stopPropagation}
       onClick={stopPropagation}
     >
-      {children}
+      <div className="w-full min-w-0 max-w-md">{children}</div>
     </div>
   );
 }

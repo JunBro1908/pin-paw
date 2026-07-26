@@ -1,74 +1,35 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import Link from "next/link";
-import { useAuth } from "@/features/auth/hooks/useAuth";
 import { MySightingCard } from "./MySightingCard";
-import type { MySightingItem } from "../model/types";
+import {
+  invalidateMySightingsCache,
+  useMySightings,
+} from "../hooks/useMySightings";
 
 export function MySightingList() {
-  const { session } = useAuth();
-  const [items, setItems] = useState<MySightingItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { items, loading, refreshing, error, reload } = useMySightings();
 
-  const fetchList = useCallback(
-    (showLoading = true) => {
-      if (!session?.access_token) {
-        setLoading(false);
-        return;
-      }
-      if (showLoading) {
-        setLoading(true);
-        setError(null);
-      }
-      let cancelled = false;
-      fetch("/api/v1/me/sightings?limit=50", {
-        credentials: "include",
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      })
-        .then((res) => {
-          if (!res.ok) throw new Error("목록을 불러올 수 없습니다.");
-          return res.json();
-        })
-        .then((json) => {
-          if (!cancelled && json.success && Array.isArray(json.data)) {
-            setItems(json.data);
-          }
-        })
-        .catch((err) => {
-          if (!cancelled) setError(err instanceof Error ? err.message : "오류");
-        })
-        .finally(() => {
-          if (!cancelled) setLoading(false);
-        });
-
-      return () => {
-        cancelled = true;
-      };
-    },
-    [session?.access_token]
-  );
-
-  useEffect(() => {
-    fetchList();
-  }, [fetchList]);
+  const refresh = () => {
+    invalidateMySightingsCache();
+    void reload();
+  };
 
   if (loading) {
     return (
-      <div className="flex min-h-[120px] items-center justify-center">
+      <div className="flex min-h-[120px] flex-col items-center justify-center gap-3">
+        <div className="bg-border-subtle h-3 w-36 animate-pulse rounded-full" />
+        <div className="bg-border-subtle h-3 w-24 animate-pulse rounded-full" />
         <Text variant="caption" color="caption">
-          로딩 중...
+          제보를 불러오는 중...
         </Text>
       </div>
     );
   }
 
-  if (error) {
+  if (error && items.length === 0) {
     return (
       <div className="flex min-h-[120px] flex-col items-center justify-center gap-2">
         <Text variant="body" color="error">
@@ -92,12 +53,23 @@ export function MySightingList() {
   }
 
   return (
-    <ul className="space-y-4">
-      {items.map((item) => (
-        <li key={item.id}>
-          <MySightingCard item={item} onDeleted={() => fetchList(false)} />
-        </li>
-      ))}
-    </ul>
+    <div className="relative">
+      {refreshing ? (
+        <Text
+          variant="caption"
+          color="caption"
+          className="mb-2 block text-right"
+        >
+          업데이트 중...
+        </Text>
+      ) : null}
+      <ul className="space-y-4">
+        {items.map((item) => (
+          <li key={item.id}>
+            <MySightingCard item={item} onDeleted={refresh} />
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

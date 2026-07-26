@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import Image from "next/image";
+import { useRef, useState } from "react";
 import { Text } from "@/shared/ui/Text";
 import { createClient } from "@/shared/supabase/client";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -16,6 +17,7 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
   const { session } = useAuth();
   const [deleting, setDeleting] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const deleteAttemptKey = useRef<string | null>(null);
   const client = createClient();
   const ref = client?.storage?.from("sightings");
   const firstKey = item.photo_keys?.[0];
@@ -34,15 +36,28 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
 
   const handleDelete = async () => {
     if (!session?.access_token) return;
+    deleteAttemptKey.current ??= crypto.randomUUID();
     setDeleting(true);
     try {
       const res = await fetch(`/api/v1/me/sightings/${item.id}`, {
         method: "DELETE",
         credentials: "include",
-        headers: { Authorization: `Bearer ${session.access_token}` },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+          "Idempotency-Key": deleteAttemptKey.current,
+        },
       });
-      if (res.ok) onDeleted?.();
-      setShowConfirm(false);
+      if (res.ok) {
+        onDeleted?.();
+        setShowConfirm(false);
+        return;
+      }
+      const result = await res.json().catch(() => null);
+      window.alert(
+        result?.error?.message ?? "제보 삭제에 실패했습니다. 다시 시도해주세요."
+      );
+    } catch {
+      window.alert("제보 삭제 중 오류가 발생했습니다.");
     } finally {
       setDeleting(false);
     }
@@ -76,12 +91,14 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
           </svg>
         </button>
       )}
-      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
+      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
         {thumbUrl ? (
-          <img
+          <Image
             src={thumbUrl}
             alt="제보 사진"
-            className="h-full w-full object-cover"
+            fill
+            sizes="96px"
+            className="object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-2xl">
@@ -111,6 +128,12 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
           className="text-primary mt-2 inline-block text-sm font-medium hover:underline"
         >
           지도에서 보기
+        </Link>
+        <Link
+          href={`/my/sightings/${item.id}/edit`}
+          className="text-primary ml-3 mt-2 inline-block text-sm font-medium hover:underline"
+        >
+          수정
         </Link>
       </div>
 

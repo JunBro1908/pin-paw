@@ -10,6 +10,7 @@ export interface SightingFormData {
   traitColor: string;
   traitSize: string;
   traitSpecies: string;
+  traitTags: string[];
   description: string;
 }
 
@@ -33,4 +34,17 @@ export interface MySightingItem {
   created_at: string;
   lat?: number;
   lng?: number;
+}
+
+export interface EditableSighting {
+  id: string;
+  photo_keys: string[];
+  occurred_at: string;
+  trait_color: string | null;
+  trait_size: string | null;
+  trait_species: string | null;
+  trait_tags: string[];
+  note: string | null;
+  lat: number;
+  lng: number;
 }
