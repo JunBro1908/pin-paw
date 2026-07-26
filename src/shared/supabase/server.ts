@@ -1,15 +1,30 @@
+import "server-only";
+
 import { createClient } from "@supabase/supabase-js";
-import type { User } from "@supabase/supabase-js";
+import type { SupabaseClient, User } from "@supabase/supabase-js";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+
+function requireServerEnvironment(
+  name:
+    | "NEXT_PUBLIC_SUPABASE_URL"
+    | "NEXT_PUBLIC_SUPABASE_ANON_KEY"
+    | "SUPABASE_SERVICE_ROLE_KEY"
+): string {
+  const value = process.env[name]?.trim();
+  if (!value) {
+    throw new Error(`${name} must be configured.`);
+  }
+  return value;
+}
 
 /**
  * 서버 전용 Supabase 클라이언트 (Service Role Key 사용)
  */
-export const createServerSupabase = () => {
+export const createServiceRoleSupabase = () => {
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    requireServerEnvironment("NEXT_PUBLIC_SUPABASE_URL"),
+    requireServerEnvironment("SUPABASE_SERVICE_ROLE_KEY"),
     {
       auth: {
         persistSession: false,
@@ -17,6 +32,41 @@ export const createServerSupabase = () => {
     }
   );
 };
+
+export async function isAccountAccessAllowed(
+  accessToken: string
+): Promise<boolean> {
+  const userClient = createClient(
+    requireServerEnvironment("NEXT_PUBLIC_SUPABASE_URL"),
+    requireServerEnvironment("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
+    {
+      auth: { persistSession: false },
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    }
+  );
+  const { data, error } = await userClient.rpc("is_account_access_allowed");
+  return error == null && data === true;
+}
+
+export async function getVerifiedUser(
+  authClient: Pick<SupabaseClient, "auth">,
+  accessToken: string,
+  options: { allowDeletionPending?: boolean } = {}
+): Promise<{ user: User } | { user: null }> {
+  if (!accessToken) return { user: null };
+  const {
+    data: { user },
+    error,
+  } = await authClient.auth.getUser(accessToken);
+  if (error || !user) return { user: null };
+  if (
+    !options.allowDeletionPending &&
+    !(await isAccountAccessAllowed(accessToken))
+  ) {
+    return { user: null };
+  }
+  return { user };
+}
 
 /**
  * 세션 기반 Supabase 클라이언트 (쿠키 기반 인증)
@@ -26,8 +76,8 @@ export const createServerSupabaseClient = async () => {
   const cookieStore = await cookies();
 
   return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    requireServerEnvironment("NEXT_PUBLIC_SUPABASE_URL"),
+    requireServerEnvironment("NEXT_PUBLIC_SUPABASE_ANON_KEY"),
     {
       cookies: {
         getAll() {
@@ -60,10 +110,5 @@ export async function getAuthenticatedUser(
     data: { session },
   } = await supabase.auth.getSession();
   if (!session?.access_token) return { user: null };
-  const {
-    data: { user },
-    error,
-  } = await supabase.auth.getUser(session.access_token);
-  if (error || !user) return { user: null };
-  return { user };
+  return getVerifiedUser(supabase, session.access_token);
 }
