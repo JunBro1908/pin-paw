@@ -1,6 +1,102 @@
+export interface NaverLatLng {
+  lat(): number;
+  lng(): number;
+}
+
+export interface NaverPoint {
+  x: number;
+  y: number;
+}
+
+export type NaverConvertedCoordinate = NaverLatLng | NaverPoint;
+
+export interface NaverBounds {
+  getSW(): NaverLatLng;
+  getNE(): NaverLatLng;
+}
+
+export interface NaverMapInstance {
+  destroy(): void;
+  getBounds(): NaverBounds;
+  getZoom(): number;
+  morph(position: NaverLatLng, zoom: number): void;
+  panTo(position: NaverLatLng): void;
+  setZoom(zoom: number): void;
+}
+
+export interface NaverMarkerInstance {
+  getPosition(): NaverLatLng;
+  setMap(map: NaverMapInstance | null): void;
+  setPosition(position: NaverLatLng): void;
+}
+
+export interface NaverPolylineInstance {
+  setMap(map: NaverMapInstance | null): void;
+  setPath(path: NaverLatLng[]): void;
+}
+
+export interface NaverMapClickEvent {
+  coord: NaverLatLng;
+}
+
+export interface NaverMapEventListener {
+  eventName: string;
+  listener: (event: NaverMapClickEvent) => void;
+  listenerId: string;
+  target: object;
+}
+
+export interface NaverGeocodeItem {
+  address?: string;
+  point?: NaverPoint;
+}
+
+export interface NaverGeocodeResponse {
+  result?: {
+    items?: NaverGeocodeItem[];
+  };
+}
+
+export interface NaverMapsApi {
+  Map: new (
+    element: HTMLElement,
+    options: Record<string, unknown>
+  ) => NaverMapInstance;
+  Marker: new (options: Record<string, unknown>) => NaverMarkerInstance;
+  Polyline: new (options: Record<string, unknown>) => NaverPolylineInstance;
+  LatLng: new (lat: number, lng: number) => NaverLatLng;
+  Point: new (x: number, y: number) => NaverPoint;
+  Size: new (width: number, height: number) => NaverPoint;
+  Event: {
+    addListener(
+      instance: object,
+      eventName: string,
+      handler: (event: NaverMapClickEvent) => void
+    ): NaverMapEventListener;
+    removeListener(
+      listeners: NaverMapEventListener | NaverMapEventListener[]
+    ): void;
+    clearInstanceListeners(instance: object): void;
+  };
+  Service: {
+    Status: { OK: string };
+    geocode(
+      options: { address: string },
+      callback: (status: string, response: NaverGeocodeResponse) => void
+    ): void;
+  };
+  TransCoord: {
+    fromTM128ToLatLng(point: NaverPoint): NaverConvertedCoordinate;
+  };
+}
+
+interface NaverMapsNamespace {
+  maps: NaverMapsApi;
+}
+
 declare global {
   interface Window {
-    naver: any;
+    naver: NaverMapsNamespace;
   }
 }
 

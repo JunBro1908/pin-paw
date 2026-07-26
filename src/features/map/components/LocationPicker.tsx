@@ -1,11 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useCallback,
+  useSyncExternalStore,
+} from "react";
 import { createPortal } from "react-dom";
 import Script from "next/script";
 import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
+import type {
+  NaverGeocodeResponse,
+  NaverMapClickEvent,
+  NaverMapInstance,
+  NaverMarkerInstance,
+} from "@/features/map/types/naver";
 
 const MIN_SEARCH_LENGTH = 2;
 
@@ -14,6 +26,16 @@ interface GeocodeItem {
   lng: number;
   label: string;
 }
+
+interface NaverLocalSearchItem {
+  title?: string;
+  address?: string;
+  roadAddress?: string;
+  mapx?: string | number;
+  mapy?: string | number;
+}
+
+const subscribeToClientRuntime = () => () => {};
 
 interface LocationPickerProps {
   clientId: string;
@@ -37,10 +59,14 @@ export function LocationPicker({
   guideMessage = "지도를 클릭하여 핀을 꽂아 위치를 선택하세요",
 }: LocationPickerProps) {
   const mapRef = useRef<HTMLDivElement>(null);
-  const mapInstanceRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
+  const mapInstanceRef = useRef<NaverMapInstance>(null);
+  const markerRef = useRef<NaverMarkerInstance>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(
+    subscribeToClientRuntime,
+    () => true,
+    () => false
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<GeocodeItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -53,7 +79,6 @@ export function LocationPicker({
 
   // 1. 컴포넌트 마운트 및 스크롤 잠금 처리
   useEffect(() => {
-    setMounted(true);
     document.body.style.overflow = "hidden";
 
     return () => {
@@ -114,20 +139,29 @@ export function LocationPicker({
       });
       markerRef.current = marker;
 
-      window.naver.maps.Event.addListener(map, "click", (e: any) => {
+      window.naver.maps.Event.addListener(
+        map,
+        "click",
+        (e: NaverMapClickEvent) => {
         marker.setPosition(e.coord);
-      });
+        }
+      );
     } catch (error) {
-      console.error("Naver Map init error:", error);
+      console.error("LocationPicker map init failed:", error);
     }
   }, [initialLat, initialLng]);
 
   useEffect(() => {
-    if (mounted && window.naver?.maps && !mapInstanceRef.current) {
-      const timer = setTimeout(initMap, 0);
-      return () => clearTimeout(timer);
-    }
-  }, [mounted, initMap]);
+    initMap();
+  }, [initMap]);
+
+  useEffect(() => {
+    return () => {
+      mapInstanceRef.current?.destroy?.();
+      mapInstanceRef.current = null;
+      markerRef.current = null;
+    };
+  }, []);
 
   const moveMapAndMarker = useCallback((lat: number, lng: number) => {
     if (!mapInstanceRef.current || !markerRef.current || !window.naver?.maps)
@@ -146,7 +180,7 @@ export function LocationPicker({
       }
       window.naver.maps.Service.geocode(
         { address: q },
-        (status: string, response: any) => {
+        (status: string, response: NaverGeocodeResponse) => {
           if (status !== window.naver.maps.Service.Status.OK) {
             resolve([]);
             return;
@@ -154,7 +188,7 @@ export function LocationPicker({
           const result = response?.result;
           const items = result?.items ?? [];
           resolve(
-            items.map((item: any) => ({
+            items.map((item) => ({
               lat: item.point?.y ?? 0,
               lng: item.point?.x ?? 0,
               label: item.address ?? "",
@@ -165,31 +199,68 @@ export function LocationPicker({
     });
   }, []);
 
-  /** 장소 검색 (지역 API) → mapx, mapy를 TM128→WGS84 변환 */
+  /** 장소 검색 (지역 API). 2023-08 이후 mapx/mapy는 WGS84*1e7. */
   const localSearchPromise = useCallback(
-    (q: string): Promise<GeocodeItem[]> => {
+    (q: string): Promise<{ items: GeocodeItem[]; error: string | null }> => {
       return fetch(`/api/v1/search/local?query=${encodeURIComponent(q)}`)
-        .then((res) => (res.ok ? res.json() : { items: [] }))
-        .then((data: { items?: any[] }) => {
-          const items = data.items ?? [];
+        .then(async (res) => {
+          const data = (await res.json().catch(() => null)) as {
+            items?: NaverLocalSearchItem[];
+            error?: { message?: string };
+          } | null;
+          if (!res.ok) {
+            return {
+              items: [] as GeocodeItem[],
+              error:
+                data?.error?.message ??
+                "장소 검색에 실패했습니다. 검색 API 설정을 확인해주세요.",
+            };
+          }
+          const items = data?.items ?? [];
           const nm = window.naver?.maps;
-          if (!nm?.TransCoord) return [];
-          return items
-            .map((item: any) => {
-              try {
-                const point = new nm.Point(
-                  Number(item.mapx),
-                  Number(item.mapy)
-                );
-                const latLng = nm.TransCoord.fromTM128ToLatLng(point);
-                const lat =
-                  typeof latLng.lat === "function"
-                    ? latLng.lat()
-                    : (latLng as { y: number }).y;
-                const lng =
-                  typeof latLng.lng === "function"
-                    ? latLng.lng()
-                    : (latLng as { x: number }).x;
+          return {
+            items: items
+              .map((item) => {
+                const mapx = Number(item.mapx);
+                const mapy = Number(item.mapy);
+                if (!Number.isFinite(mapx) || !Number.isFinite(mapy)) {
+                  return null;
+                }
+
+                let lat: number | null = null;
+                let lng: number | null = null;
+
+                // Current Local Search API: integer microdegrees (WGS84 * 1e7).
+                if (Math.abs(mapx) > 1_000_000 && Math.abs(mapy) > 1_000_000) {
+                  lng = mapx / 1e7;
+                  lat = mapy / 1e7;
+                } else if (nm?.TransCoord && nm.Point) {
+                  // Legacy TM128 fallback (pre-2023 responses).
+                  try {
+                    const point = new nm.Point(mapx, mapy);
+                    const latLng = nm.TransCoord.fromTM128ToLatLng(point);
+                    lat = "lat" in latLng ? latLng.lat() : latLng.y;
+                    lng = "lng" in latLng ? latLng.lng() : latLng.x;
+                  } catch {
+                    return null;
+                  }
+                } else {
+                  return null;
+                }
+
+                if (
+                  lat == null ||
+                  lng == null ||
+                  !Number.isFinite(lat) ||
+                  !Number.isFinite(lng) ||
+                  lat < -90 ||
+                  lat > 90 ||
+                  lng < -180 ||
+                  lng > 180
+                ) {
+                  return null;
+                }
+
                 const sub =
                   item.roadAddress || item.address
                     ? ` · ${item.roadAddress || item.address}`
@@ -199,16 +270,15 @@ export function LocationPicker({
                   lng,
                   label: `${item.title ?? ""}${sub}`.trim(),
                 };
-              } catch {
-                return null;
-              }
-            })
-            .filter(
-              (x): x is GeocodeItem =>
-                x != null && Number.isFinite(x.lat) && Number.isFinite(x.lng)
-            );
+              })
+              .filter((x): x is GeocodeItem => x != null),
+            error: null,
+          };
         })
-        .catch(() => []);
+        .catch(() => ({
+          items: [] as GeocodeItem[],
+          error: "장소 검색 중 네트워크 오류가 발생했습니다.",
+        }));
     },
     []
   );
@@ -216,23 +286,27 @@ export function LocationPicker({
   const handleSearch = useCallback(() => {
     const query = searchQuery.trim();
     if (query.length < MIN_SEARCH_LENGTH) return;
-    if (!window.naver?.maps?.Service) {
-      setCurrentLocationError(
-        "주소 검색 기능을 불러오는 중입니다. 잠시 후 다시 시도해주세요."
-      );
-      return;
-    }
     setCurrentLocationError(null);
     setIsSearching(true);
     setSearchResults([]);
 
-    Promise.all([geocodePromise(query), localSearchPromise(query)]).then(
-      ([addressList, placeList]) => {
-        setSearchResults([...addressList, ...placeList]);
+    const addressPromise = window.naver?.maps?.Service
+      ? geocodePromise(query)
+      : Promise.resolve([] as GeocodeItem[]);
+
+    Promise.all([addressPromise, localSearchPromise(query)])
+      .then(([addressList, placeResult]) => {
+        setSearchResults([...addressList, ...placeResult.items]);
         setShowDropdown(true);
+        if (placeResult.error && addressList.length === 0) {
+          setCurrentLocationError(placeResult.error);
+        }
         setIsSearching(false);
-      }
-    );
+      })
+      .catch(() => {
+        setCurrentLocationError("검색에 실패했습니다. 다시 시도해주세요.");
+        setIsSearching(false);
+      });
   }, [searchQuery, geocodePromise, localSearchPromise]);
 
   const handleSelectResult = useCallback(
@@ -252,21 +326,36 @@ export function LocationPicker({
     }
     setCurrentLocationError(null);
     setIsLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        moveMapAndMarker(lat, lng);
-        setIsLocating(false);
-      },
-      () => {
-        setCurrentLocationError(
-          "위치를 가져올 수 없습니다. 권한을 확인해주세요."
+
+    const onSuccess = (position: GeolocationPosition) => {
+      const lat = position.coords.latitude;
+      const lng = position.coords.longitude;
+      moveMapAndMarker(lat, lng);
+      setIsLocating(false);
+    };
+
+    const onError = (err: GeolocationPositionError, retried: boolean) => {
+      if (err.code === err.TIMEOUT && !retried) {
+        navigator.geolocation.getCurrentPosition(
+          onSuccess,
+          (retryErr) => onError(retryErr, true),
+          { enableHighAccuracy: false, timeout: 30000, maximumAge: 120000 }
         );
-        setIsLocating(false);
-      },
-      { enableHighAccuracy: false, timeout: 10000 }
-    );
+        return;
+      }
+      setCurrentLocationError(
+        err.code === err.PERMISSION_DENIED
+          ? "위치 권한이 거부되었습니다. 브라우저 설정을 확인해주세요."
+          : "위치를 가져올 수 없습니다. Wi-Fi/GPS를 켠 뒤 다시 시도해주세요."
+      );
+      setIsLocating(false);
+    };
+
+    navigator.geolocation.getCurrentPosition(onSuccess, (err) => onError(err, false), {
+      enableHighAccuracy: false,
+      timeout: 20000,
+      maximumAge: 60000,
+    });
   }, [moveMapAndMarker]);
 
   const handleConfirm = () => {
@@ -288,11 +377,17 @@ export function LocationPicker({
         <Script
           src={`https://openapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=geocoder`}
           onLoad={initMap}
+          onReady={initMap}
         />
         <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-gray-200" />
 
         <header className="flex h-14 shrink-0 items-center justify-between px-4">
-          <button onClick={onClose} className="text-text-sub p-2 text-xl">
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="위치 선택 닫기"
+            className="text-text-sub p-2 text-xl"
+          >
             ✕
           </button>
           <Text variant="body" className="font-bold">
