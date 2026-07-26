@@ -18,15 +18,21 @@ import {
   invalidateMySightingsCache,
   prefetchMySightings,
 } from "@/features/sightings/hooks/useMySightings";
+import {
+  clearMapViewportCache,
+  prefetchAuthMapViewport,
+} from "@/features/map/lib/map-viewport-cache";
 
 function warmAuthenticatedCaches(accessToken: string | undefined) {
   if (!accessToken) {
     invalidateMyLostPostsCache();
     invalidateMySightingsCache();
+    clearMapViewportCache();
     return;
   }
   void prefetchMyLostPosts(accessToken);
   void prefetchMySightings(accessToken);
+  void prefetchAuthMapViewport(accessToken);
 }
 
 export interface AuthState {

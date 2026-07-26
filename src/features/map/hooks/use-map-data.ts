@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useReducer, useRef, useState } from "react";
+import { useCallback, useEffect, useReducer, useState } from "react";
 import {
   buildMapCacheKey,
   getFilteredItems,
@@ -20,12 +20,11 @@ import {
 } from "../lib/map-data-state";
 import type { LostPostMapItem, MapDataState } from "../lib/map-data-state";
 import { createLatestRequestGuard } from "../lib/map-request-guard";
+import {
+  getMapViewportCache,
+  setMapViewportCache,
+} from "../lib/map-viewport-cache";
 import type { ClusterResponse, MapItem } from "../types/naver";
-
-interface CacheValue {
-  etag: string;
-  items: MapItem[];
-}
 
 interface ApiResult<T> {
   success: boolean;
@@ -84,7 +83,6 @@ export function useMapData({
     createInitialMapDataState
   );
   const [requestGuard] = useState(createLatestRequestGuard);
-  const cacheRef = useRef<Map<string, CacheValue>>(new Map());
   const view = getMapDataView(principalKey, state);
 
   useEffect(
@@ -103,7 +101,7 @@ export function useMapData({
       const cacheKey = buildMapCacheKey(viewport, zoom, authenticated, layer);
       const ownerKey = `${principalKey}:${layer}:${cacheKey}`;
       const lease = requestGuard.begin(ownerKey);
-      const cached = cacheRef.current.get(cacheKey);
+      const cached = getMapViewportCache(cacheKey);
       dispatch({ type: "begin", principalKey, ownerKey });
 
       const resolveItems = async (rawItems: MapItem[]) => {
@@ -210,7 +208,7 @@ export function useMapData({
         if (!lease.isCurrent()) return;
 
         const items = result.data.clusters;
-        cacheRef.current.set(cacheKey, {
+        setMapViewportCache(cacheKey, {
           etag: response.headers.get("ETag") ?? "",
           items,
         });
