@@ -1,6 +1,5 @@
 import assert from "node:assert/strict";
-import { access } from "node:fs/promises";
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("site copy exposes metadata fields for OG and layout", async () => {
@@ -16,14 +15,13 @@ test("site copy exposes metadata fields for OG and layout", async () => {
 test("brand assets are split into og and favicon paths", async () => {
   await access("public/brand/og.png");
   await access("public/brand/favicon.png");
+  await access("src/app/favicon.ico");
+  await access("src/app/icon.png");
 
   const og = await readFile("src/app/opengraph-image.tsx", "utf8");
-  const icon = await readFile("src/app/icon.tsx", "utf8");
   const layout = await readFile("src/app/layout.tsx", "utf8");
 
   assert.match(og, /public\/brand\/og\.png/);
-  assert.match(icon, /public\/brand\/favicon\.png/);
   assert.match(layout, /SITE_COPY\.ogTitle/);
   assert.doesNotMatch(og, /pinpaw-mascot-icon/);
-  assert.doesNotMatch(icon, /pinpaw-mascot-icon/);
 });
