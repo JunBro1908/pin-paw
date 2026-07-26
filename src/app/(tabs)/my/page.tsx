@@ -56,6 +56,20 @@ function MyPageContent() {
             로그아웃
           </button>
         </div>
+        <div className="mt-4 flex flex-wrap gap-3">
+          <Link
+            href="/my/notifications"
+            className="text-primary text-sm font-medium hover:underline"
+          >
+            알림
+          </Link>
+          <Link
+            href="/my/settings"
+            className="text-primary text-sm font-medium hover:underline"
+          >
+            설정
+          </Link>
+        </div>
       </div>
 
       {/* 내 유실글 — 드롭다운 */}
@@ -99,7 +113,7 @@ function MyPageContent() {
             </Link>
           </div>
           <div className="px-5 pb-5">
-            <LostPostList />
+            {lostPostsOpen ? <LostPostList /> : null}
           </div>
         </div>
       </section>
@@ -137,7 +151,7 @@ function MyPageContent() {
           )}
         >
           <div className="px-5 pt-3 pb-5">
-            <MySightingList />
+            {sightingsOpen ? <MySightingList /> : null}
           </div>
         </div>
       </section>

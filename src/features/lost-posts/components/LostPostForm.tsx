@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { cn } from "@/shared/lib/cn";
@@ -10,10 +11,29 @@ import { Toast } from "@/shared/ui/Toast";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { LostPostFormData } from "../model/types";
-import { DOG_BREEDS } from "@/features/sightings/constants/breeds";
-import { TRAIT_COLOR_OPTIONS } from "@/shared/constants/traitColors";
+import {
+  DOG_BREEDS,
+  getBreedLabel,
+  SPECIES_UNKNOWN,
+} from "@/features/sightings/constants/breeds";
+import {
+  SIZE_LABELS,
+  SIZE_VALUES,
+  type SizeValue,
+} from "@/shared/constants/traitSizes";
+import { TRAIT_TAGS } from "@/shared/constants/traitTags";
+import {
+  completeSubmission,
+  fingerprintUploadFile,
+  markUploadCompleted,
+  prepareSubmission,
+  rememberUploadIntent,
+  type FormSubmissionAttempt,
+} from "@/shared/lib/form-submission-lifecycle";
+import { trackFunnelEvent } from "@/shared/lib/funnel-client";
 
-const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_CLIENT_ID || "";
+const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
+const MAX_TAG_SELECT_LOST_POST = 8;
 
 const inputBase =
   "border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2";
@@ -28,8 +48,9 @@ const getInitialFormData = (): LostPostFormData => ({
   petName: "",
   lostAt: toLocalDatetimeLocalString(),
   traitColor: "",
-  traitSize: "",
-  traitSpecies: "",
+  traitSize: "unknown",
+  traitSpecies: SPECIES_UNKNOWN,
+  traitTags: [],
   description: "",
 });
 
@@ -39,7 +60,6 @@ export function LostPostForm() {
   const [formData, setFormData] =
     useState<LostPostFormData>(getInitialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showErrors, setShowErrors] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [isLocationSet, setIsLocationSet] = useState(false);
@@ -48,24 +68,45 @@ export function LostPostForm() {
     type: "success" | "error";
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const submissionAttemptRef = useRef<FormSubmissionAttempt | null>(null);
 
   useEffect(() => {
-    if ("geolocation" in navigator) {
-      setIsLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setFormData((prev) => ({
-            ...prev,
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          }));
-          setIsLocationSet(true);
-          setIsLocating(false);
-        },
-        () => setIsLocating(false),
-        { enableHighAccuracy: false, timeout: 10000 }
-      );
-    }
+    if (!("geolocation" in navigator)) return;
+
+    setIsLocating(true);
+    const onSuccess = (position: GeolocationPosition) => {
+      setFormData((prev) => ({
+        ...prev,
+        lat: position.coords.latitude,
+        lng: position.coords.longitude,
+      }));
+      setIsLocationSet(true);
+      setIsLocating(false);
+    };
+    const onError = (error: GeolocationPositionError, retried: boolean) => {
+      if (error.code === error.TIMEOUT && !retried) {
+        navigator.geolocation.getCurrentPosition(
+          onSuccess,
+          (retryError) => onError(retryError, true),
+          { enableHighAccuracy: false, timeout: 20000, maximumAge: 120000 }
+        );
+        return;
+      }
+      setIsLocating(false);
+      setToast({
+        message:
+          error.code === error.PERMISSION_DENIED
+            ? "위치 권한을 허용해주세요."
+            : "위치 정보를 가져오지 못했습니다. 지도에서 직접 선택해주세요.",
+        type: "error",
+      });
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      onSuccess,
+      (error) => onError(error, false),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+    );
   }, []);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -83,7 +124,9 @@ export function LostPostForm() {
     e.stopPropagation();
     if (formData.photoUrl) URL.revokeObjectURL(formData.photoUrl);
     setFormData((prev) => ({ ...prev, photo: null, photoUrl: null }));
-    fileInputRef.current && (fileInputRef.current.value = "");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleChange = (
@@ -98,63 +141,94 @@ export function LostPostForm() {
   const isValid =
     !!formData.photo && isLocationSet && !!formData.lostAt?.trim();
 
-  const uploadCover = async (file: File): Promise<string> => {
+  const uploadCover = async (
+    file: File,
+    initialAttempt: FormSubmissionAttempt
+  ): Promise<string> => {
     const token = session?.access_token;
-    const presignRes = await fetch("/api/v1/uploads/presign", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Idempotency-Key": crypto.randomUUID(),
-        ...(token && { Authorization: `Bearer ${token}` }),
-      },
-      body: JSON.stringify({
-        purpose: "lost_cover",
-        files: [{ contentType: file.type, sizeBytes: file.size }],
-      }),
-    });
-    if (!presignRes.ok) {
-      const err = await presignRes.json();
-      throw new Error(err.error?.message || "이미지 업로드에 실패했습니다.");
-    }
-    const { data } = await presignRes.json();
-    if (!data?.uploads?.[0]) throw new Error("이미지 업로드에 실패했습니다.");
-    const { uploadUrl, fileKey } = data.uploads[0];
+    let attempt = initialAttempt;
 
-    const uploadRes = await fetch(uploadUrl, {
-      method: "PUT",
-      headers: { "Content-Type": file.type },
-      body: file,
-    });
-    if (!uploadRes.ok) throw new Error("이미지 업로드에 실패했습니다.");
-    return fileKey;
+    if (!attempt.uploadIntent) {
+      const presignRes = await fetch("/api/v1/uploads/presign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": attempt.uploadIdempotencyKey,
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          purpose: "lost_cover",
+          files: [{ contentType: file.type, sizeBytes: file.size }],
+        }),
+      });
+      if (!presignRes.ok) {
+        const err = await presignRes.json();
+        throw new Error(err.error?.message || "이미지 업로드에 실패했습니다.");
+      }
+      const { data } = await presignRes.json();
+      if (!data?.uploads?.[0]) throw new Error("이미지 업로드에 실패했습니다.");
+      attempt = rememberUploadIntent(attempt, data.uploads[0]);
+      submissionAttemptRef.current = attempt;
+    }
+
+    const uploadIntent = attempt.uploadIntent;
+    if (!uploadIntent) throw new Error("이미지 업로드에 실패했습니다.");
+
+    if (!uploadIntent.uploaded) {
+      const uploadRes = await fetch(uploadIntent.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error("이미지 업로드에 실패했습니다.");
+      attempt = markUploadCompleted(attempt);
+      submissionAttemptRef.current = attempt;
+    }
+
+    return uploadIntent.fileKey;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     if (!isValid || !formData.photo || !session?.access_token) {
-      setShowErrors(true);
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const fileKey = await uploadCover(formData.photo);
+      const domainPayload = {
+        petName: formData.petName.trim(),
+        lostAt: new Date(formData.lostAt).toISOString(),
+        lostLocation: { lat: formData.lat, lng: formData.lng },
+        traitColor: formData.traitColor.trim() || undefined,
+        traitSize: formData.traitSize,
+        traitSpecies: formData.traitSpecies,
+        traitTags: formData.traitTags.length ? formData.traitTags : undefined,
+        note: formData.description.trim() || undefined,
+      };
+      const payloadFingerprint = JSON.stringify({
+        file: await fingerprintUploadFile(formData.photo),
+        domainPayload,
+      });
+      const attempt = prepareSubmission(
+        submissionAttemptRef.current,
+        payloadFingerprint,
+        () => crypto.randomUUID()
+      );
+      submissionAttemptRef.current = attempt;
+      const fileKey = await uploadCover(formData.photo, attempt);
+      const currentAttempt = submissionAttemptRef.current ?? attempt;
       const res = await fetch("/api/v1/lost-posts", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
-          "Idempotency-Key": crypto.randomUUID(),
+          "Idempotency-Key": currentAttempt.submissionIdempotencyKey,
         },
         body: JSON.stringify({
           coverPhotoKey: fileKey,
-          petName: formData.petName.trim(),
-          lostAt: new Date(formData.lostAt).toISOString(),
-          lostLocation: { lat: formData.lat, lng: formData.lng },
-          traitColor: formData.traitColor.trim() || undefined,
-          traitSize: formData.traitSize.trim() || undefined,
-          traitSpecies: formData.traitSpecies.trim() || undefined,
-          note: formData.description.trim() || undefined,
+          ...domainPayload,
         }),
       });
 
@@ -163,7 +237,20 @@ export function LostPostForm() {
         throw new Error(err.error?.message || "유실글 등록에 실패했습니다.");
       }
 
+      const created = await res.json();
+      const createdId =
+        created?.data?.id ?? created?.data?.lostPost?.id ?? null;
+      submissionAttemptRef.current = completeSubmission();
+      void trackFunnelEvent(session.access_token, {
+        name: "lost_post_created",
+        lostPostId: typeof createdId === "string" ? createdId : null,
+        properties: { source: "lost_post_form" },
+      });
       setToast({ message: "유실글이 등록되었습니다.", type: "success" });
+      const { invalidateMyLostPostsCache } = await import(
+        "@/features/lost-posts/hooks/useMyLostPosts"
+      );
+      invalidateMyLostPostsCache();
       setTimeout(() => router.push("/my"), 1000);
     } catch (err) {
       setToast({
@@ -197,16 +284,19 @@ export function LostPostForm() {
               e.key === "Enter" && fileInputRef.current?.click()
             }
             className={cn(
-              "border-border-subtle bg-surface flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-all",
+              "border-border-subtle bg-surface relative flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-all",
               "hover:border-primary/50 hover:bg-primary-soft/30"
             )}
           >
             {formData.photoUrl ? (
               <>
-                <img
+                <Image
                   src={formData.photoUrl}
                   alt="미리보기"
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  unoptimized
+                  className="object-cover"
                 />
                 <button
                   type="button"
@@ -261,7 +351,17 @@ export function LostPostForm() {
           </div>
           <button
             type="button"
-            onClick={() => setIsMapOpen(true)}
+            onClick={() => {
+              if (!naverMapsClientId) {
+                setToast({
+                  message:
+                    "지도 설정(NEXT_PUBLIC_NAVER_MAP_CLIENT_ID)이 없어 위치를 변경할 수 없습니다.",
+                  type: "error",
+                });
+                return;
+              }
+              setIsMapOpen(true);
+            }}
             className="border-border-subtle hover:border-primary/50 focus:ring-primary/10 flex w-full items-center justify-between rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2 active:scale-[0.99]"
           >
             <div className="flex items-center gap-2">
@@ -290,7 +390,7 @@ export function LostPostForm() {
           </button>
         </section>
 
-        {isMapOpen && (
+        {isMapOpen && naverMapsClientId ? (
           <LocationPicker
             clientId={naverMapsClientId}
             initialLat={formData.lat}
@@ -303,7 +403,7 @@ export function LostPostForm() {
             title="유실 위치 선택"
             guideMessage="지도를 클릭하거나 주소 검색으로 유실 위치를 선택하세요"
           />
-        )}
+        ) : null}
 
         <section className="space-y-3">
           <Text variant="body" className="font-bold">
@@ -323,23 +423,15 @@ export function LostPostForm() {
           <Text variant="body" className="font-bold">
             색상 · 크기 · 종 (선택)
           </Text>
-          <select
+          <input
+            type="text"
             name="traitColor"
-            value={
-              TRAIT_COLOR_OPTIONS.includes(formData.traitColor as (typeof TRAIT_COLOR_OPTIONS)[number])
-                ? formData.traitColor
-                : ""
-            }
+            value={formData.traitColor}
             onChange={handleChange}
-            className={selectBase}
-          >
-            <option value="">색상</option>
-            {TRAIT_COLOR_OPTIONS.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
+            placeholder="예: 갈색, 흰색 얼룩, 검정·흰색"
+            maxLength={100}
+            className={inputBase}
+          />
           <div className="grid grid-cols-2 gap-3">
             <select
               name="traitSize"
@@ -347,10 +439,11 @@ export function LostPostForm() {
               onChange={handleChange}
               className={selectBase}
             >
-              <option value="">크기</option>
-              <option value="소">소</option>
-              <option value="중">중</option>
-              <option value="대">대</option>
+              {SIZE_VALUES.map((v) => (
+                <option key={v} value={v}>
+                  {SIZE_LABELS[v as SizeValue]}
+                </option>
+              ))}
             </select>
             <select
               name="traitSpecies"
@@ -358,13 +451,56 @@ export function LostPostForm() {
               onChange={handleChange}
               className={selectBase}
             >
-              <option value="">견종</option>
               {DOG_BREEDS.map((b) => (
                 <option key={b} value={b}>
-                  {b}
+                  {getBreedLabel(b)}
                 </option>
               ))}
             </select>
+          </div>
+          <div className="space-y-2">
+            <Text variant="caption" color="caption">
+              특이사항 (최대 {MAX_TAG_SELECT_LOST_POST}개)
+            </Text>
+            <div className="flex flex-wrap gap-2">
+              {TRAIT_TAGS.map((tag) => {
+                const selected = formData.traitTags.includes(tag.id);
+                const disabled =
+                  !selected &&
+                  formData.traitTags.length >= MAX_TAG_SELECT_LOST_POST;
+                return (
+                  <button
+                    key={tag.id}
+                    type="button"
+                    onClick={() => {
+                      if (selected) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          traitTags: prev.traitTags.filter(
+                            (id) => id !== tag.id
+                          ),
+                        }));
+                      } else if (!disabled) {
+                        setFormData((prev) => ({
+                          ...prev,
+                          traitTags: [...prev.traitTags, tag.id],
+                        }));
+                      }
+                    }}
+                    disabled={disabled}
+                    className={cn(
+                      "rounded-full px-3 py-1.5 text-sm transition-colors",
+                      selected
+                        ? "bg-primary text-white"
+                        : "bg-muted text-muted-foreground hover:bg-muted/80",
+                      disabled && "cursor-not-allowed opacity-50"
+                    )}
+                  >
+                    {tag.labelKo}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </section>
 

@@ -2,6 +2,7 @@
 
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
@@ -11,9 +12,24 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useLostPost } from "@/features/lost-posts/hooks/useLostPost";
 import { StatusBadge } from "@/features/lost-posts/components/StatusBadge";
 import { createClient } from "@/shared/supabase/client";
-import { DOG_BREEDS } from "@/features/sightings/constants/breeds";
-import { TRAIT_COLOR_OPTIONS } from "@/shared/constants/traitColors";
+import {
+  DOG_BREEDS,
+  getBreedLabel,
+  SPECIES_UNKNOWN,
+} from "@/features/sightings/constants/breeds";
+import {
+  SIZE_LABELS,
+  SIZE_VALUES,
+  type SizeValue,
+} from "@/shared/constants/traitSizes";
+import { TRAIT_TAGS } from "@/shared/constants/traitTags";
+import { cn } from "@/shared/lib/cn";
 import { useState } from "react";
+import { trackFunnelEvent } from "@/shared/lib/funnel-client";
+import { LostPostStatusHistory } from "@/features/lost-posts/components/LostPostStatusHistory";
+import { ReportBlockSheet } from "@/features/moderation/components/ReportBlockSheet";
+
+const MAX_TAG_EDIT = 8;
 
 function LostPostDetailContent() {
   const params = useParams();
@@ -28,11 +44,13 @@ function LostPostDetailContent() {
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     petName: "",
     traitColor: "",
     traitSize: "",
     traitSpecies: "",
+    traitTags: [] as string[],
     note: "",
     status: "searching" as "searching" | "found" | "closed",
   });
@@ -53,6 +71,13 @@ function LostPostDetailContent() {
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error?.message ?? "상태 변경에 실패했습니다.");
+      }
+      if (newStatus === "closed" || newStatus === "found") {
+        void trackFunnelEvent(session.access_token, {
+          name: "lost_post_closed",
+          lostPostId,
+          properties: { status: newStatus },
+        });
       }
       setToast({
         message:
@@ -123,8 +148,20 @@ function LostPostDetailContent() {
     setEditForm({
       petName: item.pet_name ?? "",
       traitColor: item.trait_color ?? "",
-      traitSize: item.trait_size ?? "",
-      traitSpecies: item.trait_species ?? "",
+      traitSize:
+        item.trait_size && ["small", "medium", "large", "unknown"].includes(item.trait_size)
+          ? item.trait_size
+          : item.trait_size === "소"
+            ? "small"
+            : item.trait_size === "중"
+              ? "medium"
+              : item.trait_size === "대"
+                ? "large"
+                : "unknown",
+      traitSpecies: item.trait_species ?? SPECIES_UNKNOWN,
+      traitTags: Array.isArray((item as { trait_tags?: string[] }).trait_tags)
+        ? (item as { trait_tags: string[] }).trait_tags
+        : [],
       note: item.note ?? "",
       status: item.status,
     });
@@ -145,8 +182,9 @@ function LostPostDetailContent() {
         body: JSON.stringify({
           petName: editForm.petName.trim(),
           traitColor: editForm.traitColor.trim() || undefined,
-          traitSize: editForm.traitSize.trim() || undefined,
-          traitSpecies: editForm.traitSpecies.trim() || undefined,
+          traitSize: editForm.traitSize,
+          traitSpecies: editForm.traitSpecies,
+          traitTags: editForm.traitTags.length ? editForm.traitTags : undefined,
           note: editForm.note.trim() || undefined,
           status: editForm.status,
         }),
@@ -218,15 +256,17 @@ function LostPostDetailContent() {
       </div>
 
       {/* 1. 사진 */}
-      <div className="overflow-hidden rounded-2xl bg-gray-100">
+      <div className="relative aspect-[4/3] overflow-hidden rounded-2xl bg-gray-100">
         {coverUrl ? (
-          <img
+          <Image
             src={coverUrl}
             alt="대표 사진"
-            className="aspect-[4/3] w-full object-cover"
+            fill
+            sizes="(max-width: 768px) 100vw, 768px"
+            className="object-cover"
           />
         ) : (
-          <div className="flex aspect-[4/3] w-full items-center justify-center text-4xl">
+          <div className="flex h-full w-full items-center justify-center text-4xl">
             📷
           </div>
         )}
@@ -236,9 +276,41 @@ function LostPostDetailContent() {
 
       {/* 2. 내용 + 버튼 */}
       <div className="space-y-5">
-        {/* 1 row: 상태 뱃지만 */}
-        <div>
+        {/* 1 row: 상태 뱃지 + 안전한 공유 */}
+        <div className="flex items-center justify-between gap-3">
           <StatusBadge status={item.status} size="md" />
+          {item.status === "searching" ? (
+            <Button
+              type="button"
+              variant="secondary"
+              className="shrink-0 px-3 py-2 text-sm"
+              onClick={async () => {
+                const shareUrl = `${window.location.origin}/share/lost-posts/${item.id}`;
+                try {
+                  if (navigator.share) {
+                    await navigator.share({
+                      title: "PinPaw 실종 제보",
+                      text: "정확한 위치와 메모는 포함되지 않습니다.",
+                      url: shareUrl,
+                    });
+                  } else {
+                    await navigator.clipboard.writeText(shareUrl);
+                    setToast({
+                      message: "공유 링크를 복사했습니다.",
+                      type: "success",
+                    });
+                  }
+                } catch {
+                  setToast({
+                    message: "공유에 실패했습니다.",
+                    type: "error",
+                  });
+                }
+              }}
+            >
+              공유
+            </Button>
+          ) : null}
         </div>
 
         {/* 강아지 이름 */}
@@ -335,6 +407,13 @@ function LostPostDetailContent() {
             이 유실글의 추천 제보 보기
           </Button>
         </Link>
+
+        <div className="space-y-2 pt-2">
+          <Text variant="body" className="font-semibold">
+            상태 이력
+          </Text>
+          <LostPostStatusHistory lostPostId={item.id} />
+        </div>
       </div>
 
       <div className="border-border-subtle my-6 border-t dark:border-gray-700" />
@@ -349,6 +428,17 @@ function LostPostDetailContent() {
           유실글 삭제
         </button>
       </div>
+
+      {reportOpen ? (
+        <ReportBlockSheet
+          targetType="lost-post"
+          targetId={item.id}
+          onClose={() => setReportOpen(false)}
+          onCompleted={(message) =>
+            setToast({ message, type: "success" })
+          }
+        />
+      ) : null}
 
       {showEditModal && (
         <div
@@ -402,34 +492,28 @@ function LostPostDetailContent() {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">색상</label>
-                <select
-                  value={
-                    TRAIT_COLOR_OPTIONS.includes(
-                      editForm.traitColor as (typeof TRAIT_COLOR_OPTIONS)[number]
-                    )
-                      ? editForm.traitColor
-                      : ""
-                  }
+                <input
+                  type="text"
+                  value={editForm.traitColor}
                   onChange={(e) =>
                     setEditForm((prev) => ({
                       ...prev,
                       traitColor: e.target.value,
                     }))
                   }
-                  className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 pr-10 appearance-none cursor-pointer outline-none focus:ring-2 bg-no-repeat bg-[length:1.25rem] bg-[right_0.75rem_center] bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]"
-                >
-                  <option value="">선택</option>
-                  {TRAIT_COLOR_OPTIONS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="예: 갈색, 흰색 얼룩"
+                  maxLength={100}
+                  className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2"
+                />
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">크기</label>
                 <select
-                  value={editForm.traitSize}
+                  value={
+                    SIZE_VALUES.includes(editForm.traitSize as SizeValue)
+                      ? editForm.traitSize
+                      : "unknown"
+                  }
                   onChange={(e) =>
                     setEditForm((prev) => ({
                       ...prev,
@@ -438,16 +522,21 @@ function LostPostDetailContent() {
                   }
                   className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2"
                 >
-                  <option value="">선택</option>
-                  <option value="소">소</option>
-                  <option value="중">중</option>
-                  <option value="대">대</option>
+                  {SIZE_VALUES.map((v) => (
+                    <option key={v} value={v}>
+                      {SIZE_LABELS[v as SizeValue]}
+                    </option>
+                  ))}
                 </select>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">종</label>
                 <select
-                  value={editForm.traitSpecies}
+                  value={
+                    DOG_BREEDS.includes(editForm.traitSpecies as (typeof DOG_BREEDS)[number])
+                      ? editForm.traitSpecies
+                      : SPECIES_UNKNOWN
+                  }
                   onChange={(e) =>
                     setEditForm((prev) => ({
                       ...prev,
@@ -456,13 +545,53 @@ function LostPostDetailContent() {
                   }
                   className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2"
                 >
-                  <option value="">선택</option>
                   {DOG_BREEDS.map((b) => (
                     <option key={b} value={b}>
-                      {b}
+                      {getBreedLabel(b)}
                     </option>
                   ))}
                 </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  특이사항 (최대 {MAX_TAG_EDIT}개)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {TRAIT_TAGS.map((tag) => {
+                    const selected = editForm.traitTags.includes(tag.id);
+                    const disabled =
+                      !selected && editForm.traitTags.length >= MAX_TAG_EDIT;
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => {
+                          if (selected) {
+                            setEditForm((prev) => ({
+                              ...prev,
+                              traitTags: prev.traitTags.filter((id) => id !== tag.id),
+                            }));
+                          } else if (!disabled) {
+                            setEditForm((prev) => ({
+                              ...prev,
+                              traitTags: [...prev.traitTags, tag.id],
+                            }));
+                          }
+                        }}
+                        disabled={disabled}
+                        className={cn(
+                          "rounded-full px-3 py-1.5 text-sm transition-colors",
+                          selected
+                            ? "bg-primary text-white"
+                            : "bg-muted text-muted-foreground hover:bg-muted/80",
+                          disabled && "opacity-50 cursor-not-allowed"
+                        )}
+                      >
+                        {tag.labelKo}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium">

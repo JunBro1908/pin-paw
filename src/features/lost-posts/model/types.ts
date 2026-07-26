@@ -11,6 +11,7 @@ export interface LostPostFormData {
   traitColor: string;
   traitSize: string;
   traitSpecies: string;
+  traitTags: string[];
   description: string;
 }
 
@@ -26,6 +27,7 @@ export interface LostPostItem {
   trait_color: string | null;
   trait_size: string | null;
   trait_species: string | null;
+  trait_tags: string[] | null;
   note: string | null;
   status: "searching" | "found" | "closed";
   embedding_status: string;

@@ -1,64 +1,27 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import Link from "next/link";
-import { useAuth } from "@/features/auth/hooks/useAuth";
 import { LostPostCard } from "./LostPostCard";
-import type { LostPostItem } from "../model/types";
+import { useMyLostPosts } from "../hooks/useMyLostPosts";
 
 export function LostPostList() {
-  const { session } = useAuth();
-  const [items, setItems] = useState<LostPostItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!session?.access_token) {
-      setLoading(false);
-      return;
-    }
-
-    let cancelled = false;
-    fetch("/api/v1/lost-posts?limit=50", {
-      credentials: "include",
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-      },
-    })
-      .then((res) => {
-        if (!res.ok) throw new Error("목록을 불러올 수 없습니다.");
-        return res.json();
-      })
-      .then((json) => {
-        if (!cancelled && json.success && Array.isArray(json.data)) {
-          setItems(json.data);
-        }
-      })
-      .catch((err) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : "오류");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.access_token]);
+  const { items, loading, refreshing, error } = useMyLostPosts();
 
   if (loading) {
     return (
-      <div className="flex min-h-[200px] items-center justify-center">
+      <div className="flex min-h-[200px] flex-col items-center justify-center gap-3">
+        <div className="bg-border-subtle h-3 w-40 animate-pulse rounded-full" />
+        <div className="bg-border-subtle h-3 w-28 animate-pulse rounded-full" />
         <Text variant="caption" color="caption">
-          로딩 중...
+          유실글을 불러오는 중...
         </Text>
       </div>
     );
   }
 
-  if (error) {
+  if (error && items.length === 0) {
     return (
       <div className="flex min-h-[200px] flex-col items-center justify-center gap-2">
         <Text variant="body" color="error">
@@ -85,12 +48,23 @@ export function LostPostList() {
   }
 
   return (
-    <ul className="space-y-4">
-      {items.map((item) => (
-        <li key={item.id}>
-          <LostPostCard item={item} />
-        </li>
-      ))}
-    </ul>
+    <div className="relative">
+      {refreshing ? (
+        <Text
+          variant="caption"
+          color="caption"
+          className="mb-2 block text-right"
+        >
+          업데이트 중...
+        </Text>
+      ) : null}
+      <ul className="space-y-4">
+        {items.map((item) => (
+          <li key={item.id}>
+            <LostPostCard item={item} />
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }

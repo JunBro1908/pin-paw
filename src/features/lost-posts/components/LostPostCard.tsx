@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
 import { createClient } from "@/shared/supabase/client";
 import { StatusBadge } from "./StatusBadge";
@@ -40,12 +41,14 @@ export function LostPostCard({ item, href }: LostPostCardProps) {
       href={linkHref}
       className="border-border-subtle bg-surface flex gap-4 rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md"
     >
-      <div className="h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
+      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
         {coverUrl ? (
-          <img
+          <Image
             src={coverUrl}
             alt="대표 사진"
-            className="h-full w-full object-cover"
+            fill
+            sizes="96px"
+            className="object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-2xl">
