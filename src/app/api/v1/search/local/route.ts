@@ -1,35 +1,98 @@
 import { NextResponse } from "next/server";
+import { normalizeSearchQuery } from "@/shared/lib/public-api-guard";
+import { createServiceRoleSupabase } from "@/shared/supabase/server";
+import { getClientIp } from "@/shared/lib/ip";
+import { sha256 } from "@/shared/lib/hash";
+import { checkRateLimit, RateLimitPresets } from "@/shared/lib/rate-limit";
+import { createRequestLogger } from "@/shared/lib/structured-log";
+import {
+  COST_ESTIMATES_USD_MICROS,
+  recordOperationalCounter,
+} from "@/shared/lib/operational-metrics";
+import { getNaverSearchCredentials } from "@/shared/lib/naver-credentials";
+
+interface NaverLocalSearchItem {
+  title?: string;
+  address?: string;
+  roadAddress?: string;
+  mapx?: string | number;
+  mapy?: string | number;
+}
+
+interface NaverLocalSearchResponse {
+  items?: NaverLocalSearchItem[];
+}
+
+/** 네이버 검색 하이라이트(<b>…</b>)·간단 HTML 엔티티 제거 */
+function stripNaverSearchMarkup(value: string): string {
+  return value
+    .replace(/<[^>]*>/g, "")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&amp;/g, "&")
+    .trim();
+}
 
 /**
  * GET /api/v1/search/local?query=검색어
  * 네이버 검색 API(지역 검색)로 장소명 검색.
- * 응답의 mapx, mapy는 TM128 좌표이므로 클라이언트에서 naver.maps.TransCoord.fromTM128ToLatLng로 WGS84 변환 후 사용.
+ * 2023-08 이후 mapx/mapy는 WGS84 * 1e7 정수입니다.
  *
- * 환경 변수 (서버) — 반드시 네이버 개발자센터(developers.naver.com) 앱 사용:
- * - NAVER_CLIENT_ID: 내 애플리케이션 > API 설정 > 검색 사용 설정 후 발급된 Client ID
- * - NAVER_CLIENT_SECRET: 동일 앱의 Client Secret
- * ※ 지도 API(NCP) 키와 다릅니다. 검색 API는 developers.naver.com에서만 발급·설정합니다.
+ * 검색용 환경 변수 (developers.naver.com):
+ * - NEXT_PUBLIC_NAVER_CLIENT_ID / NEXT_PUBLIC_NAVER_SECRET
+ * - fallback: NAVER_CLIENT_ID / NAVER_CLIENT_SECRET
+ * ※ 지도 NCP 키(NEXT_PUBLIC_NAVER_MAP_CLIENT_ID)와 별개입니다.
  */
 export async function GET(request: Request) {
+  const logger = createRequestLogger(request, "/api/v1/search/local");
   const { searchParams } = new URL(request.url);
-  const query = searchParams.get("query")?.trim();
+  const queryResult = normalizeSearchQuery(searchParams.get("query"));
 
-  if (!query) {
+  if (!queryResult.ok) {
     return NextResponse.json(
-      { error: { message: "query 파라미터가 필요합니다." } },
+      {
+        error: {
+          message:
+            queryResult.reason === "query_missing"
+              ? "query 파라미터가 필요합니다."
+              : "query 파라미터가 유효하지 않습니다.",
+        },
+      },
       { status: 400 }
     );
   }
+  const query = queryResult.query;
+  const supabase = createServiceRoleSupabase();
+  const ipHash = sha256(await getClientIp());
+  const rateLimit = await checkRateLimit(
+    supabase,
+    "search:local",
+    ipHash,
+    null,
+    RateLimitPresets.search
+  );
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { error: { message: rateLimit.errorMessage } },
+      {
+        status: rateLimit.unavailable ? 503 : 429,
+        headers: rateLimit.retryAfterSeconds
+          ? { "Retry-After": String(rateLimit.retryAfterSeconds) }
+          : undefined,
+      }
+    );
+  }
 
-  const clientId = process.env.NAVER_CLIENT_ID;
-  const clientSecret = process.env.NAVER_CLIENT_SECRET;
+  const { clientId, clientSecret } = getNaverSearchCredentials();
 
   if (!clientId || !clientSecret) {
     return NextResponse.json(
       {
         error: {
           message:
-            "장소 검색이 설정되지 않았습니다. NAVER_CLIENT_ID, NAVER_CLIENT_SECRET을 확인해주세요.",
+            "장소 검색이 설정되지 않았습니다. NEXT_PUBLIC_NAVER_CLIENT_ID, NEXT_PUBLIC_NAVER_SECRET을 확인해주세요.",
         },
       },
       { status: 503 }
@@ -39,7 +102,7 @@ export async function GET(request: Request) {
   try {
     const url = new URL("https://openapi.naver.com/v1/search/local.json");
     url.searchParams.set("query", query);
-    url.searchParams.set("display", "10");
+    url.searchParams.set("display", "5");
     url.searchParams.set("start", "1");
     url.searchParams.set("sort", "random");
 
@@ -48,7 +111,16 @@ export async function GET(request: Request) {
         "X-Naver-Client-Id": clientId,
         "X-Naver-Client-Secret": clientSecret,
       },
+      signal: AbortSignal.timeout(5000),
     });
+    const metricRecorded = await recordOperationalCounter(supabase, {
+      metric: "naver_local_search",
+      estimatedCostUsdMicros:
+        COST_ESTIMATES_USD_MICROS.naverLocalSearchRequest,
+    });
+    if (!metricRecorded) {
+      logger.warn("search.cost_metric_failed");
+    }
 
     if (!res.ok) {
       const text = await res.text();
@@ -57,7 +129,7 @@ export async function GET(request: Request) {
         res.status === 403 ||
         (text && (text.includes("024") || text.includes("Authentication")));
       const hint = isAuthError
-        ? "네이버 개발자센터(developers.naver.com)에서 애플리케이션을 등록하고, API 설정에 '검색'을 추가한 뒤 해당 앱의 Client ID·Secret을 NAVER_CLIENT_ID, NAVER_CLIENT_SECRET에 넣어주세요. (지도 API NCP 키와 별도입니다.)"
+        ? "네이버 개발자센터(developers.naver.com)에서 검색 API가 켜진 앱의 Client ID·Secret을 NEXT_PUBLIC_NAVER_CLIENT_ID, NEXT_PUBLIC_NAVER_SECRET에 넣어주세요. (지도 NCP 키와 별도입니다.)"
         : res.status === 403
           ? "API 권한을 확인해주세요."
           : undefined;
@@ -66,28 +138,40 @@ export async function GET(request: Request) {
           error: {
             message: "장소 검색 요청에 실패했습니다.",
             ...(hint && { hint }),
-            detail: text,
           },
         },
         { status: res.status >= 500 ? 502 : res.status }
       );
     }
 
-    const data = await res.json();
-    const items = (data.items ?? []).map((item: any) => ({
-      title: item.title ?? "",
-      address: item.address ?? "",
-      roadAddress: item.roadAddress ?? "",
+    const data = (await res.json()) as NaverLocalSearchResponse;
+    const items = (data.items ?? []).map((item) => ({
+      title: stripNaverSearchMarkup(item.title ?? ""),
+      address: stripNaverSearchMarkup(item.address ?? ""),
+      roadAddress: stripNaverSearchMarkup(item.roadAddress ?? ""),
       mapx: parseInt(String(item.mapx ?? 0), 10) || 0,
       mapy: parseInt(String(item.mapy ?? 0), 10) || 0,
     }));
 
     return NextResponse.json({ items });
-  } catch (e) {
-    console.error("Search local API error:", e);
+  } catch (error) {
+    const timedOut =
+      error instanceof Error &&
+      (error.name === "TimeoutError" || error.name === "AbortError");
+    logger.error("search.local_failed", {
+      error,
+      timedOut,
+      status: timedOut ? 504 : 500,
+    });
     return NextResponse.json(
-      { error: { message: "장소 검색 중 오류가 발생했습니다." } },
-      { status: 500 }
+      {
+        error: {
+          message: timedOut
+            ? "장소 검색 응답 시간이 초과되었습니다."
+            : "장소 검색 중 오류가 발생했습니다.",
+        },
+      },
+      { status: timedOut ? 504 : 500 }
     );
   }
 }

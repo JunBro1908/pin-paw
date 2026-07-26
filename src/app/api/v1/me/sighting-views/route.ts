@@ -3,12 +3,19 @@ import {
   getAuthenticatedUser,
 } from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
+import {
+  parseEntityIdList,
+  parseEntityIdRequest,
+} from "@/shared/lib/api-input";
+import { readJsonBody } from "@/shared/lib/api-request";
+import { createRequestLogger } from "@/shared/lib/structured-log";
 
 /**
  * GET /api/v1/me/sighting-views?sightingIds=id1,id2,...
  * 현재 유저의 제보별 seen 상태. 지도 마커 색상(본=회색) 병합용.
  */
 export async function GET(request: Request) {
+  const logger = createRequestLogger(request, "/api/v1/me/sighting-views");
   const supabase = await createServerSupabaseClient();
   const { user } = await getAuthenticatedUser(supabase);
   if (!user) {
@@ -20,29 +27,15 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const sightingIdsParam = searchParams.get("sightingIds");
-  if (!sightingIdsParam) {
+  const parsed = parseEntityIdList(searchParams.get("sightingIds"), 500);
+  if (!parsed.ok) {
     return fail(
       ApiErrorCode.INVALID_PARAMS,
-      "sightingIds 쿼리 파라미터가 필요합니다.",
+      "sightingIds는 최대 500개의 유효한 UUID여야 합니다.",
       400
     );
   }
-
-  const sightingIds = sightingIdsParam
-    .split(",")
-    .map((id) => id.trim())
-    .filter(Boolean);
-  if (sightingIds.length === 0) {
-    return ok({ views: {} });
-  }
-  if (sightingIds.length > 500) {
-    return fail(
-      ApiErrorCode.INVALID_PARAMS,
-      "sightingIds는 최대 500개까지 요청할 수 있습니다.",
-      400
-    );
-  }
+  const sightingIds = parsed.value;
 
   const { data: rows, error } = await supabase
     .from("user_sighting_views")
@@ -51,7 +44,7 @@ export async function GET(request: Request) {
     .in("sighting_id", sightingIds);
 
   if (error) {
-    console.error("[sighting-views] GET error:", error);
+    logger.error("sighting_view.list_failed", { error, status: 500 });
     return fail(ApiErrorCode.INTERNAL_ERROR, "조회에 실패했습니다.", 500);
   }
 
@@ -68,6 +61,7 @@ export async function GET(request: Request) {
  * body: { sightingId: string }
  */
 export async function POST(request: Request) {
+  const logger = createRequestLogger(request, "/api/v1/me/sighting-views");
   const supabase = await createServerSupabaseClient();
   const { user } = await getAuthenticatedUser(supabase);
   if (!user) {
@@ -78,17 +72,25 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { sightingId?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return fail(ApiErrorCode.VALIDATION_ERROR, "JSON 본문이 필요합니다.", 400);
+  const body = await readJsonBody(request);
+  if (!body.ok) {
+    return fail(
+      ApiErrorCode.VALIDATION_ERROR,
+      body.reason === "body_too_large"
+        ? "요청 본문이 너무 큽니다."
+        : "JSON 요청 본문이 유효하지 않습니다.",
+      body.reason === "body_too_large" ? 413 : 400
+    );
   }
-
-  const sightingId = body.sightingId;
-  if (!sightingId || typeof sightingId !== "string") {
-    return fail(ApiErrorCode.VALIDATION_ERROR, "sightingId가 필요합니다.", 400);
+  const parsed = parseEntityIdRequest(body.value, "sightingId");
+  if (!parsed.ok) {
+    return fail(
+      ApiErrorCode.VALIDATION_ERROR,
+      "유효한 sightingId가 필요합니다.",
+      400
+    );
   }
+  const sightingId = parsed.value;
 
   const { data: existing } = await supabase
     .from("user_sighting_views")
@@ -108,7 +110,7 @@ export async function POST(request: Request) {
       .eq("user_id", user.id)
       .eq("sighting_id", sightingId);
     if (error) {
-      console.error("[sighting-views] POST update error:", error);
+      logger.error("sighting_view.update_failed", { error, status: 500 });
       return fail(ApiErrorCode.INTERNAL_ERROR, "저장에 실패했습니다.", 500);
     }
   } else {
@@ -119,7 +121,7 @@ export async function POST(request: Request) {
       updated_at: now,
     });
     if (error) {
-      console.error("[sighting-views] POST insert error:", error);
+      logger.error("sighting_view.insert_failed", { error, status: 500 });
       return fail(ApiErrorCode.INTERNAL_ERROR, "저장에 실패했습니다.", 500);
     }
   }

@@ -3,6 +3,8 @@ import {
   getAuthenticatedUser,
 } from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
+import { parsePagination } from "@/shared/lib/api-input";
+import { createRequestLogger } from "@/shared/lib/structured-log";
 
 /**
  * GET /api/v1/me/lost-posts/map
@@ -10,6 +12,7 @@ import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
  * Query: limit (default 50)
  */
 export async function GET(request: Request) {
+  const logger = createRequestLogger(request, "/api/v1/me/lost-posts/map");
   const supabase = await createServerSupabaseClient();
   const { user } = await getAuthenticatedUser(supabase);
   if (!user) {
@@ -21,10 +24,11 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const limit = Math.min(
-    Math.max(1, parseInt(searchParams.get("limit") || "50", 10)),
-    50
-  );
+  const pagination = parsePagination(searchParams.get("limit"), null, 50, 50);
+  if (!pagination.ok) {
+    return fail(ApiErrorCode.INVALID_PARAMS, "limit이 유효하지 않습니다.", 400);
+  }
+  const { limit } = pagination.value;
 
   const { data, error } = await supabase.rpc(
     "get_my_lost_posts_with_location",
@@ -34,7 +38,7 @@ export async function GET(request: Request) {
   );
 
   if (error) {
-    console.error("[lost-posts/map GET]", error);
+    logger.error("lost_post.map_failed", { error, status: 500 });
     return fail(
       ApiErrorCode.INTERNAL_ERROR,
       "유실글 위치를 불러오는 중 오류가 발생했습니다.",

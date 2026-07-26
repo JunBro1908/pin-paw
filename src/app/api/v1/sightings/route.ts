@@ -1,12 +1,51 @@
-import { createServerSupabase } from "@/shared/supabase/server";
+import {
+  createServiceRoleSupabase,
+  getVerifiedUser,
+} from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 import { getClientIp } from "@/shared/lib/ip";
 import { sha256 } from "@/shared/lib/hash";
-import { checkRateLimit, RateLimitPresets } from "@/shared/lib/rate-limit";
+import {
+  checkRateLimitDimensions,
+  RateLimitPresets,
+} from "@/shared/lib/rate-limit";
 import { triggerEmbeddingsProcess } from "@/shared/lib/embeddings-worker";
+import { extractColorTokens } from "@/shared/constants/traitColors";
+import { normalizeSize } from "@/shared/constants/traitSizes";
+import { TRAIT_TAG_IDS } from "@/shared/constants/traitTags";
+import {
+  isValidUuid,
+  parseSightingCreateRequest,
+} from "@/shared/lib/api-input";
+import { readJsonBody } from "@/shared/lib/api-request";
+import { verifyUploadIntents } from "@/shared/lib/upload-intents";
+import { createRequestLogger } from "@/shared/lib/structured-log";
+import { getIdempotencyReplay } from "@/shared/lib/idempotency";
+import { NextResponse } from "next/server";
+
+const TRAIT_TAGS_MAX_SIGHTING = 5;
 
 export async function POST(request: Request) {
-  const supabase = createServerSupabase();
+  const logger = createRequestLogger(request, "/api/v1/sightings");
+  const supabase = createServiceRoleSupabase();
+  const body = await readJsonBody(request);
+  if (!body.ok) {
+    return fail(
+      ApiErrorCode.VALIDATION_ERROR,
+      body.reason === "body_too_large"
+        ? "요청 본문이 너무 큽니다."
+        : "JSON 요청 본문이 유효하지 않습니다.",
+      body.reason === "body_too_large" ? 413 : 400
+    );
+  }
+  const parsed = parseSightingCreateRequest(body.value);
+  if (!parsed.ok) {
+    return fail(
+      ApiErrorCode.VALIDATION_ERROR,
+      "제보 요청 형식이 유효하지 않습니다.",
+      400
+    );
+  }
 
   try {
     const {
@@ -17,15 +56,8 @@ export async function POST(request: Request) {
       traitSize,
       traitSpecies,
       note,
-    } = await request.json();
-
-    if (!photoKeys || !location || !occurredAt) {
-      return fail(
-        ApiErrorCode.VALIDATION_ERROR,
-        "필수 데이터가 누락되었습니다.",
-        400
-      );
-    }
+      traitTags,
+    } = parsed.value;
 
     // 1. 인증 확인
     const authHeader = request.headers.get("Authorization");
@@ -34,64 +66,168 @@ export async function POST(request: Request) {
 
     if (authHeader) {
       const token = authHeader.replace("Bearer ", "");
-      const {
-        data: { user },
-      } = await supabase.auth.getUser(token);
+      const { user } = await getVerifiedUser(supabase, token);
+      if (!user) {
+        return fail(
+          ApiErrorCode.UNAUTHORIZED,
+          "인증 정보가 유효하지 않습니다.",
+          401
+        );
+      }
       if (user) {
         userId = user.id;
         authorType = "user";
       }
     }
 
-    // 1.1 Rate Limit 체크 (비회원만 적용, DB 기반)
-    // presign에서 이미 체크했으므로 여기서는 추가 검증만 수행
-    let ipHash: string | null = null;
-    if (authorType === "anon") {
-      const ip = await getClientIp();
-      ipHash = sha256(ip);
-      const SIGHTING_SCOPE = "sighting:submit";
-
-      const rateLimitResult = await checkRateLimit(
-        supabase,
-        SIGHTING_SCOPE,
-        ipHash,
-        null,
-        RateLimitPresets.sighting
+    // 1.1 Rate Limit 체크 (IP + 로그인 사용자는 user 이중 제한)
+    const ipHash = sha256(await getClientIp());
+    const idempotencyHeader = request.headers.get("Idempotency-Key");
+    if (idempotencyHeader && !isValidUuid(idempotencyHeader)) {
+      return fail(
+        ApiErrorCode.VALIDATION_ERROR,
+        "Idempotency-Key는 UUID 형식이어야 합니다.",
+        400
       );
+    }
+    const idempotencyKey = idempotencyHeader?.trim() || crypto.randomUUID();
 
-      if (!rateLimitResult.allowed) {
-        return fail(
-          ApiErrorCode.RATE_LIMITED,
-          rateLimitResult.errorMessage!,
-          429
-        );
-      }
+    const traitColorNorm = traitColor;
+    const colorTokens = traitColorNorm
+      ? extractColorTokens(traitColorNorm)
+      : [];
+    const sizeNorm = normalizeSize(traitSize) ?? null;
+    const traitTagsNorm = traitTags
+      .filter((id) => TRAIT_TAG_IDS.includes(id))
+      .slice(0, TRAIT_TAGS_MAX_SIGHTING);
+    const requestHash = sha256(
+      JSON.stringify({
+        photoKeys,
+        location,
+        occurredAt,
+        authorType,
+        userId,
+        traitColor: traitColorNorm,
+        traitSize: sizeNorm ?? traitSize ?? null,
+        traitSpecies: traitSpecies ?? null,
+        traitTags: traitTagsNorm,
+        colorTokens,
+        note: note ?? null,
+      })
+    );
+    const replay = await getIdempotencyReplay(
+      supabase,
+      userId === null
+        ? {
+            scope: "sighting:submit",
+            key: idempotencyKey,
+            ownerId: null,
+            ipHash,
+            requestHash,
+          }
+        : {
+            scope: "sighting:submit",
+            key: idempotencyKey,
+            ownerId: userId,
+            ipHash: null,
+            requestHash,
+          }
+    );
+    if (replay.status === "unavailable") {
+      return fail(
+        ApiErrorCode.SERVICE_UNAVAILABLE,
+        "요청 처리 상태를 확인할 수 없습니다.",
+        503
+      );
+    }
+    if (replay.status === "conflict") {
+      return fail(
+        "IDEMPOTENCY_CONFLICT",
+        "Idempotency-Key 충돌이 발생했습니다. 동일한 키로 다른 데이터를 전송할 수 없습니다.",
+        409
+      );
+    }
+    if (replay.status === "hit") {
+      return NextResponse.json(replay.response);
     }
 
-    // PostGIS geography 포인트 생성 (SRID 4326)
-    const geographyPoint = `POINT(${location.lng} ${location.lat})`;
+    const rateLimitResult = await checkRateLimitDimensions(
+      supabase,
+      "sighting:submit",
+      ipHash,
+      userId,
+      RateLimitPresets.sighting
+    );
 
-    const { data, error } = await supabase
-      .from("sightings")
-      .insert([
-        {
-          author_type: authorType,
-          user_id: userId,
-          occurred_at: occurredAt,
-          location: geographyPoint,
-          photo_keys: photoKeys,
-          trait_color: traitColor ?? null,
-          trait_size: traitSize ?? null,
-          trait_species: traitSpecies ?? null,
-          note: note ?? null,
-          embedding_status: "pending",
-        },
-      ])
-      .select()
-      .single();
+    if (!rateLimitResult.allowed) {
+      return fail(
+        rateLimitResult.unavailable
+          ? ApiErrorCode.SERVICE_UNAVAILABLE
+          : ApiErrorCode.RATE_LIMITED,
+        rateLimitResult.errorMessage!,
+        rateLimitResult.unavailable ? 503 : 429
+      );
+    }
 
-    if (error) {
-      console.error(error);
+    const uploadVerification = await verifyUploadIntents(supabase, {
+      keys: photoKeys,
+      purpose: "sighting_photo",
+      userId,
+      ipHash,
+    });
+    if (!uploadVerification.ok) {
+      const unavailable =
+        uploadVerification.reason === "verification_unavailable" ||
+        uploadVerification.reason === "object_unavailable";
+      return fail(
+        unavailable
+          ? ApiErrorCode.SERVICE_UNAVAILABLE
+          : ApiErrorCode.VALIDATION_ERROR,
+        unavailable
+          ? "업로드 파일을 확인할 수 없습니다."
+          : "업로드 파일이 발급 정보와 일치하지 않습니다.",
+        unavailable ? 503 : 400
+      );
+    }
+
+    const { data: rpcData, error } = await supabase.rpc(
+      "create_sighting_with_uploads",
+      {
+        p_photo_keys: photoKeys,
+        p_author_type: authorType,
+        p_user_id: userId,
+        p_ip_hash: ipHash,
+        p_occurred_at: occurredAt,
+        p_lat: location.lat,
+        p_lng: location.lng,
+        p_trait_color: traitColorNorm,
+        p_trait_size: sizeNorm ?? traitSize ?? null,
+        p_trait_species: traitSpecies ?? null,
+        p_trait_tags: traitTagsNorm,
+        p_color_tokens: colorTokens,
+        p_note: note ?? null,
+        p_idempotency_key: idempotencyKey,
+        p_request_hash: requestHash,
+      }
+    );
+    const data = Array.isArray(rpcData) ? rpcData[0] : rpcData;
+
+    if (error || !data) {
+      logger.error("sighting.create_failed", { error, status: 500 });
+      if (error?.message?.includes("idempotency_conflict")) {
+        return fail(
+          "IDEMPOTENCY_CONFLICT",
+          "Idempotency-Key 충돌이 발생했습니다. 동일한 키로 다른 데이터를 전송할 수 없습니다.",
+          409
+        );
+      }
+      if (error?.message?.includes("invalid_upload_intent")) {
+        return fail(
+          "UPLOAD_INTENT_CONFLICT",
+          "이미 사용되었거나 만료된 업로드입니다.",
+          409
+        );
+      }
       return fail(
         ApiErrorCode.INTERNAL_ERROR,
         "제보 저장에 실패했습니다.",
@@ -99,40 +235,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Rate Limit 추적을 위한 기록 (비회원만)
-    if (authorType === "anon" && ipHash) {
-      const now = new Date();
-      const SIGHTING_SCOPE = "sighting:submit";
-
-      await supabase.from("idempotency_keys").insert({
-        scope: SIGHTING_SCOPE,
-        key: crypto.randomUUID(),
-        owner_id: null,
-        ip_hash: ipHash,
-        request_hash: sha256(
-          JSON.stringify({ photoKeys, location, occurredAt })
-        ),
-        response: { success: true, data },
-        expires_at: new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(), // 24시간
-      });
-    }
-
-    // 임베딩: pending 삽입 후 worker fire-and-forget
-    await supabase.from("embeddings").upsert(
-      {
-        entity_type: "sighting",
-        entity_id: data.id,
-        modality: "text",
-        status: "pending",
-        retry_count: 0,
-      },
-      { onConflict: "entity_type,entity_id,modality" }
-    );
-    triggerEmbeddingsProcess(request);
+    // 도메인 행, 업로드 소비, 임베딩 job, 멱등 응답은 RPC에서 원자적으로 저장한다.
+    triggerEmbeddingsProcess(logger);
 
     return ok(data);
   } catch (err) {
-    console.error(err);
+    logger.error("sighting.unhandled", { error: err, status: 500 });
     return fail(ApiErrorCode.INTERNAL_ERROR, "서버 오류가 발생했습니다.", 500);
   }
 }

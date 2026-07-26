@@ -3,6 +3,8 @@ import {
   getAuthenticatedUser,
 } from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
+import { isValidUuid } from "@/shared/lib/api-input";
+import { createRequestLogger } from "@/shared/lib/structured-log";
 
 /**
  * GET /api/v1/me/sighting-claims/[sightingId]
@@ -12,6 +14,10 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ sightingId: string }> }
 ) {
+  const logger = createRequestLogger(
+    request,
+    "/api/v1/me/sighting-claims/[sightingId]"
+  );
   const supabase = await createServerSupabaseClient();
   const { user } = await getAuthenticatedUser(supabase);
   if (!user) {
@@ -23,8 +29,12 @@ export async function GET(
   }
 
   const { sightingId } = await params;
-  if (!sightingId) {
-    return fail(ApiErrorCode.INVALID_PARAMS, "sightingId가 필요합니다.", 400);
+  if (!isValidUuid(sightingId)) {
+    return fail(
+      ApiErrorCode.INVALID_PARAMS,
+      "유효한 sightingId가 필요합니다.",
+      400
+    );
   }
 
   const { data: claims, error: claimError } = await supabase
@@ -44,7 +54,10 @@ export async function GET(
     .eq("owner_id", user.id);
 
   if (lostError) {
-    console.error("[sighting-claims] GET lost posts error:", lostError);
+    logger.error("sighting_claim.lost_posts_lookup_failed", {
+      error: lostError,
+      status: 500,
+    });
     return fail(ApiErrorCode.INTERNAL_ERROR, "조회에 실패했습니다.", 500);
   }
 

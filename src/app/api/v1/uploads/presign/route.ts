@@ -1,13 +1,21 @@
-import { createServerSupabase } from "@/shared/supabase/server";
+import {
+  createServiceRoleSupabase,
+  getVerifiedUser,
+} from "@/shared/supabase/server";
 import { getClientIp } from "@/shared/lib/ip";
 import { sha256 } from "@/shared/lib/hash";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
-import { checkRateLimit, RateLimitPresets } from "@/shared/lib/rate-limit";
+import {
+  checkRateLimitDimensions,
+  RateLimitPresets,
+} from "@/shared/lib/rate-limit";
 import { NextResponse } from "next/server";
+import { isValidUuid, parseUploadRequest } from "@/shared/lib/api-input";
+import { readJsonBody } from "@/shared/lib/api-request";
+import { createRequestLogger } from "@/shared/lib/structured-log";
 
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png"];
 const SCOPE = "uploads:presign";
+const UPLOAD_INTENT_TTL_MS = 15 * 60 * 1000;
 
 const BUCKET_MAPPING = {
   sighting_photo: "sightings",
@@ -15,57 +23,55 @@ const BUCKET_MAPPING = {
 };
 
 export async function POST(request: Request) {
-  const supabase = createServerSupabase();
+  const logger = createRequestLogger(request, "/api/v1/uploads/presign");
+  const supabase = createServiceRoleSupabase();
   const now = new Date();
+  const body = await readJsonBody(request);
+  if (!body.ok) {
+    return fail(
+      ApiErrorCode.VALIDATION_ERROR,
+      body.reason === "body_too_large"
+        ? "요청 본문이 너무 큽니다."
+        : "JSON 요청 본문이 유효하지 않습니다.",
+      body.reason === "body_too_large" ? 413 : 400
+    );
+  }
+  const parsed = parseUploadRequest(body.value);
+  if (!parsed.ok) {
+    return fail(
+      ApiErrorCode.VALIDATION_ERROR,
+      "업로드 요청 형식이 유효하지 않습니다.",
+      400
+    );
+  }
+  const { purpose, files } = parsed.value;
 
   try {
-    const { purpose, files } = await request.json();
-
-    // 1. 요청 검증
-    if (!BUCKET_MAPPING[purpose as keyof typeof BUCKET_MAPPING]) {
-      return fail(
-        ApiErrorCode.VALIDATION_ERROR,
-        "잘못된 업로드 목적(purpose)입니다.",
-        400
-      );
-    }
-    if (!Array.isArray(files) || files.length < 1 || files.length > 3) {
-      return fail(
-        ApiErrorCode.VALIDATION_ERROR,
-        "파일은 1개에서 3개까지 업로드 가능합니다.",
-        400
-      );
-    }
-
-    for (const file of files) {
-      if (!ALLOWED_TYPES.includes(file.contentType)) {
-        return fail(
-          ApiErrorCode.VALIDATION_ERROR,
-          "허용되지 않는 파일 형식입니다.",
-          400
-        );
-      }
-      if (file.sizeBytes > MAX_FILE_SIZE) {
-        return fail(
-          ApiErrorCode.VALIDATION_ERROR,
-          "파일 크기는 10MB를 초과할 수 없습니다.",
-          400
-        );
-      }
-    }
-
     // 2. 사용자 식별
-    const {
-      data: { user },
-    } = await supabase.auth.getUser(
-      request.headers.get("Authorization")?.replace("Bearer ", "") || ""
-    );
+    const authHeader = request.headers.get("Authorization");
+    const { user } = authHeader
+      ? await getVerifiedUser(supabase, authHeader.replace("Bearer ", ""))
+      : { user: null };
+    if (authHeader && !user) {
+      return fail(
+        ApiErrorCode.UNAUTHORIZED,
+        "인증 정보가 유효하지 않습니다.",
+        401
+      );
+    }
     const userId = user?.id || null;
     const ip = await getClientIp();
     const ipHash = sha256(ip);
 
-    const idempotencyKey =
-      request.headers.get("Idempotency-Key") || crypto.randomUUID();
+    const idempotencyHeader = request.headers.get("Idempotency-Key");
+    if (idempotencyHeader && !isValidUuid(idempotencyHeader)) {
+      return fail(
+        ApiErrorCode.VALIDATION_ERROR,
+        "Idempotency-Key는 UUID 형식이어야 합니다.",
+        400
+      );
+    }
+    const idempotencyKey = idempotencyHeader?.trim() || crypto.randomUUID();
     const requestHash = sha256(
       JSON.stringify({ purpose, files, userId, ipHash })
     );
@@ -91,45 +97,85 @@ export async function POST(request: Request) {
       return NextResponse.json(cached.response);
     }
 
-    // 2.5 Rate Limit 체크 (DB 기반, 비회원만)
-    if (!userId) {
-      const rateLimitResult = await checkRateLimit(
-        supabase,
-        SCOPE,
-        ipHash,
-        userId,
-        RateLimitPresets.sighting
-      );
+    // 2.5 Rate Limit 체크 (DB 기반, IP + 로그인 사용자는 user 이중 제한)
+    const rateLimitResult = await checkRateLimitDimensions(
+      supabase,
+      SCOPE,
+      ipHash,
+      userId,
+      RateLimitPresets.sighting
+    );
 
-      if (!rateLimitResult.allowed) {
-        return fail(
-          ApiErrorCode.RATE_LIMITED,
-          rateLimitResult.errorMessage!,
-          429
-        );
-      }
+    if (!rateLimitResult.allowed) {
+      return fail(
+        rateLimitResult.unavailable
+          ? ApiErrorCode.SERVICE_UNAVAILABLE
+          : ApiErrorCode.RATE_LIMITED,
+        rateLimitResult.errorMessage!,
+        rateLimitResult.unavailable ? 503 : 429
+      );
     }
 
-    // 3. Presigned URL 생성
-    const uploads = [];
+    // 3. Intent를 먼저 기록한 뒤 Presigned URL 생성
     const dateStr = now.toISOString().split("T")[0].replace(/-/g, "");
-    const bucket = BUCKET_MAPPING[purpose as keyof typeof BUCKET_MAPPING];
-
-    for (const file of files) {
+    const bucket = BUCKET_MAPPING[purpose];
+    const expiresAt = new Date(now.getTime() + UPLOAD_INTENT_TTL_MS);
+    const plannedUploads = files.map((file) => {
       const ext = file.contentType === "image/jpeg" ? "jpg" : "png";
-      const fileKey = `${purpose}/${dateStr}/${crypto.randomUUID()}.${ext}`;
+      return {
+        file,
+        fileKey: `${purpose}/${dateStr}/${crypto.randomUUID()}.${ext}`,
+      };
+    });
 
-      const { data, error } = await supabase.storage
-        .from(bucket)
-        .createSignedUploadUrl(fileKey, { upsert: false });
-
-      if (error) throw error;
-
-      uploads.push({
-        fileKey,
-        uploadUrl: data.signedUrl,
-        // TODO : 추후 파라미터 확장시 추가할 예정 expiresAt: 60,
+    const { error: intentError } = await supabase.from("upload_intents").insert(
+      plannedUploads.map(({ file, fileKey }) => ({
+        object_key: fileKey,
+        bucket_id: bucket,
+        purpose,
+        owner_id: userId,
+        ip_hash: ipHash,
+        expected_content_type: file.contentType,
+        expected_size_bytes: file.sizeBytes,
+        expires_at: expiresAt.toISOString(),
+      }))
+    );
+    if (intentError) {
+      logger.error("upload.intent_save_failed", {
+        error: intentError,
+        status: 500,
       });
+      return fail(
+        ApiErrorCode.INTERNAL_ERROR,
+        "업로드 준비에 실패했습니다.",
+        500
+      );
+    }
+
+    const uploads = [];
+    try {
+      for (const { fileKey } of plannedUploads) {
+        const { data, error } = await supabase.storage
+          .from(bucket)
+          .createSignedUploadUrl(fileKey, { upsert: false });
+
+        if (error) throw error;
+
+        uploads.push({
+          fileKey,
+          uploadUrl: data.signedUrl,
+          expiresAt: expiresAt.toISOString(),
+        });
+      }
+    } catch (error) {
+      await supabase
+        .from("upload_intents")
+        .delete()
+        .in(
+          "object_key",
+          plannedUploads.map(({ fileKey }) => fileKey)
+        );
+      throw error;
     }
 
     const responseData = { uploads };
@@ -151,21 +197,24 @@ export async function POST(request: Request) {
         ip_hash: ipHash,
         request_hash: requestHash,
         response: finalResponse,
-        expires_at: new Date(now.getTime() + 86400000).toISOString(),
+        expires_at: expiresAt.toISOString(),
       });
 
     if (idempotencyError) {
-      console.error("Idempotency Save Error:", idempotencyError);
+      logger.error("upload.idempotency_save_failed", {
+        error: idempotencyError,
+        status: 500,
+      });
       return fail(
         ApiErrorCode.INTERNAL_ERROR,
-        `보안 키 저장 실패: ${idempotencyError.message}`,
+        "보안 키 저장에 실패했습니다.",
         500
       );
     }
 
     return ok(responseData, responseMeta);
   } catch (err) {
-    console.error(err);
+    logger.error("upload.presign_unhandled", { error: err, status: 500 });
     return fail(ApiErrorCode.INTERNAL_ERROR, "서버 오류가 발생했습니다.", 500);
   }
 }

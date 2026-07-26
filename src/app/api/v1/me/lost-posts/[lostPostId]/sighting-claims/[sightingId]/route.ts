@@ -1,9 +1,10 @@
 import {
   createServerSupabaseClient,
-  createServerSupabase,
   getAuthenticatedUser,
 } from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
+import { isValidUuid } from "@/shared/lib/api-input";
+import { createRequestLogger } from "@/shared/lib/structured-log";
 
 /**
  * DELETE /api/v1/me/lost-posts/[lostPostId]/sighting-claims/[sightingId]
@@ -13,6 +14,10 @@ export async function DELETE(
   request: Request,
   { params }: { params: Promise<{ lostPostId: string; sightingId: string }> }
 ) {
+  const logger = createRequestLogger(
+    request,
+    "/api/v1/me/lost-posts/[lostPostId]/sighting-claims/[sightingId]"
+  );
   const supabase = await createServerSupabaseClient();
   const { user } = await getAuthenticatedUser(supabase);
   if (!user) {
@@ -24,10 +29,10 @@ export async function DELETE(
   }
 
   const { lostPostId, sightingId } = await params;
-  if (!lostPostId || !sightingId) {
+  if (!isValidUuid(lostPostId) || !isValidUuid(sightingId)) {
     return fail(
       ApiErrorCode.INVALID_PARAMS,
-      "lostPostId와 sightingId가 필요합니다.",
+      "유효한 lostPostId와 sightingId가 필요합니다.",
       400
     );
   }
@@ -47,23 +52,18 @@ export async function DELETE(
     );
   }
 
-  const { error } = await supabase
-    .from("lost_post_sighting_claims")
-    .delete()
-    .eq("lost_post_id", lostPostId)
-    .eq("sighting_id", sightingId);
+  const { error } = await supabase.rpc("unclaim_sighting", {
+    p_lost_post_id: lostPostId,
+    p_sighting_id: sightingId,
+  });
 
   if (error) {
-    console.error("[sighting-claims] DELETE error:", error);
+    logger.error("lost_post_sighting_claim.delete_failed", {
+      error,
+      status: 500,
+    });
     return fail(ApiErrorCode.INTERNAL_ERROR, "삭제에 실패했습니다.", 500);
   }
-
-  // 추천 캐시 무효화: 다음 추천 조회 시 최신 북마크 반영
-  const supabaseAdmin = createServerSupabase();
-  await supabaseAdmin
-    .from("recommendation_cache")
-    .delete()
-    .eq("lost_post_id", lostPostId);
 
   return ok({ success: true });
 }

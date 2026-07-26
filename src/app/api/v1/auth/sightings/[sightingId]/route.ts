@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server";
 import {
-  createServerSupabase,
   getAuthenticatedUser,
   createServerSupabaseClient,
 } from "@/shared/supabase/server";
 import { fail, ok, ApiErrorCode } from "@/shared/lib/api-response";
+import { isValidUuid } from "@/shared/lib/api-input";
+import { createRequestLogger } from "@/shared/lib/structured-log";
 
 /**
  * GET /api/v1/auth/sightings/[sightingId]
@@ -14,6 +14,10 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ sightingId: string }> }
 ) {
+  const logger = createRequestLogger(
+    request,
+    "/api/v1/auth/sightings/[sightingId]"
+  );
   const supabaseAuth = await createServerSupabaseClient();
   const { user } = await getAuthenticatedUser(supabaseAuth);
   if (!user) {
@@ -25,21 +29,21 @@ export async function GET(
   }
 
   const { sightingId } = await params;
-  if (!sightingId) {
-    return fail(ApiErrorCode.INVALID_PARAMS, "sightingId가 필요합니다.", 400);
+  if (!isValidUuid(sightingId)) {
+    return fail(
+      ApiErrorCode.INVALID_PARAMS,
+      "유효한 sightingId가 필요합니다.",
+      400
+    );
   }
 
-  const supabase = createServerSupabase();
-  const { data: row, error } = await supabase
-    .from("sightings")
-    .select(
-      "id, photo_keys, occurred_at, author_type, trait_color, trait_size, trait_species, note"
-    )
-    .eq("id", sightingId)
-    .maybeSingle();
+  const { data: row, error } = await supabaseAuth.rpc(
+    "get_block_filtered_sighting_detail",
+    { p_sighting_id: sightingId }
+  );
 
   if (error) {
-    console.error("sightings fetch error:", error);
+    logger.error("sighting.auth_lookup_failed", { error, status: 502 });
     return fail(
       ApiErrorCode.UPSTREAM_ERROR,
       "제보를 불러오는 중 오류가 발생했습니다.",

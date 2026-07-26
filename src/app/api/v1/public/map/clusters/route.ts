@@ -1,6 +1,11 @@
 import { NextResponse } from "next/server";
-import { createServerSupabase } from "@/shared/supabase/server";
+import { createServiceRoleSupabase } from "@/shared/supabase/server";
 import { fail, notModified, ApiErrorCode } from "@/shared/lib/api-response";
+import { parseMapViewportQuery } from "@/shared/lib/public-api-guard";
+import { getClientIp } from "@/shared/lib/ip";
+import { sha256 } from "@/shared/lib/hash";
+import { checkRateLimit, RateLimitPresets } from "@/shared/lib/rate-limit";
+import { createRequestLogger } from "@/shared/lib/structured-log";
 import crypto from "crypto";
 
 /**
@@ -8,46 +13,47 @@ import crypto from "crypto";
  * 지도상의 목격 제보를 클러스터링하여 반환합니다.
  */
 export async function GET(request: Request) {
+  const logger = createRequestLogger(
+    request,
+    "/api/v1/public/map/clusters"
+  );
   const { searchParams } = new URL(request.url);
 
-  const minLat = parseFloat(searchParams.get("minLat") || "");
-  const minLng = parseFloat(searchParams.get("minLng") || "");
-  const maxLat = parseFloat(searchParams.get("maxLat") || "");
-  const maxLng = parseFloat(searchParams.get("maxLng") || "");
-  const zoom = parseInt(searchParams.get("zoom") || "");
-
-  // 1. 파라미터 유효성 검사
-  if (
-    isNaN(minLat) ||
-    isNaN(minLng) ||
-    isNaN(maxLat) ||
-    isNaN(maxLng) ||
-    isNaN(zoom)
-  ) {
-    return fail(
-      ApiErrorCode.INVALID_PARAMS,
-      "필수 파라미터가 누락되었거나 유효하지 않습니다.",
-      400
-    );
-  }
-
-  // 범위 검사 (기본적인 위경도 범위)
-  if (
-    minLat < -90 ||
-    maxLat > 90 ||
-    minLng < -180 ||
-    maxLng > 180 ||
-    minLat > maxLat ||
-    minLng > maxLng
-  ) {
+  const viewportResult = parseMapViewportQuery({
+    minLat: searchParams.get("minLat"),
+    minLng: searchParams.get("minLng"),
+    maxLat: searchParams.get("maxLat"),
+    maxLng: searchParams.get("maxLng"),
+    zoom: searchParams.get("zoom"),
+  });
+  if (!viewportResult.ok) {
     return fail(
       ApiErrorCode.VALIDATION_ERROR,
-      "위경도 범위가 유효하지 않습니다.",
+      viewportResult.reason === "bbox_too_large"
+        ? "지도 조회 범위는 위도·경도 각각 2도 이하여야 합니다."
+        : "지도 범위 또는 zoom이 유효하지 않습니다.",
       400
     );
   }
+  const { minLat, minLng, maxLat, maxLng, zoom } = viewportResult.viewport;
 
-  const supabase = createServerSupabase();
+  const supabase = createServiceRoleSupabase();
+  const rateLimit = await checkRateLimit(
+    supabase,
+    "map:public",
+    sha256(await getClientIp()),
+    null,
+    RateLimitPresets.map
+  );
+  if (!rateLimit.allowed) {
+    return fail(
+      rateLimit.unavailable
+        ? ApiErrorCode.SERVICE_UNAVAILABLE
+        : ApiErrorCode.RATE_LIMITED,
+      rateLimit.errorMessage ?? "지도 요청을 처리할 수 없습니다.",
+      rateLimit.unavailable ? 503 : 429
+    );
+  }
 
   try {
     // 2. 데이터 조회 및 클러스터링 (RPC 호출)
@@ -61,13 +67,16 @@ export async function GET(request: Request) {
     });
 
     if (error) {
-      console.error("Clusters fetch error:", error);
-
       // 네트워크/DNS 오류 (Supabase에 연결 불가)
       const isNetworkError =
         error.message?.includes("fetch failed") ||
         String(error.details ?? "").includes("ENOTFOUND") ||
         String(error.details ?? "").includes("ECONNREFUSED");
+      logger.error("map.public_clusters_failed", {
+        error,
+        networkUnavailable: isNetworkError,
+        status: isNetworkError ? 503 : 502,
+      });
 
       if (isNetworkError) {
         return fail(
@@ -113,7 +122,10 @@ export async function GET(request: Request) {
       }
     );
   } catch (err) {
-    console.error(err);
+    logger.error("map.public_clusters_unhandled", {
+      error: err,
+      status: 500,
+    });
     return fail(
       ApiErrorCode.INTERNAL_ERROR,
       "서버 내부 오류가 발생했습니다.",

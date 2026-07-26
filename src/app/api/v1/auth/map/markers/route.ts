@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import {
-  createServerSupabase,
+  createServiceRoleSupabase,
   createServerSupabaseClient,
   getAuthenticatedUser,
 } from "@/shared/supabase/server";
 import { fail, notModified, ApiErrorCode } from "@/shared/lib/api-response";
+import { parseMapViewportQuery } from "@/shared/lib/public-api-guard";
+import { getClientIp } from "@/shared/lib/ip";
+import { sha256 } from "@/shared/lib/hash";
+import {
+  checkRateLimitDimensions,
+  RateLimitPresets,
+} from "@/shared/lib/rate-limit";
+import { createRequestLogger } from "@/shared/lib/structured-log";
 import crypto from "crypto";
 
 /**
@@ -12,6 +20,7 @@ import crypto from "crypto";
  * 인증된 사용자를 위한 상세 목격 제보 마커 데이터를 반환합니다.
  */
 export async function GET(request: Request) {
+  const logger = createRequestLogger(request, "/api/v1/auth/map/markers");
   const supabaseAuth = await createServerSupabaseClient();
   const { user } = await getAuthenticatedUser(supabaseAuth);
   if (!user) {
@@ -22,48 +31,69 @@ export async function GET(request: Request) {
     );
   }
 
-  // RPC 호출용 Service Role 클라이언트
-  const supabase = createServerSupabase();
+  // 원자적 rate limit RPC만 Service Role 경계를 사용합니다.
+  const supabaseAdmin = createServiceRoleSupabase();
 
   const { searchParams } = new URL(request.url);
-  const minLat = parseFloat(searchParams.get("minLat") || "");
-  const minLng = parseFloat(searchParams.get("minLng") || "");
-  const maxLat = parseFloat(searchParams.get("maxLat") || "");
-  const maxLng = parseFloat(searchParams.get("maxLng") || "");
-  const zoom = parseInt(searchParams.get("zoom") || "");
-
-  // 2. 파라미터 유효성 검사
-  if (
-    isNaN(minLat) ||
-    isNaN(minLng) ||
-    isNaN(maxLat) ||
-    isNaN(maxLng) ||
-    isNaN(zoom)
-  ) {
+  const viewportResult = parseMapViewportQuery({
+    minLat: searchParams.get("minLat"),
+    minLng: searchParams.get("minLng"),
+    maxLat: searchParams.get("maxLat"),
+    maxLng: searchParams.get("maxLng"),
+    zoom: searchParams.get("zoom"),
+  });
+  if (!viewportResult.ok) {
     return fail(
       ApiErrorCode.INVALID_PARAMS,
-      "필수 파라미터가 유효하지 않습니다.",
+      viewportResult.reason === "bbox_too_large"
+        ? "지도 조회 범위는 위도·경도 각각 2도 이하여야 합니다."
+        : "지도 범위 또는 zoom이 유효하지 않습니다.",
       400
+    );
+  }
+  const { minLat, minLng, maxLat, maxLng, zoom } = viewportResult.viewport;
+
+  const ipHash = sha256(await getClientIp());
+  const rateLimit = await checkRateLimitDimensions(
+    supabaseAdmin,
+    "map:auth",
+    ipHash,
+    user.id,
+    RateLimitPresets.map
+  );
+  if (!rateLimit.allowed) {
+    return fail(
+      rateLimit.unavailable
+        ? ApiErrorCode.SERVICE_UNAVAILABLE
+        : ApiErrorCode.RATE_LIMITED,
+      rateLimit.errorMessage ?? "지도 요청을 처리할 수 없습니다.",
+      rateLimit.unavailable ? 503 : 429
     );
   }
 
   try {
-    // 3. 데이터 조회 (is_public: false로 상세 데이터 요청)
-    const { data, error } = await supabase.rpc("get_sighting_clusters", {
-      min_lat: minLat,
-      min_lng: minLng,
-      max_lat: maxLat,
-      max_lng: maxLng,
-      zoom_level: zoom,
-      is_public: false, // 인증 유저용 상세 데이터
-    });
+    // 데이터 RPC는 세션 JWT의 auth.uid()로 정밀 위치 권한을 결정합니다.
+    const { data, error } = await supabaseAuth.rpc(
+      "get_block_filtered_sighting_markers",
+      {
+        p_min_lat: minLat,
+        p_min_lng: minLng,
+        p_max_lat: maxLat,
+        p_max_lng: maxLng,
+        p_zoom_level: zoom,
+      }
+    );
 
     if (error) {
-      console.error("Auth markers fetch error:", error);
       const isNetworkError =
         error.message?.includes("fetch failed") ||
         String(error.details ?? "").includes("ENOTFOUND") ||
         String(error.details ?? "").includes("ECONNREFUSED");
+      logger.error("map.auth_markers_failed", {
+        error,
+        networkUnavailable: isNetworkError,
+        status: isNetworkError ? 503 : 502,
+      });
       if (isNetworkError) {
         return fail(
           ApiErrorCode.SERVICE_UNAVAILABLE,
@@ -106,7 +136,10 @@ export async function GET(request: Request) {
       }
     );
   } catch (err) {
-    console.error("Auth markers fetch error:", err);
+    logger.error("map.auth_markers_unhandled", {
+      error: err,
+      status: 500,
+    });
     return fail(
       ApiErrorCode.INTERNAL_ERROR,
       "데이터를 가져오는 중 오류가 발생했습니다.",

@@ -3,6 +3,7 @@ import {
   getAuthenticatedUser,
 } from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
+import { parsePagination } from "@/shared/lib/api-input";
 
 /**
  * GET /api/v1/me/sightings — 내 제보 목록 (인증 필수, userId 기반)
@@ -21,11 +22,20 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const limit = Math.min(
-    Math.max(parseInt(searchParams.get("limit") || "20", 10), 1),
+  const pagination = parsePagination(
+    searchParams.get("limit"),
+    searchParams.get("offset"),
+    20,
     50
   );
-  const offset = Math.max(parseInt(searchParams.get("offset") || "0", 10), 0);
+  if (!pagination.ok) {
+    return fail(
+      ApiErrorCode.INVALID_PARAMS,
+      "limit과 offset이 유효하지 않습니다.",
+      400
+    );
+  }
+  const { limit, offset } = pagination.value;
 
   const { data: rows, error } = await supabase.rpc("get_my_sightings_list", {
     limit_count: limit,
