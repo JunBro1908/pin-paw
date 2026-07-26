@@ -34,6 +34,13 @@ export type MapDataAction =
   | { type: "reset" }
   | { type: "begin"; principalKey: string; ownerKey: string }
   | {
+      type: "hydrate-clusters";
+      ownerKey: string;
+      rawItems: MapItem[];
+      items: MapItem[];
+      feedback: SightingFeedbackMap;
+    }
+  | {
       type: "resolve-clusters";
       ownerKey: string;
       rawItems: MapItem[];
@@ -52,6 +59,7 @@ export type MapDataAction =
       claimed?: boolean;
       seen?: boolean;
     }
+  | { type: "settle"; ownerKey: string }
   | { type: "fail"; ownerKey: string; error: string };
 
 export function createInitialMapDataState(): MapDataState {
@@ -116,6 +124,14 @@ export function mapDataReducer(
   if (state.ownerKey !== action.ownerKey) return state;
 
   switch (action.type) {
+    case "hydrate-clusters":
+      return {
+        ...state,
+        rawItems: action.rawItems,
+        items: action.items,
+        feedback: action.feedback,
+        error: null,
+      };
     case "resolve-clusters":
       return {
         ...state,
@@ -123,6 +139,12 @@ export function mapDataReducer(
         rawItems: action.rawItems,
         items: action.items,
         feedback: action.feedback,
+        error: null,
+      };
+    case "settle":
+      return {
+        ...state,
+        loading: false,
         error: null,
       };
     case "resolve-bookmark": {

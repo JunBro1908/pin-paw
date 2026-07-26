@@ -161,3 +161,26 @@ test("patch-feedback updates claimed without requiring ownerKey", () => {
 
   assert.deepEqual(next.feedback["abc-1"], { seen: true, claimed: true });
 });
+
+test("hydrate keeps loading true while settle clears it without replacing items", () => {
+  const ownerKey = "token-a:default:viewport";
+  const loading = mapDataReducer(createInitialMapDataState(), {
+    type: "begin",
+    principalKey: "token-a",
+    ownerKey,
+  });
+  const hydrated = mapDataReducer(loading, {
+    type: "hydrate-clusters",
+    ownerKey,
+    rawItems: [{ type: "point", id: "cached", lat: 37.5, lng: 127 }],
+    items: [{ type: "point", id: "cached", lat: 37.5, lng: 127 }],
+    feedback: {},
+  });
+  assert.equal(hydrated.loading, true);
+  assert.equal(hydrated.items[0].id, "cached");
+
+  const settled = mapDataReducer(hydrated, { type: "settle", ownerKey });
+  assert.equal(settled.loading, false);
+  assert.equal(settled.items[0].id, "cached");
+  assert.equal(settled.error, null);
+});

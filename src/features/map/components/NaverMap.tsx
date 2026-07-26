@@ -1463,13 +1463,6 @@ export function NaverMap({
 
         {/* 하단 컨트롤러 */}
         <div className="absolute right-5 bottom-24 z-10 flex flex-col gap-3">
-          {mapDataLoading ? (
-            <div className="pointer-events-none self-end rounded-full bg-white/90 px-3 py-1.5 text-xs font-medium text-gray-600 shadow-md backdrop-blur dark:bg-gray-900/90 dark:text-gray-300">
-              {itemsInView.length > 0 || lostPostsForMap.length > 0
-                ? "지도 업데이트 중..."
-                : "제보 불러오는 중..."}
-            </div>
-          ) : null}
           {/* 레이어 필터 (로그인 시에만) */}
           {isAuthenticated && (
             <div className="relative">
@@ -1609,17 +1602,25 @@ export function NaverMap({
           </div>
         )}
 
-        {/* 토스트 알림 */}
-        {toast && (
+        {/* 지도 상태: 로딩/실패를 같은 상단 토스트 결로 표시 */}
+        {toast ? (
           <Toast
             message={toast.message}
             type={toast.type}
             onClose={() => setToast(null)}
           />
-        )}
-        {!toast && mapDataError && (
+        ) : mapDataLoading ? (
+          <Toast
+            message={
+              itemsInView.length > 0 || lostPostsForMap.length > 0
+                ? "지도 업데이트 중..."
+                : "제보 불러오는 중..."
+            }
+            type="loading"
+          />
+        ) : mapDataError ? (
           <Toast message={mapDataError} type="error" onClose={resetMapData} />
-        )}
+        ) : null}
       </div>
     </>
   );

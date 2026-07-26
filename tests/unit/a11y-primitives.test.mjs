@@ -22,6 +22,7 @@ test("Loading and Toast announce status changes", async () => {
   assert.match(loading, /aria-live="polite"/);
   assert.match(toast, /role="status"/);
   assert.match(toast, /aria-live="polite"/);
+  assert.match(toast, /type\?\: "success" \| "error" \| "loading"/);
 });
 
 test("tabs navigation exposes current page and skip link exists", async () => {

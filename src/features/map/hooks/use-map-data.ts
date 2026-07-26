@@ -104,7 +104,10 @@ export function useMapData({
       const cached = getMapViewportCache(cacheKey);
       dispatch({ type: "begin", principalKey, ownerKey });
 
-      const resolveItems = async (rawItems: MapItem[]) => {
+      const resolveItems = async (
+        rawItems: MapItem[],
+        mode: "hydrate" | "resolve"
+      ) => {
         let feedback: SightingFeedbackMap = {};
         const pointIds = rawItems
           .filter(
@@ -168,7 +171,7 @@ export function useMapData({
 
         if (!lease.isCurrent()) return;
         dispatch({
-          type: "resolve-clusters",
+          type: mode === "hydrate" ? "hydrate-clusters" : "resolve-clusters",
           ownerKey,
           rawItems,
           items: getFilteredItems(rawItems, feedback, layer),
@@ -178,7 +181,8 @@ export function useMapData({
 
       try {
         if (cached) {
-          await resolveItems(cached.items);
+          // Show cached pins immediately while the network revalidation continues.
+          await resolveItems(cached.items, "hydrate");
           if (!lease.isCurrent()) return;
         }
 
@@ -200,7 +204,11 @@ export function useMapData({
           signal: lease.signal,
         });
 
-        if (!lease.isCurrent() || response.status === 304) return;
+        if (!lease.isCurrent()) return;
+        if (response.status === 304) {
+          dispatch({ type: "settle", ownerKey });
+          return;
+        }
         const result = await readJson<ClusterResponse>(response, lease.signal);
         if (!result.success || !result.data) {
           throw new Error("Map response was unsuccessful");
@@ -212,7 +220,7 @@ export function useMapData({
           etag: response.headers.get("ETag") ?? "",
           items,
         });
-        await resolveItems(items);
+        await resolveItems(items, "resolve");
       } catch {
         if (!lease.signal.aborted && lease.isCurrent()) {
           dispatch({

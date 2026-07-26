@@ -37,7 +37,21 @@ export async function GET(request: Request) {
   }
   const { minLat, minLng, maxLat, maxLng, zoom } = viewportResult.viewport;
 
-  const supabase = createServiceRoleSupabase();
+  let supabase;
+  try {
+    supabase = createServiceRoleSupabase();
+  } catch (error) {
+    logger.error("map.public_clusters_misconfigured", {
+      error,
+      status: 503,
+    });
+    return fail(
+      ApiErrorCode.SERVICE_UNAVAILABLE,
+      "지도 서비스를 준비하는 중입니다.",
+      503
+    );
+  }
+
   const rateLimit = await checkRateLimit(
     supabase,
     "map:public",
