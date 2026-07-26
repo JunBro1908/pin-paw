@@ -1,5 +1,6 @@
 "use client";
 
+import * as Sentry from "@sentry/nextjs";
 import { useEffect } from "react";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
@@ -12,7 +13,12 @@ export default function Error({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("[Error Boundary]", error.message, error.digest ?? "", error);
+    Sentry.captureException(error, {
+      tags: {
+        boundary: "app",
+        ...(error.digest ? { digest: error.digest } : {}),
+      },
+    });
   }, [error]);
 
   return (
