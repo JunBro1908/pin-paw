@@ -63,6 +63,7 @@ create table if not exists public.lost_posts (
   owner_id uuid not null references auth.users(id) on delete cascade,
 
   cover_photo_key text not null,
+  pet_name text not null default '',
 
   lost_at timestamptz not null,
   lost_location geography(point, 4326) not null,
@@ -70,6 +71,8 @@ create table if not exists public.lost_posts (
   trait_color text null,
   trait_size  text null,
   trait_species text null,
+  trait_tags text[] default '{}',
+  color_tokens text[] default '{}',
   note text null,
 
   status lost_status not null default 'searching',
@@ -77,7 +80,8 @@ create table if not exists public.lost_posts (
   embedding_status embedding_status not null default 'pending',
 
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  archived_at timestamptz null
 );
 
 drop trigger if exists trg_lost_posts_updated_at on public.lost_posts;
@@ -107,6 +111,8 @@ create table if not exists public.sightings (
   trait_color text null,
   trait_size  text null,
   trait_species text null,
+  trait_tags text[] default '{}',
+  color_tokens text[] default '{}',
 
   -- note (민감할 수 있음)
   note text null,
@@ -116,6 +122,7 @@ create table if not exists public.sightings (
 
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
+  archived_at timestamptz null,
 
   constraint sightings_author_consistency check (
     (author_type = 'anon' and user_id is null)
@@ -152,13 +159,16 @@ create table if not exists public.embeddings (
   status embedding_status not null default 'pending',
   retry_count integer not null default 0,
 
-  -- NOTE: dim은 모델에 맞춰 변경. 예: text-embedding-3-small = 1536
-  embedding vector(1536) null,
+  -- 필드별 벡터 (정보 없음이면 NULL, 임베딩 안 함)
+  embedding_species vector(1536) null,
+  embedding_color vector(1536) null,
+  embedding_size vector(1536) null,
+  embedding_note vector(1536) null,
 
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
 
-  constraint embeddings_entity_unique unique (entity_type, entity_id, modality)
+  constraint embeddings_entity_modality_unique unique (entity_type, entity_id, modality)
 );
 
 drop trigger if exists trg_embeddings_updated_at on public.embeddings;
@@ -189,7 +199,8 @@ create trigger trg_reco_cache_updated_at
 before update on public.recommendation_cache
 for each row execute function public.set_updated_at();
 
--- 추천: 유실글 기준 공간·시간 pre-filter + pgvector 코사인 유사도 Top-K
+-- 추천: 필드별 임베딩 가중 합(S_text)만 score. 반경·기간은 필터링만 적용. NULL 필드는 sim=0.5 (중립)
+-- w_species=0.2, w_color=0.45, w_size=0.1, w_note=0.25
 create or replace function public.get_recommendations_for_lost_post(
   p_lost_post_id uuid,
   p_radius_km float default 8,
@@ -204,64 +215,50 @@ as $$
 declare
   v_lost_location geography;
   v_lost_at timestamptz;
-  v_query_embedding vector(1536);
+  v_emb_species vector(1536);
+  v_emb_color vector(1536);
+  v_emb_size vector(1536);
+  v_emb_note vector(1536);
   v_result jsonb;
 begin
-  select lp.lost_location, lp.lost_at
-  into v_lost_location, v_lost_at
-  from lost_posts lp
-  where lp.id = p_lost_post_id;
+  select lp.lost_location, lp.lost_at into v_lost_location, v_lost_at
+  from lost_posts lp where lp.id = p_lost_post_id;
+  if v_lost_location is null or v_lost_at is null then return null; end if;
 
-  if v_lost_location is null or v_lost_at is null then
-    return null;
-  end if;
-
-  select e.embedding into v_query_embedding
+  select e.embedding_species, e.embedding_color, e.embedding_size, e.embedding_note
+  into v_emb_species, v_emb_color, v_emb_size, v_emb_note
   from embeddings e
-  where e.entity_type = 'lost_post'
-    and e.entity_id = p_lost_post_id
-    and e.status = 'ready'
-  limit 1;
+  where e.entity_type = 'lost_post' and e.entity_id = p_lost_post_id and e.status = 'ready' limit 1;
 
-  if v_query_embedding is null then
+  if v_emb_species is null and v_emb_color is null and v_emb_size is null and v_emb_note is null then
     return null;
   end if;
 
   with candidates as (
-    select
-      s.id as sighting_id,
-      s.photo_keys,
-      s.occurred_at,
-      s.location,
-      (1 - (emb.embedding <=> v_query_embedding))::float as similarity
+    select s.id as sighting_id, s.photo_keys, s.occurred_at, s.location,
+      case when v_emb_species is not null and emb.embedding_species is not null
+        then (1 - (emb.embedding_species <=> v_emb_species))::float else 0.5 end as sim_s,
+      case when v_emb_color is not null and emb.embedding_color is not null
+        then (1 - (emb.embedding_color <=> v_emb_color))::float else 0.5 end as sim_c,
+      case when v_emb_size is not null and emb.embedding_size is not null
+        then (1 - (emb.embedding_size <=> v_emb_size))::float else 0.5 end as sim_z,
+      case when v_emb_note is not null and emb.embedding_note is not null
+        then (1 - (emb.embedding_note <=> v_emb_note))::float else 0.5 end as sim_n
     from sightings s
-    join embeddings emb on emb.entity_id = s.id
-      and emb.entity_type = 'sighting'
-      and emb.status = 'ready'
+    join embeddings emb on emb.entity_id = s.id and emb.entity_type = 'sighting' and emb.status = 'ready'
     where st_dwithin(s.location::geography, v_lost_location, p_radius_km * 1000)
-      and s.occurred_at >= v_lost_at
-      and s.occurred_at <= v_lost_at + (p_days || ' days')::interval
+      and s.occurred_at >= v_lost_at and s.occurred_at <= v_lost_at + (p_days || ' days')::interval
   ),
-  ranked as (
-    select * from candidates
-    order by similarity desc
-    limit least(p_top_k, 100)
-  )
+  scored as (
+    select sighting_id, photo_keys, occurred_at, location,
+      (0.2 * sim_s + 0.45 * sim_c + 0.1 * sim_z + 0.25 * sim_n) as similarity
+    from candidates
+  ),
+  ranked as ( select * from scored order by similarity desc limit least(p_top_k, 100) )
   select coalesce(
-    jsonb_agg(
-      jsonb_build_object(
-        'sightingId', sighting_id,
-        'similarity', round(similarity::numeric, 4),
-        'photoKeys', photo_keys,
-        'occurredAt', occurred_at,
-        'lat', st_y(location::geometry),
-        'lng', st_x(location::geometry)
-      )
-    ),
+    jsonb_agg(jsonb_build_object('sightingId', sighting_id, 'similarity', round(similarity::numeric, 4), 'photoKeys', photo_keys, 'occurredAt', occurred_at, 'lat', st_y(location::geometry), 'lng', st_x(location::geometry))),
     '[]'::jsonb
-  ) into v_result
-  from ranked;
-
+  ) into v_result from ranked;
   return v_result;
 end;
 $$;
@@ -302,11 +299,6 @@ create index if not exists idx_sightings_user_id_created_at on public.sightings 
 
 create index if not exists idx_lost_posts_owner_id_created_at on public.lost_posts (owner_id, created_at desc);
 create index if not exists idx_lost_posts_location_gist on public.lost_posts using gist (lost_location);
-
--- ivfflat: vector가 null이면 인덱스가 의미 없으니, 운영에선 status=ready/embedding not null 보장 권장
-create index if not exists idx_embeddings_vector_ivfflat
-on public.embeddings using ivfflat (embedding vector_cosine_ops)
-with (lists = 100);
 
 create index if not exists idx_embeddings_status on public.embeddings (status);
 create index if not exists idx_reco_cache_expires_at on public.recommendation_cache (expires_at);
@@ -376,6 +368,28 @@ with check (
 );
 
 -- -----------------------------------------------------------------------------
+-- 9.5) 28일 아카이빙 (Cron에서 호출 권장)
+-- -----------------------------------------------------------------------------
+create or replace function public.archive_old_records_28d()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  update public.sightings
+  set archived_at = now()
+  where created_at < now() - interval '28 days'
+    and archived_at is null;
+
+  update public.lost_posts
+  set archived_at = now()
+  where created_at < now() - interval '28 days'
+    and archived_at is null;
+end;
+$$;
+
+-- -----------------------------------------------------------------------------
 -- 10) Map Clustering Functions
 -- -----------------------------------------------------------------------------
 
@@ -429,6 +443,7 @@ begin
     select id, st_y(location::geometry) as lat, st_x(location::geometry) as lng
     from public.sightings
     where location && st_makeenvelope(min_lng, min_lat, max_lng, max_lat, 4326)
+      and archived_at is null
   ),
   grid_clusters as (
     select
@@ -501,7 +516,7 @@ set search_path = public
 as $$
   select st_y(location::geometry), st_x(location::geometry)
   from public.sightings
-  where id = sighting_id and user_id = auth.uid();
+  where id = sighting_id and user_id = auth.uid() and archived_at is null;
 $$;
 
 -- 본인 제보 목록 (위도·경도 포함, 지도 링크용)
@@ -523,8 +538,100 @@ as $$
   select s.id, s.photo_keys, s.occurred_at, s.note, s.created_at,
     st_y(s.location::geometry), st_x(s.location::geometry)
   from public.sightings s
-  where s.user_id = auth.uid()
+  where s.user_id = auth.uid() and s.archived_at is null
   order by s.created_at desc
   limit nullif(least(limit_count, 50), 0)
   offset greatest(offset_count, 0);
+$$;
+
+-- 지도 "내 유실글 + 북마크" 레이어용: 본인 유실글 목록 + 위도·경도·표시용 필드
+create or replace function public.get_my_lost_posts_with_location(limit_count int default 50)
+returns table (
+  id uuid,
+  pet_name text,
+  lost_at timestamptz,
+  cover_photo_key text,
+  trait_color text,
+  trait_size text,
+  trait_species text,
+  note text,
+  lat double precision,
+  lng double precision
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select lp.id, lp.pet_name, lp.lost_at,
+    lp.cover_photo_key, lp.trait_color, lp.trait_size, lp.trait_species, lp.note,
+    st_y(lp.lost_location::geometry),
+    st_x(lp.lost_location::geometry)
+  from public.lost_posts lp
+  where lp.owner_id = auth.uid()
+  order by lp.created_at desc
+  limit nullif(least(limit_count, 50), 0);
+$$;
+
+-- 지도 "내 유실글+북마크" 레이어용: 유실 시각 기준 경로 (유실 위치 → occurred_at 순 제보, 유실 이전 제보 제외)
+create or replace function public.get_my_lost_post_paths()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with my_lost as (
+    select lp.id as lost_post_id,
+           st_y(lp.lost_location::geometry) as lost_lat,
+           st_x(lp.lost_location::geometry) as lost_lng,
+           lp.lost_at
+    from public.lost_posts lp
+    where lp.owner_id = auth.uid()
+  ),
+  claimed_after_lost as (
+    select c.lost_post_id,
+           s.id as sighting_id,
+           st_y(s.location::geometry) as lat,
+           st_x(s.location::geometry) as lng,
+           s.occurred_at,
+           s.photo_keys,
+           s.note
+    from public.lost_post_sighting_claims c
+    join public.sightings s on s.id = c.sighting_id
+    join my_lost m on m.lost_post_id = c.lost_post_id
+    where s.occurred_at >= m.lost_at
+      and s.location is not null
+  ),
+  points_ordered as (
+    select lost_post_id,
+           jsonb_agg(
+             jsonb_build_object(
+               'sighting_id', sighting_id,
+               'lat', lat,
+               'lng', lng,
+               'occurred_at', occurred_at,
+               'photo_keys', photo_keys,
+               'note', note
+             ) order by occurred_at
+           ) as points
+    from claimed_after_lost
+    group by lost_post_id
+  )
+  select coalesce(
+    (
+      select jsonb_agg(
+        jsonb_build_object(
+          'lost_post_id', m.lost_post_id,
+          'lost_lat', m.lost_lat,
+          'lost_lng', m.lost_lng,
+          'lost_at', m.lost_at,
+          'points', coalesce(p.points, '[]'::jsonb)
+        ) order by m.lost_at desc
+      )
+      from my_lost m
+      left join points_ordered p on p.lost_post_id = m.lost_post_id
+    ),
+    '[]'::jsonb
+  );
 $$;
