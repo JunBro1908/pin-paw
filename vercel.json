@@ -2,7 +2,7 @@
   "crons": [
     {
       "path": "/api/v1/internal/embeddings/process",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 2 * * *"
     },
     {
       "path": "/api/v1/internal/uploads/cleanup",
@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/v1/internal/accounts/delete",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 6 * * *"
     },
     {
       "path": "/api/v1/internal/shelter-animals/import",
