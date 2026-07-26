@@ -2,20 +2,39 @@
   "name": "pin-paw",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=22.0.0 <23"
+  },
+  "overrides": {
+    "next": {
+      "postcss": "8.5.18",
+      "sharp": "0.35.0"
+    },
+    "ws": "8.21.0",
+    "@babel/core": "7.29.7"
+  },
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
+    "test": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test",
+    "test:integration": "node tests/integration/http-boundaries.mjs",
+    "test:db-concurrency": "node tests/integration/db-concurrency.mjs",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset --local",
+    "db:stop": "supabase stop",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },
   "dependencies": {
+    "@sentry/nextjs": "10.68.0",
     "@supabase/ssr": "^0.8.0",
-    "@supabase/supabase-js": "^2.89.0",
-    "next": "16.1.1",
-    "openai": "^6.22.0",
+    "@supabase/supabase-js": "^2.110.8",
+    "next": "^16.2.11",
+    "openai": "^6.49.0",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -26,10 +45,11 @@
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.1.1",
+    "eslint-config-next": "^16.2.11",
     "eslint-config-prettier": "^10.1.8",
     "prettier": "^3.7.4",
     "prettier-plugin-tailwindcss": "^0.7.2",
+    "supabase": "^2.109.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
