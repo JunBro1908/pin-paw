@@ -1,0 +1,3 @@
+-- Historical no-op placeholder.
+-- The function is introduced by the immediately following
+-- 20250219110000_lost_posts_map_add_display_fields.sql migration.
