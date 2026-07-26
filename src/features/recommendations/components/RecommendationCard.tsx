@@ -1,13 +1,16 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { createClient } from "@/shared/supabase/client";
 import { SightingDetailCard } from "@/features/sightings/components/SightingDetailCard";
 import type { SightingDetailData } from "@/features/sightings/components/SightingDetailCard";
+import { ReportBlockSheet } from "@/features/moderation/components/ReportBlockSheet";
+import { trackFunnelEvent } from "@/shared/lib/funnel-client";
 import type { RecommendationItem } from "../model/types";
 
 interface RecommendationCardProps {
@@ -31,6 +34,14 @@ export function RecommendationCard({
   const [detail, setDetail] = useState<SightingDetailData | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [actionToast, setActionToast] = useState<string | null>(null);
+  const [claimed, setClaimed] = useState(Boolean(item.claimedAsMyDog));
+  const [claimPending, setClaimPending] = useState(false);
+
+  useEffect(() => {
+    setClaimed(Boolean(item.claimedAsMyDog));
+  }, [item.claimedAsMyDog, item.sightingId]);
 
   const client = createClient();
   const storageRef = client?.storage?.from("sightings");
@@ -108,27 +119,64 @@ export function RecommendationCard({
   const handleClaimToggle = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!lostPostId || !accessToken) return;
-    const isClaimed = item.claimedAsMyDog;
+    if (!lostPostId || !accessToken || claimPending) return;
+
+    const nextClaimed = !claimed;
+    const previousClaimed = claimed;
+    setClaimed(nextClaimed);
+    setClaimPending(true);
+
     const url = `/api/v1/me/lost-posts/${lostPostId}/sighting-claims`;
-    if (isClaimed) {
-      const res = await fetch(`${url}/${item.sightingId}`, {
-        method: "DELETE",
-        credentials: "include",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      if (res.ok) onFeedbackChange?.();
-    } else {
-      const res = await fetch(url, {
-        method: "POST",
-        credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
-        body: JSON.stringify({ sightingId: item.sightingId }),
-      });
-      if (res.ok) onFeedbackChange?.();
+    try {
+      const res = nextClaimed
+        ? await fetch(url, {
+            method: "POST",
+            credentials: "include",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ sightingId: item.sightingId }),
+          })
+        : await fetch(`${url}/${item.sightingId}`, {
+            method: "DELETE",
+            credentials: "include",
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+
+      if (!res.ok) {
+        setClaimed(previousClaimed);
+        const json = (await res.json().catch(() => null)) as {
+          error?: { message?: string };
+        } | null;
+        setActionToast(
+          json?.error?.message ??
+            (nextClaimed
+              ? "북마크 등록에 실패했습니다."
+              : "북마크 해제에 실패했습니다.")
+        );
+        return;
+      }
+
+      if (nextClaimed) {
+        void trackFunnelEvent(accessToken, {
+          name: "sighting_claimed",
+          lostPostId,
+          sightingId: item.sightingId,
+          properties: { source: "recommendation_card" },
+        });
+      }
+      // Reconcile list in the background; UI already updated.
+      onFeedbackChange?.();
+    } catch {
+      setClaimed(previousClaimed);
+      setActionToast(
+        nextClaimed
+          ? "북마크 등록에 실패했습니다."
+          : "북마크 해제에 실패했습니다."
+      );
+    } finally {
+      setClaimPending(false);
     }
   };
 
@@ -136,15 +184,16 @@ export function RecommendationCard({
     lostPostId && accessToken ? (
       <button
         type="button"
+        disabled={claimPending}
         onClick={(e) => {
           e.preventDefault();
           e.stopPropagation();
-          handleClaimToggle(e);
+          void handleClaimToggle(e);
         }}
-        className="rounded-full p-2 transition-transform active:scale-95"
-        aria-label={item.claimedAsMyDog ? "북마크 해제" : "북마크 등록"}
+        className="rounded-full p-2 transition-transform active:scale-95 disabled:opacity-60"
+        aria-label={claimed ? "북마크 해제" : "북마크 등록"}
       >
-        {item.claimedAsMyDog ? (
+        {claimed ? (
           <svg
             className="h-8 w-8 text-yellow-500"
             viewBox="0 0 24 24"
@@ -172,7 +221,7 @@ export function RecommendationCard({
     <>
       <div className="border-border-subtle bg-surface flex flex-col gap-3 rounded-xl border p-4 shadow-sm transition-shadow">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          {item.claimedAsMyDog && (
+          {claimed && (
             <span className="text-primary text-xs font-medium">
               ✓ 북마크한 제보
             </span>
@@ -191,12 +240,14 @@ export function RecommendationCard({
             onClick={openModal}
             className="flex min-w-0 flex-1 gap-4 text-left transition-shadow hover:shadow-md"
           >
-            <div className="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+            <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
               {thumbUrl ? (
-                <img
+                <Image
                   src={thumbUrl}
                   alt="목격 사진"
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="80px"
+                  className="object-cover"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-2xl">
@@ -234,7 +285,7 @@ export function RecommendationCard({
           aria-label="제보 상세"
         >
           <div
-            className="animate-in fade-in zoom-in-95 w-full max-w-lg duration-200"
+            className="animate-in fade-in zoom-in-95 w-full max-w-md duration-200"
             onClick={(e) => e.stopPropagation()}
           >
             {detailLoading && (
@@ -261,19 +312,44 @@ export function RecommendationCard({
                 onClose={closeModal}
                 rightSlot={bookmarkButton}
                 footer={
-                  <Button
-                    variant="primary"
-                    className="w-full text-xs"
-                    onClick={handleMapClick}
-                  >
-                    지도에서 보기
-                  </Button>
+                  <div className="space-y-2">
+                    <Button
+                      variant="primary"
+                      className="w-full text-xs"
+                      onClick={handleMapClick}
+                    >
+                      지도에서 보기
+                    </Button>
+                    {accessToken ? (
+                      <Button
+                        variant="secondary"
+                        className="w-full text-xs"
+                        onClick={() => setReportOpen(true)}
+                      >
+                        신고 / 차단
+                      </Button>
+                    ) : null}
+                    {actionToast ? (
+                      <Text variant="caption" color="caption">
+                        {actionToast}
+                      </Text>
+                    ) : null}
+                  </div>
                 }
               />
             )}
           </div>
         </div>
       )}
+      {reportOpen ? (
+        <ReportBlockSheet
+          targetType="sighting"
+          targetId={item.sightingId}
+          authorUserId={detail?.author_user_id}
+          onClose={() => setReportOpen(false)}
+          onCompleted={(message) => setActionToast(message)}
+        />
+      ) : null}
     </>
   );
 }

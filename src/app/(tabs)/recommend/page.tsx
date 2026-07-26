@@ -2,6 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
+import { Suspense, useEffect, useState } from "react";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
@@ -9,43 +11,24 @@ import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { LostPostCard } from "@/features/lost-posts/components/LostPostCard";
 import { useLostPost } from "@/features/lost-posts/hooks/useLostPost";
+import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
 import { StatusBadge } from "@/features/lost-posts/components/StatusBadge";
 import { createClient } from "@/shared/supabase/client";
-import { useEffect, useState } from "react";
-import type { LostPostItem } from "@/features/lost-posts/model/types";
 import { useRecommendations } from "@/features/recommendations/hooks/useRecommendations";
 import { RecommendationCard } from "@/features/recommendations/components/RecommendationCard";
+import { trackFunnelEvent } from "@/shared/lib/funnel-client";
 
 function RecommendContent() {
   const searchParams = useSearchParams();
   const lostPostId = searchParams.get("lostPostId");
   const { session } = useAuth();
-  const [lostPosts, setLostPosts] = useState<LostPostItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!session?.access_token) {
-      setLoading(false);
-      return;
-    }
-    let cancelled = false;
-    fetch("/api/v1/lost-posts?limit=50", {
-      credentials: "include",
-      headers: { Authorization: `Bearer ${session.access_token}` },
-    })
-      .then((res) => (res.ok ? res.json() : { success: false, data: [] }))
-      .then((json) => {
-        if (!cancelled && json.success && Array.isArray(json.data)) {
-          setLostPosts(json.data);
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [session?.access_token]);
+  const {
+    items: lostPosts,
+    loading,
+    refreshing,
+    error: listError,
+    reload: reloadLostPosts,
+  } = useMyLostPosts();
 
   // 유실글을 선택하지 않았을 때: 내 유실글 목록을 보여주고, 선택하면 해당 유실글의 추천으로 이동
   if (!lostPostId) {
@@ -58,9 +41,22 @@ function RecommendContent() {
           유실글을 선택하면 해당 유실글에 맞는 추천 제보를 볼 수 있습니다.
         </Text>
         {loading ? (
-          <Text variant="caption" color="caption">
-            로딩 중...
-          </Text>
+          <div className="space-y-3">
+            <div className="bg-border-subtle h-3 w-40 animate-pulse rounded-full" />
+            <div className="bg-border-subtle h-3 w-28 animate-pulse rounded-full" />
+            <Text variant="caption" color="caption">
+              유실글을 불러오는 중...
+            </Text>
+          </div>
+        ) : listError && lostPosts.length === 0 ? (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-900/20">
+            <Text variant="body" color="caption" className="mb-2 block">
+              {listError}
+            </Text>
+            <Button variant="secondary" onClick={() => void reloadLostPosts()}>
+              다시 시도
+            </Button>
+          </div>
         ) : lostPosts.length === 0 ? (
           <div className="rounded-xl border border-gray-200 bg-gray-50 p-8 text-center dark:border-gray-700 dark:bg-gray-800/50">
             <Text variant="body" color="caption" className="mb-4 block">
@@ -72,9 +68,16 @@ function RecommendContent() {
           </div>
         ) : (
           <div className="space-y-3">
-            <Text variant="body" className="font-medium">
-              유실글 선택
-            </Text>
+            <div className="flex items-center justify-between gap-3">
+              <Text variant="body" className="font-medium">
+                유실글 선택
+              </Text>
+              {refreshing ? (
+                <Text variant="caption" color="caption">
+                  업데이트 중...
+                </Text>
+              ) : null}
+            </div>
             <ul className="space-y-4">
               {lostPosts.map((item) => (
                 <li key={item.id}>
@@ -120,6 +123,26 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
     days,
     topK,
   });
+
+  useEffect(() => {
+    if (!session?.access_token || recommendations?.status !== "ready") return;
+    void trackFunnelEvent(session.access_token, {
+      name: "recommendation_viewed",
+      lostPostId,
+      properties: {
+        count: recommendations.items?.length ?? 0,
+        radiusKm,
+        days,
+      },
+    });
+  }, [
+    session?.access_token,
+    recommendations?.status,
+    recommendations?.items?.length,
+    lostPostId,
+    radiusKm,
+    days,
+  ]);
 
   const client = createClient();
   const storageRef = client?.storage?.from("lost");
@@ -178,12 +201,14 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
             선택된 유실글
           </Text>
           <div className="flex gap-4">
-            <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gray-100">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gray-100">
               {coverUrl ? (
-                <img
+                <Image
                   src={coverUrl}
                   alt=""
-                  className="h-full w-full object-cover"
+                  fill
+                  sizes="64px"
+                  className="object-cover"
                 />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-2xl">
@@ -345,7 +370,17 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
 export default function RecommendPage() {
   return (
     <AuthGuard>
-      <RecommendContent />
+      <Suspense
+        fallback={
+          <Container className="py-10">
+            <Text variant="caption" color="caption">
+              로딩 중...
+            </Text>
+          </Container>
+        }
+      >
+        <RecommendContent />
+      </Suspense>
     </AuthGuard>
   );
 }

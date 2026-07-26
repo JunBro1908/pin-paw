@@ -44,6 +44,9 @@ export function useRecommendations(
   const [data, setData] = useState<RecommendationsData | null>(null);
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const radiusKm = params?.radiusKm;
+  const days = params?.days;
+  const topK = params?.topK;
 
   const fetchRecommendations = useCallback(() => {
     if (!lostPostId || !accessToken) {
@@ -54,7 +57,11 @@ export function useRecommendations(
     }
     setIsLoading(true);
     setError(null);
-    const url = buildRecommendationsUrl(lostPostId, params);
+    const url = buildRecommendationsUrl(lostPostId, {
+      radiusKm,
+      days,
+      topK,
+    });
     fetch(url, {
       credentials: "include",
       headers: { Authorization: `Bearer ${accessToken}` },
@@ -74,10 +81,13 @@ export function useRecommendations(
         setData(null);
       })
       .finally(() => setIsLoading(false));
-  }, [lostPostId, accessToken, params?.radiusKm, params?.days, params?.topK]);
+  }, [lostPostId, accessToken, radiusKm, days, topK]);
 
   const fetchRef = useRef(fetchRecommendations);
-  fetchRef.current = fetchRecommendations;
+
+  useEffect(() => {
+    fetchRef.current = fetchRecommendations;
+  }, [fetchRecommendations]);
 
   useEffect(() => {
     fetchRef.current();
