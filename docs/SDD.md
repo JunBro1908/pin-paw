@@ -1,914 +1,304 @@
-# PinPaw SDD (Software Design Document)
+# SDD (Software Design Document) — PinPaw
 
-> **목격된 유실 동물의 발자국에 핀을 꽂으며 반려인과의 재회를 돕는 플랫폼**
->
-> 작성일: 2026-02-16 | 마지막 업데이트: 2026-02-16
->
-> **진행:** Phase 2 인증(카카오 로그인, AuthContext, 로그아웃) 및 지도 마커 인증 분기 반영. Phase 4 Commit 4-1~4-3: Lost Posts API + UI 구현 완료. 지도 컴포넌트 생명주기·API 최소화 반영(싱글톤, lat/lng 쿼리 전달).
+## 7. 제보 피드백 및 지도/추천 연동
 
----
+### 7-5. 유저별 제보 상태(본/안 본, 내 강아지 인정)
 
-## 목차
+#### 7-5.1 개요
 
-1. [현재 구현 상태 요약](#1-현재-구현-상태-요약)
-2. [커밋 단위 개발 계획](#2-커밋-단위-개발-계획)
-   - [Phase 1: 기반 정비 & 버그 수정](#phase-1-기반-정비--버그-수정)
-   - [Phase 2: 인증 시스템](#phase-2-인증-시스템)
-   - [Phase 3: 목격 제보 고도화](#phase-3-목격-제보-고도화)
-   - [Phase 4: 유실글 (Lost Posts) CRUD](#phase-4-유실글-lost-posts-crud)
-   - [Phase 5: 마이페이지 & 사용자 기능](#phase-5-마이페이지--사용자-기능)
-   - [Phase 6: 추천 시스템](#phase-6-추천-시스템)
-   - [Phase 7: 안정화 & 최적화](#phase-7-안정화--최적화)
-3. [기술 스택 정리](#3-기술-스택-정리)
-4. [디렉토리 구조 계획](#4-디렉토리-구조-계획)
-5. [지도 컴포넌트 설계 (생명주기·API 최소화)](#5-지도-컴포넌트-설계-생명주기api-최소화)
+- **목적**: 유저가 본 제보와 보지 않은 제보를 구분하고, “내 강아지 제보”로 인정한 항목을 추천 최상단에 고정·표시한다.
+- **범위**: 지도 마커 스타일(빨강/회색/초록), 추천 목록 정렬, 상세에서 버튼(내 강아지 인정).
+- **특성**: 모든 상태는 **유저별**로 저장·적용된다 (유저 A와 B는 서로 다른 상태를 본다).
 
----
+#### 7-5.2 요구사항 요약
 
-## 1. 현재 구현 상태 요약
+| 구분 | 요구사항 |
+|------|----------|
+| 지도 | 안 본 제보: 빨간 테두리(현행 유지). 본 제보: 회색 테두리. |
+| 지도 | “내 강아지로 인정”한 제보: 초록 테두리 (유실글 컨텍스트 있을 때). |
+| 추천 | “내 강아지로 인정”한 제보는 **최상단 고정**, 그 아래 유사도 순. |
+| 추천 | “내 강아지로 인정”한 제보에 “내가 인정한 제보” 배지 표시. |
+| 상세 | “내 강아지로 인정” 체크/해제 가능 (인스타 좋아요처럼 토글). |
 
-### ✅ 완료 (약 65%)
+#### 7-5.3 데이터 설계
 
-| 영역                     | 상태    | 구현 내용                                                                          |
-| ------------------------ | ------- | ---------------------------------------------------------------------------------- |
-| **목격 제보 폼 (`/`)**   | ✅ 완료 | SightingForm, 사진 업로드, 위치 자동 입력, Optimistic UI                           |
-| **Presigned URL 업로드** | ✅ 완료 | `POST /api/v1/uploads/presign` — Rate Limit, Idempotency, IP 해싱                  |
-| **목격 저장 API**        | ✅ 완료 | `POST /api/v1/sightings` — 익명/인증 분기, PostGIS 위치 저장                       |
-| **지도 뷰 (`/map`)**     | ✅ 완료 | 네이버 맵, 공개 클러스터 + 인증 마커, ETag 캐싱 (304), 인증 시 상세 마커           |
-| **Public Clusters API**  | ✅ 완료 | `GET /api/v1/public/map/clusters` — bbox/zoom 기반, 좌표 마스킹                    |
-| **Auth Markers API**     | ✅ 완료 | `GET /api/v1/auth/map/markers` — 쿠키 세션 기반, 상세 정보 포함                    |
-| **인증 (카카오)**        | ✅ 완료 | AuthContext 전역 상태, createBrowserClient(쿠키), AuthGuard, 로그아웃(내정보)      |
-| **유실글 CRUD API**      | ✅ 완료 | `POST/GET /api/v1/lost-posts`, `GET/PATCH/DELETE /api/v1/lost-posts/[id]`          |
-| **DB 스키마**            | ✅ 완료 | users, sightings, lost_posts, embeddings, recommendation_cache, idempotency_keys   |
-| **RLS 정책**             | ✅ 완료 | lost_posts 소유자 전용, sightings 공개 insert, recommendation_cache 소유자 전용    |
-| **DB Functions**         | ✅ 완료 | `get_sighting_clusters()` — 줌 레벨 기반 그리드 클러스터링                         |
-| **유실글 UI**            | ✅ 완료 | 등록 폼, 목록, 상세(상태 변경·삭제·추천 보기), StatusBadge, useLostPost (4-2, 4-3) |
-| **공통 UI**              | ✅ 완료 | Button, Text, Toast, Loading, Divider, Container                                   |
-| **탭 네비게이션**        | ✅ 완료 | 하단 탭바 (홈, 지도, 추천, 내정보)                                                 |
+**원칙**: 인스타 좋아요처럼 “한 유저·한 제보” 또는 “한 유실글·한 제보”당 최소 행으로 관리.
 
-### ⚠️ 부분 구현 (약 10%)
+**테이블 1: `user_sighting_views` (본 적 있음)**
 
-| 영역                           | 상태 | 누락 사항                                                          |
-| ------------------------------ | ---- | ------------------------------------------------------------------ |
-| **Rate Limiting**              | ⚠️   | presign/sightings에만 적용, lost-posts 등 나머지 API 미적용        |
-| **목격 폼 선택 입력**          | ⚠️   | 견종/색상/태그 선택 UI 미구현 (DB 컬럼은 존재)                     |
-| **추천 페이지 (`/recommend`)** | ⚠️   | 하드코딩 플레이스홀더 UI만 존재                                    |
-| **마이페이지 (`/my`)**         | ⚠️   | 로그인·로그아웃·표시명 반영 완료, 내 유실글 목록 링크 등 추가 필요 |
-| **API 응답 형식**              | ⚠️   | `success/data/error` 사용 중이나 spec의 `meta` 필드 미포함         |
+- **역할**: 유저별로 “해당 제보를 봤는지” 저장. **지도 마커 색상**(회색=본 제보)용 (유실글 무관).
+- **스키마** (현재 코드·마이그레이션 기준):
+  - `user_id` (uuid, FK → auth.users) — 유저
+  - `sighting_id` (uuid, FK → sightings) — 제보
+  - `seen_at` (timestamptz, nullable) — NULL = 안 봄, 값 있음 = 본 시각 → 지도에서 회색
+  - `created_at`, `updated_at` (timestamptz)
+  - PK: `(user_id, sighting_id)`
+- **인덱스**: `(user_id)`, `(sighting_id)` (조회용).
+- **참고**: “다시 보지 않기”(dismissed) 기능은 제거됨 — `dismissed_at` 컬럼 없음 (마이그레이션 20250218160000).
 
-### ❌ 미구현 (약 25%)
+**테이블 2: `lost_post_sighting_claims` (내 강아지로 인정)**
 
-| 영역                | 상태 | 필요 사항                                        |
-| ------------------- | ---- | ------------------------------------------------ |
-| **인증 미들웨어**   | ❌   | Next.js middleware — 보호 라우트 리다이렉트      |
-| **추천 API**        | ❌   | `GET /api/v1/recommendations` — 벡터 검색 + 캐시 |
-| **임베딩 생성**     | ❌   | 제보/유실글 저장 시 text 임베딩 비동기 생성      |
-| **내 제보 목록**    | ❌   | `GET /api/v1/me/sightings`                       |
-| **SWR 통합**        | ❌   | 클라이언트 캐싱/재검증 라이브러리                |
-| **에러 바운더리**   | ❌   | 전역 에러 핸들링                                 |
-| **데이터 생명주기** | ❌   | 28일 초과 데이터 아카이빙                        |
+- **역할**: “이 유실글에서 이 제보를 내 강아지로 인정했는가”만 저장. 존재 = 인정, 삭제 = 인정 해제.
+- **스키마**:
+  - `lost_post_id` (uuid, FK → lost_posts)
+  - `sighting_id` (uuid, FK → sightings)
+  - `claimed_at` (timestamptz, default now())
+  - PK: `(lost_post_id, sighting_id)`
+- **인덱스**: `(lost_post_id)` (추천 정렬/필터용).
 
----
+**RLS**
 
-## 2. 커밋 단위 개발 계획
+- `user_sighting_views`: `user_id = auth.uid()` 인 행만 SELECT/INSERT/UPDATE/DELETE 허용.
+- `lost_post_sighting_claims`: `lost_posts.owner_id = auth.uid()` 인 lost_post에 대해서만 SELECT/INSERT/DELETE 허용.
 
-> 각 커밋은 독립적으로 동작 가능하고 롤백 안전한 단위로 설계되었습니다.
-> 예상 소요 시간은 1인 개발 기준입니다.
+#### 7-5.4 API 설계
 
----
+**인증 (서버 검증)**  
+`/api/v1/me/*` 및 인증이 필요한 API에서는 쿠키 세션에서 **access_token만 읽은 뒤** Supabase Auth 서버로 검증하는 **`getAuthenticatedUser()`**를 사용한다. `getSession()`의 user 객체는 저장소(쿠키) 기반이라 서버에서 신뢰하지 않고, **`getUser(access_token)`**으로 검증된 user만 사용한다. 공용 헬퍼: `@/shared/supabase/server`의 `getAuthenticatedUser(supabase)`.
 
-### Phase 1: 기반 정비 & 버그 수정
+| 메서드 | 경로 | 설명 |
+|--------|------|------|
+| GET | `/api/v1/me/sighting-views?sightingIds=id1,id2,...` | 현재 유저의 제보별 seen 상태 반환. 지도 마커 색상(회색)용. |
+| POST | `/api/v1/me/sighting-views` | body: `{ sightingId }` — “본 적 있음” 기록 (seen_at 설정). |
+| GET | `/api/v1/me/lost-posts/map?limit=50` | 지도 “내 유실글+북마크” 레이어용. 본인 유실글 목록 + 위도·경도·표시용 필드. RPC `get_my_lost_posts_with_location` 호출. |
+| GET | `/api/v1/me/lost-posts/map/paths` | 지도 "내 유실글+북마크" 레이어용. 유실 위치→제보(occurred_at 순) 경로 데이터. RPC `get_my_lost_post_paths` 호출. 반환: `[{ lost_post_id, lost_lat, lost_lng, lost_at, points: [{ sighting_id, lat, lng, occurred_at, photo_keys?, note? }, ...] }, ...]`. |
+| GET | `/api/v1/me/lost-posts/[lostPostId]/sighting-claims` | 해당 유실글에서 “내 강아지로 인정”한 sighting_id 목록. |
+| POST | `/api/v1/me/lost-posts/[lostPostId]/sighting-claims` | body: `{ sightingId }` — 인정 추가. 성공 시 해당 `lost_post_id`의 `recommendation_cache` 삭제(다음 추천 조회 시 반영). |
+| DELETE | `/api/v1/me/lost-posts/[lostPostId]/sighting-claims/[sightingId]` | 인정 해제. 성공 시 해당 `lost_post_id`의 `recommendation_cache` 삭제. |
+| GET | `/api/v1/auth/sightings/[sightingId]` | 인증 유저용 제보 단건 상세. 지도 상세 카드/추천 모달과 동일한 형식(id, photo_keys, occurred_at, author_type, trait_*, note) 반환. Service role로 sightings 테이블 직접 조회. |
 
-#### Commit 1-1: 세션 기반 Supabase 서버 클라이언트 추가
+#### 7-5.5 프론트 연동
 
-**배경:**
-현재 `src/shared/supabase/server.ts`에는 `createServerSupabase`(Service Role 기반)만 존재합니다.
-`/api/v1/auth/map/markers/route.ts`에서 import하는 `createServerSupabaseClient`(세션 기반)가 정의되어 있지 않아 Auth 마커 API가 정상 동작하지 않습니다.
+- **지도**
+  - **레이어 필터** (실제 구현): 지도 상단에서 전환 가능. **전체**(default) / **안 본 제보**(unseen) / **내 유실글+북마크**(bookmark). default·unseen은 클러스터 수신 후 메모리에서 필터링; bookmark 레이어는 zoom 17로 포인트만 요청·표시(클러스터 없음), 캐시 키에 레이어 포함.
+  - 인증 유저: 클러스터 수신 후 `GET /api/v1/me/sighting-views?sightingIds=...` 및 (유실글 컨텍스트 시) `GET .../sighting-claims` 로 상태 조회. sighting ID 정규화(소문자·trim)로 API/DB 포맷 차이 시에도 인정 상태가 초록으로 반영되도록 함.
+  - claimed → 초록 테두리, seen만 있음 → 회색 테두리, 그 외 → 빨간 테두리.
+  - 지도에서 마커(포인트) 클릭 시 상세 카드 열기 직전 `POST /api/v1/me/sighting-views` 로 "본 적 있음" 기록.
+  - **내 유실글+북마크 레이어**: `GET /api/v1/me/lost-posts/map`으로 유실글 위치 목록 조회. RPC에 `cover_photo_key` 등이 없을 수 있어 `GET /api/v1/lost-posts`와 병합해 이미지·특징 보강. 유실글 위치에 **둥근 네모 마커**(커버 이미지, 주황 테두리) 표시, 터치 시 **유실글 카드**(사진·유실일·특징·메모) 표시. 제보 카드와 별도 상태(`selectedLostPostForCard`).
+  - **북마크 레이어 경로·제보**: `GET /api/v1/me/lost-posts/map/paths`로 유실 위치→제보(occurred_at 순) 경로 데이터 조회. **경로 폴리라인**(연두색 배경선) + **방향 애니메이션**(초록 선이 유실→제보 순으로 따라 그려짐, 1초 텀으로 무한 반복). pathData 기반으로 **제보 마커만** 그리며 `sightingFeedbackMap`(인정=초록)과 연동. `lastMyPositionRef`로 경로 선이 '내 위치' 마커에 붙지 않도록 처리. idle 시 북마크 레이어일 때는 `fetchClusters` 호출 생략.
+  - **클레임(인정/해제) 후**: `fetchBookmarkLayerData()` 호출로 경로·제보 마커 갱신, 북마크 모달 닫기·선택 제보 초기화. 등록 가능한 유실글이 없을 때 "조회 가능한 유실글이 없습니다" 안내.
+  - **추천 "지도에서 보기" 진입**: `initialCenter`+`initialFocusSightingId`가 있으면 클러스터 대기 없이 `GET /api/v1/auth/sightings/[sightingId]`로 상세 조회 후 제보 상세 카드 자동 오픈.
+  - **지도 상세 카드(하단 패널)**: 인증 + 선택된 제보에 `id` 있음 + **내 유실글이 1개 이상 로드된 경우**에만 우측 상단에 **북마크 별 아이콘** 표시. 별만 노출(버튼 형태 아님). 클릭 시 인정이면 해제(DELETE), 아니면 유실글 선택 모달(등록) 또는 바로 등록. `effectiveLostPostId` = URL의 `lostPostId` 우선, 없으면 내 유실글 1개 또는 모달 선택값.
+  - **내 유실글 로드 조건**: URL에 `lostPostId`가 **없을 때만** 마커 상세 열림 시 `GET /api/v1/lost-posts?limit=50` 호출로 `myLostPosts` 설정. **추천 페이지에서 지도로 진입한 경우**(`?lostPostId=...` 있음)에는 해당 유실글 1건을 `GET /api/v1/lost-posts/[lostPostId]`로 로드해 `myLostPosts`에 넣어 북마크 별이 보이도록 함(7-5.6.1).
+- **추천**
+  - 기존 추천 API 응답에 대해: 해당 유실글의 claimed 제보를 **최상단 고정** 후 유사도 순 정렬. 응답에 `claimedAsMyDog` 플래그 포함.
+  - **추천 카드(RecommendationCard)**:
+    - “내가 인정한 제보” 배지(✓ 북마크한 제보) 유지.
+    - **메인 액션**: 카드 클릭 시 **팝업 모달**로 제보 상세 표시(지도 상세 카드와 동일한 내용: 사진·일시·익명/회원 제보·색·크기·종·추가 설명·북마크·지도에서 보기 버튼). 모달 열 때 `POST /api/v1/me/sighting-views`로 “본 적 있음” 기록.
+    - **서브 액션**: 카드 **우측 상단** “지도에서 보기 →” 링크로 지도 탭 이동. 모달 내 “지도에서 보기” 버튼은 모달 닫은 뒤 지도로 이동.
+    - **북마크**: 카드 및 모달 내 **별 아이콘**으로 등록/해제(지도 상세와 동일 UX). `lostPostId`는 현재 선택된 유실글로 고정.
+    - 지도 링크 시 `lostPostId` 쿼리 전달(초록 마커용).
+  - **공통 컴포넌트**: 지도·추천에서 동일한 제보 상세 UI 사용. **SightingDetailCard**: 제보 상세 내용(사진·제목·일시·특징·설명·rightSlot·footer) 표시. **SightingDetailSheet**: 지도 전용 래퍼(absolute 하단 고정, 터치/스크롤 시 지도 이벤트 전파 차단). 추천 상세는 **중앙 팝업 모달**(fixed overlay + flex center)로 SightingDetailCard만 사용.
+- **상세(제보 진입 시)**
+  - “본 적 있음” 기록: 지도 마커 클릭·추천 모달 열기·지도 링크 클릭 시 `POST /api/v1/me/sighting-views` with `sightingId`.
+- **특징(색상) 입력 공통화**: 유실글·제보의 색상(`trait_color`)을 자유 텍스트 대신 **공통 옵션 선택**으로 통일. 상수 `TRAIT_COLOR_OPTIONS`(검정, 흰색, 갈색, 회색, 크림/연한색, 얼룩(복합), 기타)를 `@/shared/constants/traitColors`에서 정의. **유실글 등록(LostPostForm)**·**유실글 수정([lostPostId]/page)**·**제보 등록(SightingForm)**에서 색상 입력을 `<select>`로 표시. 기존 자유 텍스트 값은 옵션에 없으면 "선택"으로 표시되며, 수정 시 위 옵션 중 선택 가능.
 
-**변경 사항:**
+#### 7-5.6 체크리스트 (구현 완료 기준)
 
-- [x] `src/shared/supabase/server.ts`에 `createServerSupabaseClient` 함수 추가
-  - `@supabase/ssr` 패키지 설치 (Next.js App Router 쿠키 기반 세션)
-  - `cookies()` 를 활용한 세션 기반 클라이언트 생성
-- [x] `@supabase/ssr` 의존성 추가 (`package.json`)
-- [x] 기존 auth markers 라우트의 import 경로 확인 및 수정
+- [x] **DB**
+  - [x] `user_sighting_views` 테이블 생성 (PK, FK, 인덱스). `dismissed_at` 제거 반영(마이그레이션 20250218160000).
+  - [x] `lost_post_sighting_claims` 테이블 생성 (PK, FK, 인덱스)
+  - [x] 두 테이블 RLS 활성화 및 정책 적용
+  - [x] RPC `get_my_lost_posts_with_location(limit_count)` — 지도용 유실글 목록(id, pet_name, lost_at, cover_photo_key, trait_*, note, lat, lng). 마이그레이션 20250219100000, 20250219110000.
+  - [x] RPC `get_my_lost_post_paths` — 북마크 레이어용 경로 데이터(유실 위치→제보 occurred_at 순). 반환: lost_post_id, lost_lat, lost_lng, lost_at, points(sighting_id, lat, lng, occurred_at, photo_keys?, note?). 마이그레이션 20250222100000.
+- [x] **API**
+  - [x] GET/POST `/api/v1/me/sighting-views` 구현
+  - [x] GET `/api/v1/me/lost-posts/map?limit=50` 구현 (RPC 호출)
+  - [x] GET `/api/v1/me/lost-posts/map/paths` 구현 (RPC `get_my_lost_post_paths` 호출, 경로 데이터 반환)
+  - [x] GET/POST/DELETE `/api/v1/me/lost-posts/[lostPostId]/sighting-claims` 구현 (POST/DELETE 성공 시 해당 lost_post_id의 recommendation_cache 삭제)
+  - [x] GET `/api/v1/auth/sightings/[sightingId]` 구현 (제보 단건 상세, 추천 모달용)
+  - [x] 추천 API: claimed 최상단 정렬 및 `claimedAsMyDog` 필드 반환
+- [x] **지도**
+  - [x] 레이어 필터: 전체 / 안 본 제보 / 내 유실글+북마크. 북마크 레이어는 zoom 17 포인트만, 클러스터 없음.
+  - [x] 인증 시 클러스터 수신 후 sighting-views·sighting-claims 조회·병합 (ID 정규화로 claimed 초록 반영 보장)
+  - [x] claimed → 초록, seen → 회색, 기본 빨간 테두리
+  - [x] 지도 마커 클릭 시 "본 적 있음" 기록 후 상세 카드 표시
+  - [x] 지도 상세 카드에 북마크 **별 아이콘**(우측 상단, 버튼 형태 아님). 내 유실글 1개 이상 로드된 경우에만 표시. 클릭 시 인정/해제 또는 유실글 선택 모달.
+  - [x] 내 유실글+북마크 레이어: 유실글 위치 마커(둥근 네모·커버 이미지), 터치 시 유실글 카드(사진·유실일·특징·메모). 목록 API와 병합해 cover_photo_key 보강.
+  - [x] 북마크 레이어 경로·제보: GET `/api/v1/me/lost-posts/map/paths`로 경로 데이터 조회. 경로 폴리라인(연두색) + 방향 애니메이션(초록 선 따라 그리기, 1초 텀 무한 반복). pathData 기반 제보 마커만 그리며 sightingFeedbackMap 연동. 클레임(인정/해제) 후 fetchBookmarkLayerData 호출, 등록 가능 유실글 없을 때 "조회 가능한 유실글이 없습니다" 안내. 추천 "지도에서 보기" 진입 시 initialCenter+initialFocusSightingId로 상세 카드 자동 오픈.
+- [x] **특징(색상) 입력**
+  - [x] TRAIT_COLOR_OPTIONS 상수(검정/흰색/갈색/회색/크림·연한색/얼룩(복합)/기타) 정의. 유실글 등록·수정·제보 등록 폼에서 색상 select 적용.
+- [x] **추천 UI**
+  - [x] RecommendationCard에 “내가 인정한 제보” 배지
+  - [x] RecommendationCard **카드 클릭 → 팝업 모달**로 제보 상세(지도 상세와 동일 SightingDetailCard). 우측 상단 “지도에서 보기 →” 링크(서브). 모달 열 때 “본 적 있음” 기록.
+  - [x] RecommendationCard·모달 내 **별 아이콘**으로 북마크 등록/해제 (지도 상세와 동일 UX).
+  - [x] 지도 링크 시 lostPostId 쿼리 전달(초록 마커용)
+- [x] **공통 컴포넌트**
+  - [x] SightingDetailCard: 제보 상세 공통 UI (지도·추천 모달)
+  - [x] SightingDetailSheet: 지도 위 상세 카드 래퍼(하단 고정, 이벤트 전파 차단). 지도에서만 사용.
+- [x] **상세**
+  - [x] 제보 상세 진입 시 "본 적 있음" API 호출 (URL 진입 + 지도 마커 클릭 시)
+  - [x] 지도 상세 카드에서도 동일 버튼 제공 “본 적 있음” API 호출
 
-**영향 범위:**
+#### 7-5.6.1 알려진 동작·제한 (해결됨)
 
-- `src/shared/supabase/server.ts`
-- `src/app/api/v1/auth/map/markers/route.ts`
-- `package.json`
+| 구분 | 내용 |
+|------|------|
+| 지도 북마크 별 | **해결:** 추천 → "지도에서 보기" 진입 시(`lostPostId` 있음)에도 상세 패널에 북마크 별이 보이도록, 해당 유실글 1건을 `GET /api/v1/lost-posts/[lostPostId]`로 로드해 `myLostPosts`에 넣는 로딩 정책을 추가함. |
 
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | `npm run build` 실행 | 빌드 에러 없이 성공 |
-| 2 | 비로그인 상태에서 `/api/v1/auth/map/markers` 요청 | 401 Unauthorized 응답 |
-| 3 | 로그인 상태에서 `/api/v1/auth/map/markers` 요청 | 200 + 마커 데이터 반환 |
+#### 7-5.7 검증 시나리오
 
----
+**시나리오 1: 본/안 본 구분 (지도)**  
+1. 유저 A 로그인 → 지도 열기.  
+2. 제보 X가 빨간 테두리로 보임.  
+3. 제보 X 클릭 → 상세 진입 → “본 적 있음” 기록.  
+4. 지도로 돌아와서 같은 영역 다시 로드.  
+5. **검증**: 제보 X가 회색 테두리로 보인다.  
+6. 유저 B로 로그인 후 같은 영역 확인.  
+7. **검증**: 제보 X는 유저 B에게 빨간 테두리(안 본 상태)로 보인다.
 
-#### Commit 1-2: API 공통 응답 유틸리티 정비
+**시나리오 2: 내 강아지 인정 (추천 최상단 + 지도 초록)**  
+1. 유저 A가 유실글 L 선택 → 추천 목록에서 제보 Z에 “내 강아지로 인정” 클릭.  
+2. **검증**: 제보 Z가 목록 최상단으로 이동하고 “내가 인정한 제보” 배지가 보인다.  
+3. 지도에서 `lostPostId=L` 컨텍스트로 제보 Z 위치 확인.  
+4. **검증**: 제보 Z 마커가 초록 테두리로 보인다.  
+5. “내 강아지로 인정” 다시 클릭(해제).  
+6. **검증**: 배지 사라지고, 목록에서 유사도 순으로 재정렬되며, 지도에서 해당 마커는 회색/빨강으로 보인다.
 
-**배경:**
-스펙 문서에서 정의한 Response Envelope(`success / data / error / meta`)를 통일하고,
-에러 코드 체계(`VALIDATION_ERROR`, `UNAUTHORIZED` 등)를 표준화합니다.
-
-**변경 사항:**
-
-- [x] `src/shared/lib/api-response.ts` 생성
-  - `ApiSuccessResponse<T>` 및 `ApiErrorResponse` 타입 정의
-  - `ok(data, meta?)`, `fail(code, message, status)` 헬퍼 함수
-  - 에러 코드 enum: `VALIDATION_ERROR`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `RATE_LIMITED`, `INTERNAL_ERROR`
-- [x] `src/shared/types/api.ts` 업데이트 — 기존 `ApiResponse` 타입을 새 envelope과 통합
-- [x] 기존 API 라우트들(`sightings`, `presign`, `clusters`, `markers`)의 응답을 새 헬퍼로 마이그레이션
-
-**영향 범위:**
-
-- `src/shared/lib/api-response.ts` (신규)
-- `src/shared/types/api.ts`
-- `src/app/api/v1/*/route.ts` (모든 API 라우트)
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 정상 응답 시 JSON 구조 확인 | `{ success: true, data: {...}, meta: {...} }` |
-| 2 | 400 에러 응답 시 JSON 구조 확인 | `{ success: false, error: { code: "VALIDATION_ERROR", message: "..." } }` |
-| 3 | 기존 Sighting 제보 플로우 E2E | 기존 동작 유지 (회귀 없음) |
-
----
-
-#### Commit 1-3: Rate Limiting 우선순위 체계 구현 (DB 기반, 모듈화)
-
-**배경:**
-기존 인라인 Rate Limiting을 체계화하고 우선순위를 적용합니다.
-Vercel Serverless 환경 호환성을 위해 DB 기반 방식을 사용합니다.
-중복 로직을 공통 유틸리티로 모듈화하여 재사용성을 높입니다.
-
-**변경 사항:**
-
-- [x] `src/shared/lib/rate-limit.ts` 생성 — DB 기반 공통 Rate Limiting 유틸리티
-  - `checkRateLimit()` 함수: 우선순위 기반 체크
-  - `RateLimitPresets.sighting`: 24h 30회, 1h 10회, 10s 쿨다운 설정
-  - DB (`idempotency_keys`) 기반 체크로 Vercel Serverless 호환
-  - 우선순위 정렬 및 가장 제한적인 메시지만 반환
-- [x] `src/app/api/v1/uploads/presign/route.ts` 공통 유틸리티 적용 및 버그 수정
-  - 중복 Rate Limit 로직을 `checkRateLimit()` 함수로 교체
-  - 비회원만 적용
-  - 누락된 `now = new Date()` 변수 선언 추가 (500 에러 수정)
-- [x] `src/app/api/v1/sightings/route.ts` 공통 유틸리티 적용
-  - 중복 Rate Limit 로직을 `checkRateLimit()` 함수로 교체
-  - 비회원: 제보 성공 시 추적 기록 저장
-  - IP/ipHash 변수 재사용으로 중복 호출 제거
-- [x] `src/features/sightings/components/SightingForm.tsx` 에러 응답 처리 개선
-  - HTTP 상태 코드 먼저 체크 (`!presignRes.ok`)
-  - `error.message` 정확하게 파싱 (기존 `error` 객체 전체 사용 수정)
-  - Rate Limit 메시지 정확하게 표시
-
-**영향 범위:**
-
-- `src/shared/lib/rate-limit.ts` (신규)
-- `src/app/api/v1/uploads/presign/route.ts`
-- `src/app/api/v1/sightings/route.ts`
-- `src/features/sightings/components/SightingForm.tsx`
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 10개 제보 후 11번째 제보 시도 (1시간 내) | "1시간 동안 최대 10회까지 제보할 수 있습니다" 메시지 |
-| 2 | 30개 제보 후 31번째 제보 시도 (1일 내) | "하루 동안 최대 30회까지 제보할 수 있습니다" 메시지 |
-| 3 | 1일 30회 + 1시간 10회 모두 초과 시 | 1일 30회 메시지만 표시 (우선순위) |
-| 4 | 10초 내 재시도 | "잠시 후 다시 시도해주세요. (10초 쿨다운)" 메시지 |
-| 5 | Rate Limit 이내 요청 | 200 정상 응답 |
+**시나리오 3: 인정 해제**  
+1. 위 상태에서 제보 Z의 “내 강아지로 인정” 버튼을 다시 눌러 해제.  
+2. **검증**: 목록에서 최상단 고정이 해제되고, “내가 인정한 제보” 배지가 사라진다.  
+3. **검증**: 지도에서 제보 Z는 회색(본 제보) 또는 빨강(상태에 따라)으로만 보인다.
 
 ---
 
-### Phase 2: 인증 시스템
-
-#### Commit 2-1: 카카오 로그인 (Supabase Auth + OAuth)
-
-**배경:**
-`추천`과 `마이페이지` 이용자는 인증 필수입니다. 보호자 식별 + 악성 유저(개장수) 방지를 위해
-카카오 소셜 로그인을 구현합니다. Supabase Auth + Kakao OAuth를 사용합니다.
-`지도`와 `제보`는 로그인 없이 사용 가능합니다.
-
-**변경 사항:**
-
-- [x] `public/images/kakao_login_medium_narrow.png` — 카카오 로그인 버튼 이미지 사용
-  - 카카오 디자인 가이드라인 준수
-  - 중간 크기, 좁은 버전 (183x45px)
-- [x] `src/app/auth/login/page.tsx` — 카카오 로그인 페이지
-  - 카카오 로그인 버튼 (이미지 사용)
-  - Supabase `signInWithOAuth({ provider: 'kakao' })` 호출
-  - 로그인 후 redirect 파라미터 처리
-  - 이미 로그인된 경우 자동 리다이렉트
-- [x] `src/app/auth/callback/route.ts` — OAuth 콜백 핸들러
-  - Supabase Auth 코드 교환 처리 (`exchangeCodeForSession`)
-  - 세션 쿠키 설정
-  - redirect URL로 리다이렉트
-- [x] `src/features/auth/hooks/useAuth.ts` — 인증 상태 관리 훅
-  - `useAuth()`: session, user, signInWithKakao, signOut, isLoading
-  - Supabase `onAuthStateChange` 구독
-  - 초기 세션 로딩 처리
-- [x] `src/features/auth/components/AuthGuard.tsx` — 인증 필요 래퍼 컴포넌트
-  - 미인증 시 로그인 페이지로 리다이렉트 (현재 경로를 redirect 파라미터로 전달)
-  - 로딩 중 fallback 지원
-- [x] `src/app/(tabs)/recommend/page.tsx` — AuthGuard 적용
-  - 추천 페이지를 AuthGuard로 감싸기
-  - "use client" 추가
-- [x] `src/app/(tabs)/my/page.tsx` — AuthGuard 적용
-  - 마이페이지를 AuthGuard로 감싸기
-  - "use client" 추가
-
-**영향 범위:**
-
-- `public/images/kakao_login_medium_narrow.png` (기존)
-- `src/app/auth/login/page.tsx` (신규, 기존 이메일/비밀번호 버전 대체)
-- `src/app/auth/callback/route.ts` (신규)
-- `src/features/auth/hooks/useAuth.ts` (신규, 기존 이메일/비밀번호 버전 대체)
-- `src/features/auth/components/AuthGuard.tsx` (신규, 기존 버전 대체)
-- `src/app/(tabs)/recommend/page.tsx` (수정)
-- `src/app/(tabs)/my/page.tsx` (수정)
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 카카오 로그인 버튼 클릭 | 카카오 OAuth 페이지로 이동 |
-| 2 | 카카오 계정으로 로그인 | Supabase에 세션 생성, redirect 페이지로 이동 |
-| 3 | 로그인 후 `useAuth()` 호출 | `user` 객체 및 `session` 반환 |
-| 4 | 미인증 상태에서 `/recommend` 접근 | 로그인 페이지로 리다이렉트 |
-| 5 | 미인증 상태에서 `/my` 접근 | 로그인 페이지로 리다이렉트 |
-| 6 | 미인증 상태에서 `/map` 접근 | 정상 접근 가능 (로그인 불필요) |
-| 7 | 미인증 상태에서 제보 작성 | 정상 제출 가능 (로그인 불필요) |
+이 문서는 7-5 기능 구현 및 검증의 기준이 된다.
 
 ---
 
-#### Commit 2-2: (통합) 카카오 로그인 구현 완료
-
-**참고:** Commit 2-1에서 AuthGuard 컴포넌트로 이미 라우트 보호 처리가 완료되었습니다.
-별도의 미들웨어가 필요하지 않으며, 각 보호 페이지(`/recommend`, `/my`)에서
-AuthGuard를 사용하여 클라이언트 사이드에서 인증을 체크합니다.
-
----
-
-### Phase 3: 목격 제보 고도화
-
-#### Commit 3-1: 제보 폼 선택 입력 UI 추가 (견종, 색상, 태그)
-
-**배경:**
-스펙 문서에서 정의한 선택 입력 필드(견종 선택, 색상 선택, 태그 기반 추가 정보)를
-SightingForm에 추가합니다. DB의 `trait_color`, `trait_size`, `trait_state` 컬럼을 활용합니다.
-
-**변경 사항:**
-
-- [ ] `src/features/sightings/model/constants.ts` 생성
-  - 견종 드롭다운 옵션 목록
-  - 색상 드롭다운 옵션 목록 (흰색, 검정, 갈색, 크림, 회색, 혼합 등)
-  - 크기 옵션 (소형, 중형, 대형)
-  - 태그 옵션 목록 (목줄 있음, 옷 입음, 겁 많음, 사람을 잘 따름, 부상 의심 등)
-- [ ] `src/features/sightings/components/TraitSelector.tsx` — 태그 선택 컴포넌트
-  - 탭으로 토글 가능한 태그 칩 UI
-- [ ] `SightingForm.tsx` 업데이트
-  - 색상 드롭다운 (선택)
-  - 크기 드롭다운 (선택)
-  - 태그 셀렉터 (선택)
-  - 필수 입력(사진, 위치, 시간) 이후 노출 (후순위 배치)
-- [ ] `SightingFormData` 타입 업데이트
-- [ ] `POST /api/v1/sightings` — `trait_color`, `trait_size`, `trait_state` 저장 로직 추가
-
-**영향 범위:**
-
-- `src/features/sightings/model/constants.ts` (신규)
-- `src/features/sightings/components/TraitSelector.tsx` (신규)
-- `src/features/sightings/components/SightingForm.tsx`
-- `src/features/sightings/model/types.ts`
-- `src/app/api/v1/sightings/route.ts`
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 선택 입력 없이 필수 항목만 제출 | 정상 저장 (선택 필드 null) |
-| 2 | 색상 "흰색" + 크기 "소형" + 태그 "목줄 있음" 선택 후 제출 | DB에 trait_color, trait_size, trait_state 정상 저장 |
-| 3 | 태그 선택 → 해제 → 재선택 | 토글 정상 동작 |
-| 4 | 전체 제보 플로우 (사진 + 위치 + 시간 + 선택 입력) | 10초 내 제보 완료 가능 여부 확인 |
-
----
-
-#### Commit 3-2: SWR 도입 및 클라이언트 데이터 페칭 통합
-
-**배경:**
-스펙 문서의 Near Real-Time UX 전략에 따라, SWR (Stale-While-Revalidate)을 도입하여
-지도 데이터의 캐시 우선 표시 + 백그라운드 재검증을 구현합니다.
-
-**변경 사항:**
-
-- [ ] `swr` 패키지 설치
-- [ ] `src/shared/lib/fetcher.ts` — SWR용 공통 fetcher 생성
-  - ETag 헤더 관리
-  - 304 응답 시 캐시 유지
-- [ ] `src/features/map/hooks/useMapData.ts` — SWR 기반 지도 데이터 훅
-  - `useSWR`로 캐시 우선 렌더
-  - `focusThrottleInterval` 설정 (탭 활성 시 재검증)
-  - `revalidateOnFocus: true` (포커스 복귀 시 1회 재검증)
-  - `refreshInterval` 조건부 설정 (지도 idle 시에만 폴링)
-- [ ] `NaverMap.tsx` — SWR 훅으로 데이터 페칭 리팩토링 (기존 인라인 fetch 교체)
-
-**영향 범위:**
-
-- `package.json`
-- `src/shared/lib/fetcher.ts` (신규)
-- `src/features/map/hooks/useMapData.ts` (신규)
-- `src/features/map/components/NaverMap.tsx`
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | `/map` 진입 시 | 캐시 데이터 즉시 렌더 + 백그라운드 갱신 |
-| 2 | 다른 탭 갔다가 `/map` 복귀 | 1회 자동 재검증 수행 |
-| 3 | 데이터 변경 없는 상태에서 재검증 | 304 Not Modified (네트워크 절감) |
-| 4 | 새 제보 등록 후 `/map` 이동 | 새 마커가 지도에 반영됨 |
-| 5 | 오프라인 상태에서 `/map` 접근 | 캐시 데이터로 지도 표시 (에러 없음) |
-
----
-
-### Phase 4: 유실글 (Lost Posts) CRUD
-
-#### Commit 4-1: Lost Posts API — 생성 및 목록 조회
-
-**배경:**
-`찾습니다` 이용자가 유실 동물을 등록하고 관리할 수 있는 핵심 API를 구현합니다.
-모든 유실글은 인증 사용자 소유로 관리됩니다.
-
-**변경 사항:**
-
-- [x] `src/app/api/v1/lost-posts/route.ts` — POST (생성) + GET (내 목록)
-  - **POST**: 인증 필수, coverPhotoKey, lostAt, lostLocation, traits 저장
-  - Idempotency-Key 지원
-  - embeddingStatus=pending으로 생성
-  - **GET**: 인증 필수, 본인 소유 유실글 목록 (created_at DESC, 페이지네이션)
-- [x] `src/app/api/v1/lost-posts/[lostPostId]/route.ts` — GET / PATCH / DELETE
-  - **GET**: 단건 상세 조회 (본인 소유만)
-  - **PATCH**: 상태 변경 (searching → found → closed), traits 수정
-  - **DELETE**: 하드 삭제, 소유자 검증
-  - 소유자 검증 로직
-
-**영향 범위:**
-
-- `src/app/api/v1/lost-posts/route.ts` (신규)
-- `src/app/api/v1/lost-posts/[lostPostId]/route.ts` (신규)
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 인증 유저가 유실글 생성 | 201, DB에 owner_id와 함께 저장 |
-| 2 | 비인증 유저가 유실글 생성 시도 | 401 UNAUTHORIZED |
-| 3 | 본인 유실글 목록 조회 | 본인 소유 글만 반환 (created_at DESC) |
-| 4 | 타인의 유실글 상세 조회 시도 | 404 NOT_FOUND (소유자 불일치) |
-| 5 | 유실글 상태를 "found"로 변경 | status 정상 업데이트 |
-| 6 | 동일 Idempotency-Key로 중복 생성 시도 | 기존 응답 반환 (중복 생성 방지) |
-| 7 | 유실글 삭제 | DB에서 제거 + 관련 캐시 무효화 |
-
----
-
-#### Commit 4-2: Lost Posts UI — 등록 폼 + 목록 페이지
-
-**배경:**
-유실글 등록 폼은 `/my` 페이지 내에서 접근하며,
-사진 업로드 (Presigned URL 재활용), 유실 위치 (LocationPicker 재활용),
-유실 시각, 특징 정보를 입력합니다.
-
-**변경 사항:**
-
-- [x] `src/features/lost-posts/components/LostPostForm.tsx` — 유실글 등록 폼
-  - 대표 사진 업로드 (Presigned URL, purpose=lost_cover)
-  - 유실 위치 (LocationPicker 재활용)
-  - 유실 시각 (datetime-local)
-  - 특징 입력 (색상, 크기, 상태 텍스트)
-  - 인증 토큰 포함 요청
-- [x] `src/features/lost-posts/components/LostPostCard.tsx` — 유실글 카드 컴포넌트
-  - 대표 사진 썸네일
-  - 상태 뱃지 (searching / found / closed)
-  - 유실 일시, 특징 요약
-- [x] `src/features/lost-posts/components/LostPostList.tsx` — 유실글 목록
-  - fetch + useEffect로 목록 페칭
-  - 빈 상태 UI ("아직 등록된 유실글이 없습니다")
-- [x] `src/app/(tabs)/my/lost-posts/new/page.tsx` — 유실글 등록 페이지 (AuthGuard)
-- [x] `src/app/(tabs)/my/lost-posts/page.tsx` — 내 유실글 목록 페이지
-- [x] `src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx` — 유실글 상세 (최소 조회용, 4-3에서 상태/삭제 UI 추가)
-
-**영향 범위:**
-
-- `src/features/lost-posts/components/` (신규 3개)
-- `src/app/(tabs)/my/lost-posts/` (신규 2개)
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 유실글 등록 폼 진입 (비로그인) | 로그인 페이지로 리다이렉트 |
-| 2 | 사진 + 위치 + 시각 입력 후 등록 | 유실글 생성 + 목록에 표시 |
-| 3 | 내 유실글 목록에서 카드 클릭 | 상세 페이지로 이동 |
-| 4 | 유실글 0건 상태에서 목록 접근 | "아직 등록된 유실글이 없습니다" 표시 |
-| 5 | 유실글 상태를 "찾았어요"로 변경 | 상태 뱃지 업데이트 |
-
----
-
-#### Commit 4-3: Lost Posts 상세 페이지 + 상태 관리 UI
-
-**변경 사항:**
-
-- [x] `src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx` — 유실글 상세 페이지
-  - 대표 사진 (전체 크기)
-  - 유실 정보 (위치, 시각, 특징)
-  - 상태 변경 버튼 (searching → found → closed)
-  - 삭제 버튼 (확인 다이얼로그)
-  - "추천 보기" 링크 (→ `/recommend?lostPostId=xxx`)
-- [x] `src/features/lost-posts/components/StatusBadge.tsx` — 상태 뱃지 컴포넌트
-- [x] `src/features/lost-posts/hooks/useLostPost.ts` — 단건 조회 훅 (fetch + mutate)
-
-**영향 범위:**
-
-- `src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx` (신규)
-- `src/features/lost-posts/components/StatusBadge.tsx` (신규)
-- `src/features/lost-posts/hooks/useLostPost.ts` (신규)
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 상세 페이지 진입 | 유실글 정보 정상 표시 |
-| 2 | 타인의 유실글 URL 직접 접근 | 404 페이지 표시 |
-| 3 | 상태를 "found"로 변경 | 확인 다이얼로그 → 상태 변경 → 뱃지 업데이트 |
-| 4 | 유실글 삭제 | 확인 다이얼로그 → 삭제 → 목록으로 리다이렉트 |
-| 5 | "추천 보기" 클릭 | `/recommend?lostPostId=xxx`로 이동 |
-
----
-
-### Phase 5: 마이페이지 & 사용자 기능
-
-#### Commit 5-1: 마이페이지 리팩토링 — 실제 사용자 데이터 연동
-
-**변경 사항:**
-
-- [x] `src/app/(tabs)/my/page.tsx` 리팩토링
-  - `useAuth()` 훅으로 실제 사용자 정보 표시
-  - 로그인/비로그인 분기 UI (AuthGuard + LoginPrompt)
-  - 비로그인: 로그인 유도 UI
-  - 로그인: 프로필 정보 + 메뉴 (내 유실글, 내 제보, 로그아웃)
-- [x] 로그아웃 기능 (Supabase `signOut`)
-- [x] `src/features/auth/components/LoginPrompt.tsx` — 로그인 유도 컴포넌트
-
-**영향 범위:**
-
-- `src/app/(tabs)/my/page.tsx`
-- `src/features/auth/components/LoginPrompt.tsx` (신규)
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 비로그인 상태에서 `/my` 접근 | 로그인 유도 UI 표시 |
-| 2 | 로그인 상태에서 `/my` 접근 | 이메일, 메뉴 목록 표시 |
-| 3 | 로그아웃 버튼 클릭 | 세션 해제 + 홈으로 이동 |
-| 4 | "내 유실글" 메뉴 클릭 | `/my/lost-posts`로 이동 |
-
----
-
-#### Commit 5-2: 내 제보 목록 API 및 UI
-
-**변경 사항:**
-
-- [x] `src/app/api/v1/me/sightings/route.ts` — GET (내 제보 목록)
-  - 인증 필수 (RLS로 본인 제보만 조회)
-  - Pagination (limit/offset), created_at DESC 정렬
-- [x] `src/features/sightings/components/MySightingList.tsx` — 내 제보 목록 컴포넌트
-- [x] `src/features/sightings/components/MySightingCard.tsx` — 제보 카드 (사진 썸네일 + 시각 + 지도에서 보기)
-  - fetch 기반 데이터 페칭 (SWR 미사용)
-- [x] `src/app/(tabs)/my/sightings/page.tsx` — 내 제보 목록 페이지 (딥링크용)
-- [x] 내 정보(My) 페이지 "내 제보" 드롭다운에 MySightingList 인라인 표시
-
-**영향 범위:**
-
-- `src/app/api/v1/me/sightings/route.ts` (신규)
-- `src/features/sightings/components/MySightingList.tsx` (신규)
-- `src/app/(tabs)/my/sightings/page.tsx` (신규)
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 로그인 유저가 내 제보 조회 | 본인이 인증 상태에서 작성한 제보만 반환 |
-| 2 | 비인증 유저가 API 호출 | 401 UNAUTHORIZED |
-| 3 | 제보 0건 상태 | "아직 작성한 제보가 없습니다" 표시 |
-| 4 | 제보 카드 클릭 | 제보 상세 (지도 위치 표시) |
-
----
-
-### Phase 6: 추천 시스템
-
-유실글에 대한 추천 목록 위계의 관계는, 유실글 삭제시 추천 목록이 사라지긴해야함?
-언제 벡터로 만들건지?
-
-#### Commit 6-1: 임베딩 생성 파이프라인
-
-**배경:**
-추천 시스템의 기반인 텍스트 임베딩을 생성합니다.
-제보/유실글 저장 시 비동기적으로 임베딩을 생성하여 `embeddings` 테이블에 저장합니다.
-
-**변경 사항:**
-
-- [ ] `src/shared/lib/embedding.ts` — 임베딩 생성 유틸리티
-  - OpenAI `text-embedding-3-small` API 호출
-  - trait 정보(색상, 크기, 상태)를 텍스트로 직렬화
-  - 위치/시간 정보를 정규화된 텍스트로 변환
-- [ ] `src/app/api/v1/internal/embeddings/route.ts` — 내부 임베딩 생성 API
-  - entity_type + entity_id를 받아 임베딩 생성
-  - `embeddings` 테이블에 INSERT/UPDATE
-  - status를 `pending → ready` 또는 `pending → failed`로 업데이트
-- [ ] `src/app/api/v1/sightings/route.ts` 수정 — 제보 저장 후 비동기 임베딩 생성 트리거
-- [ ] (후속) `lost-posts` 생성 API에서도 동일하게 트리거
-
-> **NOTE:** 초기에는 API Route 기반 비동기 호출로 구현하고,
-> 트래픽 증가 시 Supabase Edge Functions 또는 별도 Worker로 전환합니다.
-
-**영향 범위:**
-
-- `src/shared/lib/embedding.ts` (신규)
-- `src/app/api/v1/internal/embeddings/route.ts` (신규)
-- `src/app/api/v1/sightings/route.ts`
-- `package.json` (openai 패키지 추가)
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 새 제보 생성 | `embeddings` 테이블에 `status=pending` 레코드 생성 |
-| 2 | 임베딩 생성 완료 | `status=ready`, `embedding` 벡터 저장 (1536차원) |
-| 3 | OpenAI API 실패 시 | `status=failed`, 에러 로그 기록 |
-| 4 | 이미 임베딩이 있는 엔티티에 재시도 | UPSERT로 덮어쓰기 |
-| 5 | trait 정보가 없는 제보 | 위치+시간 정보만으로 임베딩 생성 |
-
----
-
-#### Commit 6-2: 추천 API 구현
-
-**배경:**
-보호자의 유실글을 기준으로 유사한 목격 제보를 추천합니다.
-Pre-filter(8km/8일) → pgvector 코사인 유사도 → Top-K → DB 캐시(TTL 180초) 전략을 사용합니다.
-
-**변경 사항:**
-
-- [ ] `src/app/api/v1/recommendations/route.ts` — GET
-  - Query: `lostPostId`, `radiusKm=8`, `days=8`, `topK=10`
-  - 인증 필수 + lostPostId 소유자 검증
-  - 1단계: `recommendation_cache` 확인 (TTL 180초)
-    - Cache Hit: 캐시 결과 반환
-    - Cache Miss: 계산 수행
-  - 2단계: Pre-filter
-    - `ST_DWithin(sighting.location, lost_post.location, radiusKm * 1000)`
-    - `sighting.created_at >= NOW() - INTERVAL '{days} days'`
-    - `embedding.status = 'ready'`
-  - 3단계: pgvector 코사인 유사도 계산 (후보군 내)
-  - 4단계: Top-K 결과 + 유사도 점수 → 캐시 저장
-  - Pending 처리: 임베딩 미생성 시 `{ status: "pending", items: [] }` 반환 (200 OK)
-- [ ] Rate Limit 적용 (회원: 30초당 10회)
-
-**영향 범위:**
-
-- `src/app/api/v1/recommendations/route.ts` (신규)
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 유실글 소유자가 추천 요청 | 유사도 점수 포함 Top-K 목격 목록 반환 |
-| 2 | 비소유자가 추천 요청 | 403 FORBIDDEN |
-| 3 | 임베딩 미생성 상태에서 요청 | `{ status: "pending", items: [] }` (200 OK) |
-| 4 | 동일 요청 3분 내 재요청 | 캐시 결과 반환 (계산 없음) |
-| 5 | 3분 경과 후 재요청 | 새로운 계산 수행 |
-| 6 | 8km 반경 내 목격 없음 | `{ status: "ready", items: [] }` |
-| 7 | 30초 내 11번째 요청 | 429 RATE_LIMITED |
-
----
-
-#### Commit 6-3: 추천 페이지 UI 구현
-
-**변경 사항:**
-
-- [ ] `src/app/(tabs)/recommend/page.tsx` 리팩토링
-  - 유실글 선택 (본인 유실글 목록 드롭다운 or 카드 선택)
-  - 유실글 미등록 시 "먼저 유실글을 등록해주세요" 안내 + 등록 유도
-  - 추천 결과 리스트
-    - 목격 사진 + 위치 + 시각 + 유사도 점수
-    - 유사도 근거 표시 (예: "거리 1.2km, 색상 유사")
-  - Pending 상태 UI ("추천 준비중...")
-  - 마지막 업데이트 시각 + 수동 새로고침 버튼
-  - URL: `/recommend?lostPostId=xxx` (유실글 상세에서 진입 시)
-- [ ] `src/features/recommendations/components/RecommendationCard.tsx` — 추천 카드
-- [ ] `src/features/recommendations/hooks/useRecommendations.ts` — SWR 기반 훅
-
-**영향 범위:**
-
-- `src/app/(tabs)/recommend/page.tsx`
-- `src/features/recommendations/` (신규 디렉토리)
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 유실글 선택 후 추천 결과 조회 | 유사도 점수 높은 순으로 카드 표시 |
-| 2 | 유실글 미등록 상태 | "먼저 유실글을 등록해주세요" + 등록 버튼 |
-| 3 | Pending 상태 | "추천 준비중..." 로딩 UI |
-| 4 | 새로고침 버튼 클릭 | 데이터 재검증 + 업데이트 시각 갱신 |
-| 5 | 추천 결과 0건 | "아직 유사한 목격 제보가 없습니다" |
-| 6 | 추천 카드 클릭 | 목격 상세 정보 (사진 확대, 위치 지도) |
-
----
-
-### Phase 7: 안정화 & 최적화
-
-#### Commit 7-1: 에러 바운더리 + 전역 에러 핸들링
-
-**변경 사항:**
-
-- [ ] `src/app/error.tsx` — 전역 에러 바운더리 (App Router)
-  - 사용자 친화적 에러 메시지
-  - "다시 시도" 버튼
-  - 에러 로깅 (console.error → 추후 Sentry 등)
-- [ ] `src/app/not-found.tsx` — 404 페이지
-- [ ] `src/app/loading.tsx` — 전역 로딩 UI
-- [ ] 각 탭 라우트별 `loading.tsx` 추가
-
-**영향 범위:**
-
-- `src/app/error.tsx` (신규)
-- `src/app/not-found.tsx` (신규)
-- `src/app/loading.tsx` (신규)
-- `src/app/(tabs)/*/loading.tsx` (신규)
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 존재하지 않는 URL 접근 | 404 페이지 표시 |
-| 2 | API 에러 발생 시 | 에러 바운더리 UI 표시 + "다시 시도" 버튼 |
-| 3 | 페이지 전환 시 | 로딩 UI 표시 후 콘텐츠 렌더링 |
-| 4 | "다시 시도" 클릭 | 페이지 리로드 |
-
----
-
-#### Commit 7-2: 데이터 생명주기 관리 (28일 아카이빙)
-
-**배경:**
-스펙 문서에 따르면, `created_at < NOW() - INTERVAL '28 days'`인 데이터는
-기본 조회/지도 노출에서 제외하되 완전 삭제하지 않고 Archived 상태로 관리합니다.
-
-**변경 사항:**
-
-- [ ] `supabase/schema.sql` — 컬럼 추가
-  - `sightings` 테이블에 `archived_at timestamptz null` 추가
-  - `lost_posts` 테이블에 `archived_at timestamptz null` 추가
-- [ ] DB Function 또는 Cron Job
-  - 28일 초과 sighting에 `archived_at = NOW()` 설정
-  - (보호소 데이터는 예외 처리 — 추후 source_type 도입 시)
-- [ ] 기존 조회 쿼리에 `WHERE archived_at IS NULL` 조건 추가
-  - `get_sighting_clusters` 함수 수정
-  - markers API 쿼리 수정
-- [ ] 추천 쿼리에서도 아카이빙 데이터 제외
-
-**영향 범위:**
-
-- `supabase/schema.sql`
-- `src/app/api/v1/public/map/clusters/route.ts`
-- `src/app/api/v1/auth/map/markers/route.ts`
-- `src/app/api/v1/recommendations/route.ts`
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 29일 전 제보 데이터 | 지도에 표시되지 않음 |
-| 2 | 27일 전 제보 데이터 | 지도에 정상 표시 |
-| 3 | 아카이빙된 데이터 | DB에 존재하되 `archived_at` 값이 설정됨 |
-| 4 | 아카이빙된 제보가 추천에 포함되는지 | 제외됨 |
-
----
-
-#### Commit 7-3: 성능 최적화 — 번들 분할 + 이미지 최적화
-
-**변경 사항:**
-
-- [ ] 네이버 맵 스크립트 동적 import (lazy loading)
-- [ ] 이미지 리사이즈/압축 — 클라이언트 측 업로드 전 처리
-  - `browser-image-compression` 패키지 활용
-  - 최대 너비 1200px, JPEG 품질 0.8로 압축
-- [ ] Next.js Image 컴포넌트 활용 — 썸네일 표시 최적화
-- [ ] `next.config.ts` — 이미지 도메인 설정 확인
-
-**영향 범위:**
-
-- `package.json`
-- `src/features/sightings/components/SightingForm.tsx`
-- `src/features/map/components/NaverMap.tsx`
-- `next.config.ts`
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 5MB 사진 업로드 | 클라이언트에서 압축 후 ~500KB 이하로 업로드 |
-| 2 | `/map` 초기 로딩 | 네이버 맵 스크립트 lazy load (TTI 개선) |
-| 3 | Lighthouse 성능 점수 | LCP < 2.5s, FID < 100ms 목표 |
-
----
-
-#### Commit 7-4: 환경 변수 검증 + 보안 강화
-
-**변경 사항:**
-
-- [ ] `src/shared/lib/env.ts` — 환경 변수 검증 유틸리티
-  - 필수 변수 누락 시 빌드 타임 에러
-  - `NEXT_PUBLIC_SUPABASE_URL`
-  - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-  - `SUPABASE_SERVICE_ROLE_KEY`
-  - `NEXT_PUBLIC_NAVER_MAPS_CLIENT_ID`
-  - `OPENAI_API_KEY` (Phase 6 이후)
-- [ ] 보안 헤더 설정 (`next.config.ts`)
-  - `X-Content-Type-Options: nosniff`
-  - `X-Frame-Options: DENY`
-  - `Referrer-Policy: strict-origin-when-cross-origin`
-
-**검증 시나리오:**
-| # | 시나리오 | 기대 결과 |
-|---|---------|-----------|
-| 1 | 필수 환경 변수 누락 시 | 빌드 실패 + 명확한 에러 메시지 |
-| 2 | 보안 헤더 확인 | 응답에 보안 헤더 포함 |
-
----
-
-## 3. 기술 스택 정리
-
-### 현재 사용 중
-
-| 기술         | 버전    | 용도                       |
-| ------------ | ------- | -------------------------- |
-| Next.js      | 16.1.1  | App Router, BFF API Routes |
-| React        | 19.2.3  | UI 프레임워크              |
-| TypeScript   | ^5      | 타입 안전성                |
-| Supabase     | ^2.89.0 | Auth, DB, Storage          |
-| Tailwind CSS | ^4      | 스타일링                   |
-| Naver Maps   | -       | 지도 서비스 (Script 태그)  |
-
-### 추가 예정
-
-| 기술                        | 커밋 | 용도                   |
-| --------------------------- | ---- | ---------------------- |
-| `@supabase/ssr`             | 1-1  | 서버 쿠키 기반 세션    |
-| `swr`                       | 3-2  | 클라이언트 캐시/재검증 |
-| `openai`                    | 6-1  | text-embedding-3-small |
-| `browser-image-compression` | 7-3  | 클라이언트 이미지 압축 |
-
----
-
-## 4. 디렉토리 구조 계획
-
-```
-src/
-├── app/
-│   ├── (tabs)/
-│   │   ├── page.tsx                          # ✅ 홈 (목격 제보)
-│   │   ├── map/page.tsx                      # ✅ 지도 뷰
-│   │   ├── recommend/page.tsx                # ⚠️ → 6-3에서 리팩토링
-│   │   └── my/
-│   │       ├── page.tsx                      # ⚠️ → 5-1에서 리팩토링
-│   │       ├── sightings/page.tsx            # ❌ → 5-2에서 구현
-│   │       └── lost-posts/
-│   │           ├── page.tsx                  # ❌ → 4-2에서 구현
-│   │           ├── new/page.tsx              # ❌ → 4-2에서 구현
-│   │           └── [lostPostId]/page.tsx     # ❌ → 4-3에서 구현
-│   ├── auth/
-│   │   ├── login/page.tsx                    # ❌ → 2-1에서 구현
-│   │   └── signup/page.tsx                   # ❌ → 2-1에서 구현
-│   ├── api/v1/
-│   │   ├── sightings/route.ts               # ✅ POST
-│   │   ├── uploads/presign/route.ts          # ✅ POST
-│   │   ├── public/map/clusters/route.ts      # ✅ GET
-│   │   ├── auth/map/markers/route.ts         # ✅ GET (⚠️ 1-1에서 버그 수정)
-│   │   ├── lost-posts/
-│   │   │   ├── route.ts                      # ❌ → 4-1에서 구현
-│   │   │   └── [lostPostId]/route.ts         # ❌ → 4-1에서 구현
-│   │   ├── me/
-│   │   │   └── sightings/route.ts            # ❌ → 5-2에서 구현
-│   │   ├── recommendations/route.ts          # ❌ → 6-2에서 구현
-│   │   └── internal/
-│   │       └── embeddings/route.ts           # ❌ → 6-1에서 구현
-│   ├── error.tsx                             # ❌ → 7-1에서 구현
-│   ├── not-found.tsx                         # ❌ → 7-1에서 구현
-│   └── loading.tsx                           # ❌ → 7-1에서 구현
-├── middleware.ts                             # ❌ → 2-2에서 구현
-├── features/
-│   ├── sightings/
-│   │   ├── components/
-│   │   │   ├── SightingForm.tsx              # ✅ (⚠️ 3-1에서 확장)
-│   │   │   ├── TraitSelector.tsx             # ❌ → 3-1에서 구현
-│   │   │   └── MySightingList.tsx            # ❌ → 5-2에서 구현
-│   │   ├── model/
-│   │   │   ├── types.ts                      # ✅
-│   │   │   └── constants.ts                  # ❌ → 3-1에서 구현
-│   │   └── lib/
-│   │       └── validators.ts                 # ✅
-│   ├── map/
-│   │   ├── components/
-│   │   │   ├── NaverMap.tsx                  # ✅ (⚠️ 3-2에서 리팩토링)
-│   │   │   └── LocationPicker.tsx            # ✅
-│   │   ├── hooks/
-│   │   │   └── useMapData.ts                 # ❌ → 3-2에서 구현
-│   │   └── types/
-│   │       └── naver.ts                      # ✅
-│   ├── auth/
-│   │   ├── hooks/
-│   │   │   └── useAuth.ts                    # ❌ → 2-1에서 구현
-│   │   └── components/
-│   │       ├── AuthGuard.tsx                 # ❌ → 2-1에서 구현
-│   │       └── LoginPrompt.tsx               # ❌ → 5-1에서 구현
-│   ├── lost-posts/
-│   │   ├── components/
-│   │   │   ├── LostPostForm.tsx              # ❌ → 4-2에서 구현
-│   │   │   ├── LostPostCard.tsx              # ❌ → 4-2에서 구현
-│   │   │   ├── LostPostList.tsx              # ❌ → 4-2에서 구현
-│   │   │   └── StatusBadge.tsx               # ❌ → 4-3에서 구현
-│   │   └── hooks/
-│   │       └── useLostPost.ts                # ❌ → 4-3에서 구현
-│   └── recommendations/
-│       ├── components/
-│       │   └── RecommendationCard.tsx        # ❌ → 6-3에서 구현
-│       └── hooks/
-│           └── useRecommendations.ts         # ❌ → 6-3에서 구현
-└── shared/
-    ├── supabase/
-    │   ├── server.ts                         # ✅ (⚠️ 1-1에서 확장)
-    │   └── client.ts                         # ✅
-    ├── lib/
-    │   ├── api-response.ts                   # ❌ → 1-2에서 구현
-    │   ├── rate-limit.ts                     # ❌ → 1-3에서 구현
-    │   ├── embedding.ts                      # ❌ → 6-1에서 구현
-    │   ├── env.ts                            # ❌ → 7-4에서 구현
-    │   ├── fetcher.ts                        # ❌ → 3-2에서 구현
-    │   ├── cn.ts                             # ✅
-    │   ├── ip.ts                             # ✅
-    │   ├── hash.ts                           # ✅
-    │   └── assert.ts                         # ✅
-    ├── types/
-    │   └── api.ts                            # ✅ (⚠️ 1-2에서 확장)
-    └── ui/
-        ├── Button.tsx                        # ✅
-        ├── Text.tsx                          # ✅
-        ├── Toast.tsx                         # ✅
-        ├── Loading.tsx                       # ✅
-        ├── Divider.tsx                       # ✅
-        └── Container.tsx                     # ✅
-```
-
----
-
-## 5. 지도 컴포넌트 설계 (생명주기·API 최소화)
-
-> 일반적인 IT 기업 관점에서 지도 뷰의 부하를 줄이고 유지보수성을 높이기 위한 설계 원칙을 정리합니다.
-
-### 5.1 생명주기 관리
-
-- **싱글톤 지도 인스턴스**: `/map` 페이지에서 `NaverMap` 컴포넌트는 **한 번 마운트된 뒤 유지**합니다. URL 쿼리(`lat`, `lng`, `sightingId`)가 바뀌어도 컴포넌트를 `key`로 재생성하지 않습니다. 지도 인스턴스를 매번 destroy/create 하면 스크립트 로딩·이벤트 리스너·캐시가 초기화되어 불필요한 부하와 타이밍 이슈가 발생합니다.
-- **초기화 시점**: 네이버 지도 스크립트 로드 후 `initMap` 한 번 실행. 이미 `window.naver?.maps`와 DOM이 준비된 경우(탭 전환 등)에는 스크립트 재로드 없이 기존 인스턴스를 재사용합니다.
-- **클린업**: 컴포넌트 언마운트 시에만 `mapInstanceRef.current.destroy()` 및 idle 디바운스 타이머 해제를 수행합니다.
-
-### 5.2 API 요청 최소화
-
-- **마이페이지 → 지도에서 보기**: 내 제보 목록은 이미 인증된 사용자만 접근하므로, 목록 API 응답에 **위도·경도(lat, lng)** 를 포함합니다. "지도에서 보기" 클릭 시 **별도 단건 조회 API 없이** `lat`, `lng`를 쿼리 스트링(`/map?lat=...&lng=...`)으로 전달하고, 지도는 이를 **초기 중심 좌표**로만 사용합니다. (서울 시청 기본값을 해당 좌표로 치환.)
-- **인증 상태**: 마이페이지는 이미 `AuthGuard`로 보호되며, 인증 상태는 `AuthContext`로 전역 관리됩니다. 지도에서 마커/클러스터를 가져올 때는 이 전역 세션을 사용하며, 불필요한 중복 인증 체크나 단건 조회를 하지 않습니다.
-
-### 5.3 데이터 흐름 요약
-
-| 진입 경로           | 전달 데이터              | 지도 동작 |
-| ------------------- | ------------------------ | --------- |
-| 탭에서 `/map` 직접  | 없음                     | 기본 중심(서울 시청) 또는 현재 위치 |
-| 마이페이지 "지도에서 보기" | `lat`, `lng` (쿼리)      | 해당 좌표를 초기 중심으로 설정, 추가 API 없음 |
-
----
-
-## 개발 우선순위 요약
-
-```
-Phase 1 (기반 정비)     ──→ Phase 2 (인증)     ──→ Phase 3 (제보 고도화)
-                                  │
-                                  ▼
-                           Phase 4 (유실글)     ──→ Phase 5 (마이페이지)
-                                  │
-                                  ▼
-                           Phase 6 (추천)       ──→ Phase 7 (안정화)
-```
-
-| Phase          | 커밋 수 | 예상 소요    | 우선순위 | 의존성     |
-| -------------- | ------- | ------------ | -------- | ---------- |
-| 1. 기반 정비   | 3       | 1~2일        | **P0**   | 없음       |
-| 2. 인증 시스템 | 2       | 2~3일        | **P0**   | Phase 1    |
-| 3. 제보 고도화 | 2       | 2~3일        | **P1**   | Phase 1    |
-| 4. 유실글 CRUD | 3       | 3~4일        | **P0**   | Phase 2    |
-| 5. 마이페이지  | 2       | 1~2일        | **P1**   | Phase 2, 4 |
-| 6. 추천 시스템 | 3       | 4~5일        | **P1**   | Phase 4    |
-| 7. 안정화      | 4       | 2~3일        | **P2**   | Phase 6    |
-| **합계**       | **19**  | **~15-22일** |          |            |
-
----
-
-> **참고:** 이 문서는 개발 진행에 따라 지속적으로 업데이트됩니다.
-> 각 커밋의 검증 시나리오가 모두 통과하면 해당 커밋을 "완료"로 표시합니다.
+## 7-6. 추천 유사도 공식 개선 (필드별 임베딩 + 위치·시간 가중)
+
+### 7-6.1 개요
+
+- **목적**: 유실글–목격 제보 간 유사도를 “종·색·크기·메모” 필드별 임베딩 가중 합 + “제보 위치·제보 시각” 보정으로 계산해, 색·메모(특이사항) 비중을 높이고 “합리적인 제보”(위치·시간이 말이 되는 경우)를 반영한다.
+- **범위**: 임베딩 스키마·워커·RPC·추천 API. 이미지 유사도는 **추후 개선**으로 제외.
+- **특성**: 하이퍼파라미터(가중치·감쇠 계수)는 **실험 완료 값으로 고정**하며, **유저는 변경 불가**하다.
+
+### 7-6.2 논의 요약 (배경)
+
+- **기존**: 한 문장(종·색·크기·메모 concat) 1개 임베딩 → 코사인 유사도 1개로 정렬. 위치·시간은 pre-filter만 사용.
+- **한계**: 색/메모 등 중요도 반영 불가, “위치·시간이 가까울수록 합리적”이 유사도 점수에 반영되지 않음.
+- **선택**: (1) 텍스트는 필드별 임베딩 후 가중 합. (2) 위치·시간은 지수 감쇠로 0~1 계수화 후 곱. (3) 이미지는 별도 개선으로 미포함. (4) API 호출은 entity당 1회 배치(4문장 → 4벡터)로 비용·호출 수 유지.
+
+### 7-6.3 최종 수식
+
+**텍스트 유사도 (필드별 코사인 유사도 가중 합)**
+
+- `sim(종)`, `sim(색)`, `sim(크기)`, `sim(메모)`: 유실글 4벡터 vs 목격 4벡터 각각 코사인 유사도 (1 − 코사인거리).
+- \( S_{\text{text}} = w_s \cdot \text{sim}(\text{종}) + w_c \cdot \text{sim}(\text{색}) + w_z \cdot \text{sim}(\text{크기}) + w_n \cdot \text{sim}(\text{메모}) \)
+- 제약: \( w_s + w_c + w_z + w_n = 1 \).
+
+**위치·시간 보정**
+
+- `distance_km = st_distance(유실 위치, 제보 위치) / 1000`
+- `time_diff_days = extract(epoch from (제보 시각 - 유실 시각)) / 86400` (pre-filter로 이미 \( \in [0, p_{\text{days}}] \))
+- \( f_{\text{loc}} = \exp(-\lambda_{\text{dist}} \cdot \frac{\text{distance\_km}}{p_{\text{radius\_km}}}) \)
+- \( f_{\text{time}} = \exp(-\lambda_{\text{time}} \cdot \frac{\text{time\_diff\_days}}{p_{\text{days}}}) \)
+- \( f_{\text{loc,time}} = f_{\text{loc}} \times f_{\text{time}} \)
+
+**최종 스코어**
+
+- \( \text{score} = S_{\text{text}} \times f_{\text{loc,time}} \)
+- 정렬: `score` 내림차순, 상위 `p_top_k`개.
+
+### 7-6.4 고정 파라미터 (유저 변경 불가)
+
+| 구분 | 파라미터 | 값 | 비고 |
+|------|----------|-----|------|
+| 텍스트 가중치 | w_species (w_s) | 0.2 | 종 |
+| | w_color (w_c) | 0.45 | 색 |
+| | w_size (w_z) | 0.1 | 크기 |
+| | w_note (w_n) | 0.25 | 메모(특이사항) |
+| 위치·시간 감쇠 | λ_dist | 실험 완료 값 (문서/코드 상수) | 거리 감쇠 |
+| | λ_time | 실험 완료 값 (문서/코드 상수) | 시간 차이 감쇠 |
+
+- 기존 쿼리 파라미터 `p_radius_km`, `p_days`, `p_top_k`는 **API 쿼리로 유저 전달 가능** (현행 유지). 위 가중치·λ는 **서버/RPC 상수**로만 사용.
+
+### 7-6.5 데이터·스키마 변경
+
+- **embeddings 테이블**
+  - 컬럼 추가: `trait` (text not null). 값: `'species' | 'color' | 'size' | 'note'`.
+  - unique 변경: `(entity_type, entity_id, modality)` 제거 → `(entity_type, entity_id, modality, trait)` 추가.
+  - entity(유실글/목격)당 **4행** (종·색·크기·메모 각 1행).
+
+- **기존 데이터**
+  - 기존 embeddings는 “한 문장 합쳐서 만든 벡터 1개”라 **재사용 불가**.
+  - 마이그레이션 시: embeddings 전부 삭제 → `lost_posts.embedding_status`, `sightings.embedding_status` = `'pending'` → entity당 4행(종·색·크기·메모) insert (status=`'pending'`) → 워커가 재임베딩.
+
+- **recommendation_cache**
+  - 공식 변경으로 점수 체계가 바뀌므로 **한 번 비우기** (TRUNCATE 또는 DELETE). 캐시 키는 기존처럼 `radiusKm_days_topK` 유지(하이퍼파라미터는 쿼리로 노출하지 않음).
+
+### 7-6.6 커밋 단위 구현 체크리스트
+
+아래 순서로 진행 시, 각 블록을 한 커밋 단위로 나누어 작업·바이브 가능.
+
+#### Commit 1: SDD 반영 (문서)
+
+- [ ] **docs/SDD.md**: 7-6 섹션 추가 (개요, 논의 요약, 수식, 고정 파라미터, 스키마·마이그레이션, 커밋 단위 체크리스트).
+
+#### Commit 2: DB 마이그레이션 (embeddings trait + 데이터 정리)
+
+- [ ] **supabase/migrations/YYYYMMDDHHMMSS_embeddings_trait_field.sql**
+  - `embedding_trait` enum 또는 `trait text not null` 추가. (기존 행이 있으면 default `'legacy'` 등으로 넣은 뒤 삭제.)
+  - unique 제약: `embeddings_entity_unique` drop → `(entity_type, entity_id, modality, trait)` 로 추가.
+  - `DELETE FROM embeddings;`
+  - `UPDATE lost_posts SET embedding_status = 'pending'; UPDATE sightings SET embedding_status = 'pending';`
+  - (선택) `TRUNCATE recommendation_cache;`
+  - **백필**: 모든 `lost_post` id에 대해 `(entity_type='lost_post', entity_id, modality='text', trait)` 4종(species, color, size, note) insert, status=`'pending'`. 모든 `sighting` id에 대해 동일. (SQL 루프 또는 앱 스크립트.)
+
+#### Commit 3: 임베딩 라이브러리 (필드별 텍스트 + 배치 호출)
+
+- [ ] **src/shared/lib/embedding.ts**
+  - 필드별 문장 생성: `serializeTraitToText(field: 'species'|'color'|'size'|'note', value)` 또는 `serializeTraitsToText`를 필드별로 호출해 `[종문장, 색문장, 크기문장, 메모문장]` 반환.
+  - `createEmbedding(text: string)` 유지 + `createEmbeddings(texts: string[])`: `input: texts` 배열로 한 번에 호출, 반환 `number[][]` (또는 벡터 배열).
+  - 기존 `serializeTraitsToText`(한 문장 concat)는 워커에서 더 이상 사용하지 않거나, 레거시 분기용으로만 유지.
+
+#### Commit 4: 임베딩 워커 (entity당 4문장 → 1회 API → 4행 갱신)
+
+- [ ] **src/app/api/v1/internal/embeddings/process/route.ts**
+  - pending 행을 **entity 단위로 그룹화** `(entity_type, entity_id)`.
+  - 그룹당 4개 trait(species, color, size, note) 텍스트 생성 → `createEmbeddings([...])` 1회 호출 → 반환 4벡터로 해당 entity의 `trait`별 4행 update (status=`'ready'`, embedding 저장).
+  - entity당 1회 API 호출만 하도록 보장 (배치 4문장).
+
+#### Commit 5: 유실글·목격 API (embeddings 4행 upsert)
+
+- [ ] **src/app/api/v1/lost-posts/route.ts** (POST): embeddings insert를 1행이 아닌 **trait 4종 각 1행**(species, color, size, note) upsert. `onConflict`: `(entity_type, entity_id, modality, trait)`.
+- [ ] **src/app/api/v1/lost-posts/[lostPostId]/route.ts** (PATCH 등): 해당 유실글에 대해 동일하게 4행 upsert.
+- [ ] **src/app/api/v1/sightings/route.ts** (POST): 해당 목격에 대해 4행 upsert.
+
+#### Commit 6: RPC get_recommendations_for_lost_post (4벡터 + 수식)
+
+- [ ] **supabase/migrations/YYYYMMDDHHMMSS_get_recommendations_field_weights.sql** (또는 schema.sql 반영)
+  - 유실글 4개 임베딩(종·색·크기·메모) 조회.
+  - 후보 sighting마다 4개 임베딩 조회 → 코사인 유사도 4개 → \( S_{\text{text}} = w_s \cdot \text{sim}_s + w_c \cdot \text{sim}_c + w_z \cdot \text{sim}_z + w_n \cdot \text{sim}_n \).
+  - `distance_km`, `time_diff_days` 계산 → `f_loc`, `f_time` → `score = S_text * f_loc * f_time`.
+  - `order by score desc limit least(p_top_k, 100)`.
+  - RPC 인자: 기존 `p_lost_post_id`, `p_radius_km`, `p_days`, `p_top_k` 유지. `w_s`, `w_c`, `w_z`, `w_n`, `λ_dist`, `λ_time`는 **함수 내 상수**로 고정(유저 변경 불가).
+
+#### Commit 7: 추천 API 라우트 (RPC 호출만, 파라미터 변경 없음)
+
+- [ ] **src/app/api/v1/recommendations/route.ts**
+  - RPC `get_recommendations_for_lost_post` 호출은 기존과 동일. 가중치·λ는 RPC 내부 상수이므로 **쿼리 파라미터 추가 없음**.
+  - 캐시 키: 기존 `buildCacheKey(radiusKm, days, topK)` 유지.
+
+### 7-6.7 터치포인트 요약
+
+| 위치 | 변경 요약 |
+|------|-----------|
+| docs/SDD.md | 7-6 섹션 추가 (본 문서). |
+| supabase/migrations | embeddings `trait` 컬럼·unique 변경, 기존 embeddings 삭제, embedding_status pending, recommendation_cache 비우기, entity당 4행 백필. |
+| supabase (RPC) | get_recommendations_for_lost_post: 4벡터 조회, S_text·f_loc·f_time·score 계산, 고정 w_*·λ 상수. |
+| src/shared/lib/embedding.ts | 필드별 텍스트 생성, createEmbeddings(texts[]) 배치 호출. |
+| src/app/api/v1/internal/embeddings/process/route.ts | entity 단위 그룹, 4문장 → 1회 API → 4행 update. |
+| src/app/api/v1/lost-posts/route.ts | embeddings 4행 upsert (trait별). |
+| src/app/api/v1/lost-posts/[lostPostId]/route.ts | embeddings 4행 upsert (trait별). |
+| src/app/api/v1/sightings/route.ts | embeddings 4행 upsert (trait별). |
+| src/app/api/v1/recommendations/route.ts | 변경 없음(또는 RPC 시그니처만 유지). |
+
+### 7-6.8 알려진 제한·추후 개선
+
+| 구분 | 내용 |
+|------|------|
+| 이미지 유사도 | 추천 스코어에 미포함. 추후 이미지 임베딩·하이브리드 스코어(텍스트+이미지) 별도 개선. |
+| 하이퍼파라미터 | 유저 노출·변경 불가. 실험 완료 값으로 서버/RPC 상수 고정. |
+| λ_dist, λ_time 초기값 | SDD 또는 코드 주석에 “실험 완료 값”으로 명시. 구체 수치는 구현 시 상수로 넣음. |
