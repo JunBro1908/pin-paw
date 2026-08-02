@@ -1,9 +1,12 @@
 "use client";
 
+import { useEffect, useId, useRef, useState } from "react";
 import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
+import { Icon } from "@/shared/ui/Icon";
 import { cn } from "@/shared/lib/cn";
 import { scrollablePanelClass } from "@/shared/ui/ScrollablePanel";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 
 /** 지도 상세 카드/추천 모달과 동일한 형식의 제보 상세 (API get_sighting_detail 응답과 호환) */
 export interface SightingDetailData {
@@ -33,6 +36,89 @@ interface SightingDetailCardProps {
   showCloseButton?: boolean;
 }
 
+type SourceKind = {
+  label: string;
+  tip: string;
+};
+
+function resolveSourceKind(
+  sighting: SightingDetailData,
+  currentUserId: string | undefined
+): SourceKind {
+  if (sighting.source_type === "shelter") {
+    return {
+      label: "보호소",
+      tip: "보호소·공공 데이터에서 가져온 보호 동물 위치예요.",
+    };
+  }
+  if (sighting.author_type === "anon") {
+    return {
+      label: "비회원 제보",
+      tip: "로그인 없이 올린 현장 목격이에요.",
+    };
+  }
+  if (
+    currentUserId &&
+    sighting.author_user_id &&
+    sighting.author_user_id === currentUserId
+  ) {
+    return {
+      label: "나의 제보",
+      tip: "내가 올린 목격 제보예요.",
+    };
+  }
+  return {
+    label: "회원 제보",
+    tip: "로그인한 사용자가 올린 현장 목격이에요.",
+  };
+}
+
+function SourceInfoTip({ tip }: { tip: string }) {
+  const [open, setOpen] = useState(false);
+  const tipId = useId();
+  const rootRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
+
+  return (
+    <span
+      ref={rootRef}
+      className="relative inline-flex"
+      onMouseEnter={() => setOpen(true)}
+      onMouseLeave={() => setOpen(false)}
+    >
+      <button
+        type="button"
+        aria-label="제보 종류 설명"
+        aria-expanded={open}
+        aria-describedby={open ? tipId : undefined}
+        onClick={() => setOpen((value) => !value)}
+        className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary inline-flex h-5 w-5 items-center justify-center rounded-full border border-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+      >
+        <Icon name="info" size={12} />
+      </button>
+      {open ? (
+        <span
+          id={tipId}
+          role="tooltip"
+          className="border-border-subtle bg-surface text-text-sub absolute top-full left-1/2 z-20 mt-1.5 w-max max-w-[14rem] -translate-x-1/2 rounded-lg border px-2.5 py-1.5 text-left text-xs leading-relaxed shadow-sm"
+        >
+          {tip}
+        </span>
+      ) : null}
+    </span>
+  );
+}
+
 export function SightingDetailCard({
   sighting,
   getImageUrl,
@@ -42,16 +128,9 @@ export function SightingDetailCard({
   className = "",
   showCloseButton = true,
 }: SightingDetailCardProps) {
-  const sourceCopy =
-    sighting.source_type === "shelter"
-      ? {
-          title: "보호소",
-          body: "보호소·공공 데이터에서 가져온 보호 동물 위치입니다. 현장 목격 제보와 출처가 달라요.",
-        }
-      : {
-          title: "목격 제보",
-          body: "사용자가 현장에서 올린 목격 기록입니다. 유실 사건·보호소 기록과 구분해 확인할 수 있어요.",
-        };
+  const { user } = useAuth();
+  const sourceKind = resolveSourceKind(sighting, user?.id);
+
   return (
     <div
       className={`bg-surface relative mx-auto w-full max-w-md overflow-hidden rounded-[28px] shadow-[0_8px_40px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:ring-white/10 ${className}`}
@@ -96,20 +175,14 @@ export function SightingDetailCard({
           )}
 
           <div className="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
-            <div className="border-border-subtle bg-surface-soft rounded-xl border px-3 py-2.5">
-              <p className="text-text-main text-sm font-semibold">
-                {sourceCopy.title}
-              </p>
-              <p className="text-text-sub mt-1 text-xs leading-relaxed">
-                {sourceCopy.body}
-              </p>
-            </div>
-
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <Text variant="title" className="text-lg font-bold sm:text-xl">
-                  {sighting.author_type === "anon" ? "익명 제보" : "회원 제보"}
-                </Text>
+                <div className="flex items-center gap-1.5">
+                  <Text variant="title" className="text-lg font-bold sm:text-xl">
+                    {sourceKind.label}
+                  </Text>
+                  <SourceInfoTip tip={sourceKind.tip} />
+                </div>
                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                   {sighting.occurred_at
                     ? new Date(sighting.occurred_at).toLocaleString("ko-KR", {
@@ -153,16 +226,18 @@ export function SightingDetailCard({
               </div>
             )}
 
-            <div>
-              <p className="mb-1.5 text-sm font-medium text-gray-500 dark:text-gray-400">
-                추가 설명
-              </p>
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3.5 sm:p-4 dark:border-gray-600 dark:bg-gray-900/50">
-                <p className="text-[15px] leading-relaxed break-words text-gray-800 dark:text-gray-200">
-                  {sighting.note || "상세 설명이 없습니다."}
+            {sighting.note?.trim() ? (
+              <div>
+                <p className="mb-1.5 text-sm font-medium text-gray-500 dark:text-gray-400">
+                  추가 설명
                 </p>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3.5 sm:p-4 dark:border-gray-600 dark:bg-gray-900/50">
+                  <p className="text-[15px] leading-relaxed break-words text-gray-800 dark:text-gray-200">
+                    {sighting.note}
+                  </p>
+                </div>
               </div>
-            </div>
+            ) : null}
 
             {footer != null && <div className="pt-1">{footer}</div>}
           </div>
