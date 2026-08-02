@@ -118,12 +118,43 @@ export function assertSharePreviewIsSafe(
   }
 }
 
+/** 공개 티저/OG용 특성 라벨. unknown·모름은 숨기고 크기는 한글로 표기한다. */
+export function buildShareTraitLabels(
+  preview: Pick<
+    SafeLostPostSharePreview,
+    "traitColor" | "traitSize" | "traitSpecies"
+  >
+): string[] {
+  const labels: string[] = [];
+  const species = preview.traitSpecies?.trim();
+  if (species && species !== "unknown" && species !== "모름") {
+    labels.push(species);
+  }
+  const sizeLabel = formatShareTraitSize(preview.traitSize);
+  if (sizeLabel) labels.push(sizeLabel);
+  const color = preview.traitColor?.trim();
+  if (color && color !== "unknown" && color !== "모름") {
+    labels.push(color);
+  }
+  return labels;
+}
+
+function formatShareTraitSize(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const raw = value.trim();
+  if (!raw) return null;
+  const normalized = raw.toLowerCase();
+  if (normalized === "unknown" || raw === "모름") return null;
+  if (normalized === "small" || raw === "소") return "소";
+  if (normalized === "medium" || raw === "중") return "중";
+  if (normalized === "large" || raw === "대") return "대";
+  return raw;
+}
+
 export function buildOpenGraphDescription(
   preview: SafeLostPostSharePreview
 ): string {
-  const traits = [preview.traitColor, preview.traitSize, preview.traitSpecies]
-    .filter(Boolean)
-    .join(" · ");
+  const traits = buildShareTraitLabels(preview).join(" · ");
   const name = preview.petName ?? "강아지";
   const areaHint = preview.approximateArea
     ? "근처에서 찾고 있습니다."

@@ -1,6 +1,6 @@
 -- M2-04: public share preview for searching lost posts (no precise location / note).
 
-create function public.get_public_lost_post_share_preview(p_lost_post_id uuid)
+create or replace function public.get_public_lost_post_share_preview(p_lost_post_id uuid)
 returns table (
   id uuid,
   status text,

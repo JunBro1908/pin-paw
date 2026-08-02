@@ -6,6 +6,7 @@ import {
   assertSharePreviewIsSafe,
   buildLostPostSharePreview,
   buildOpenGraphDescription,
+  buildShareTraitLabels,
 } from "../../src/shared/lib/share-preview.ts";
 
 const migrationPath =
@@ -97,6 +98,38 @@ test("open graph description never embeds private notes", () => {
   const description = buildOpenGraphDescription(preview);
   assert.doesNotMatch(description, /SECRET_NOTE/);
   assert.match(description, /초코/);
+});
+
+test("share trait labels localize size and hide unknown values", () => {
+  const preview = buildLostPostSharePreview({
+    id: "8db61ddf-bce2-4b51-b531-0b93093053d1",
+    status: "searching",
+    pet_name: "초코",
+    lost_at: null,
+    trait_color: "흰색",
+    trait_size: "medium",
+    trait_species: "말티즈",
+    trait_tags: null,
+    cover_photo_key: null,
+    hidden_at: null,
+    archived_at: null,
+  });
+  assert.deepEqual(buildShareTraitLabels(preview), ["말티즈", "중", "흰색"]);
+});
+
+test("share page keeps public teaser CTAs without auth-only detail fields", async () => {
+  const page = await readFile(
+    "src/app/share/lost-posts/[lostPostId]/page.tsx",
+    "utf8"
+  );
+  assert.match(page, /get_public_lost_post_share_preview/);
+  assert.match(page, /buildShareTraitLabels/);
+  assert.match(page, /지도에서 주변 보기/);
+  assert.match(page, /로그인하고 함께 찾기/);
+  assert.match(page, /ShareUnavailable|공유할 수 없는 유실글/);
+  assert.match(page, /정확한 위치와 비공개 메모는 공유되지 않습니다/);
+  assert.doesNotMatch(page, /\bowner_id\b|\.note\b|정밀 위치/);
+  assert.doesNotMatch(page, /notFound\(/);
 });
 
 test("share preview SQL uses lost_location grid and never selects note", async () => {

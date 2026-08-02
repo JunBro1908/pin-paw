@@ -1,17 +1,18 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { createServiceRoleSupabase } from "@/shared/supabase/server";
 import {
   assertSharePreviewIsSafe,
   buildLostPostSharePreview,
   buildOpenGraphDescription,
+  buildShareTraitLabels,
 } from "@/shared/lib/share-preview";
 import { isValidUuid } from "@/shared/lib/api-input";
 import { parseAppOrigin } from "@/shared/lib/app-origin";
 import { Text } from "@/shared/ui/Text";
 import { Container } from "@/shared/ui/Container";
+import { Icon } from "@/shared/ui/Icon";
 import { ShareOpenedTracker } from "@/features/lost-posts/components/ShareOpenedTracker";
 
 export const dynamic = "force-dynamic";
@@ -69,6 +70,42 @@ async function loadPreview(lostPostId: string) {
   return preview;
 }
 
+function ShareUnavailable() {
+  return (
+    <Container className="flex min-h-[100dvh] flex-col justify-center gap-6 py-10">
+      <div className="flex items-center gap-2">
+        <Icon name="paw" size={22} className="text-status-lost" />
+        <Text variant="body" className="font-semibold">
+          PinPaw
+        </Text>
+      </div>
+      <div>
+        <Text variant="title" className="block">
+          공유할 수 없는 유실글이에요
+        </Text>
+        <Text variant="body" color="caption" className="mt-2 block">
+          찾을 수 없거나 종료·비공개된 제보일 수 있어요. PinPaw에서 다른
+          제보를 확인하거나 직접 제보해 주세요.
+        </Text>
+      </div>
+      <div className="flex flex-col gap-3">
+        <Link
+          href="/"
+          className="bg-action-primary text-action-on-primary inline-flex min-h-12 items-center justify-center rounded-xl px-4 py-3 text-center font-semibold"
+        >
+          홈으로 가기
+        </Link>
+        <Link
+          href="/my"
+          className="border-border-subtle bg-surface text-text-main inline-flex min-h-12 items-center justify-center rounded-xl border px-4 py-3 text-center font-semibold"
+        >
+          로그인하고 시작하기
+        </Link>
+      </div>
+    </Container>
+  );
+}
+
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
@@ -110,54 +147,89 @@ export async function generateMetadata({
 export default async function ShareLostPostPage({ params }: PageProps) {
   const { lostPostId } = await params;
   const preview = await loadPreview(lostPostId);
-  if (!preview) notFound();
+  if (!preview) return <ShareUnavailable />;
 
-  const traits = [preview.traitColor, preview.traitSize, preview.traitSpecies]
-    .filter(Boolean)
-    .join(" · ");
+  const traits = buildShareTraitLabels(preview);
   const coverUrl = coverPublicUrl(preview.coverPhotoKey);
+  const petName = preview.petName ?? "강아지";
+  const mapHref = preview.approximateArea
+    ? `/map?lat=${preview.approximateArea.lat}&lng=${preview.approximateArea.lng}&lostPostId=${preview.id}`
+    : "/map";
 
   return (
-    <Container className="flex min-h-[100dvh] flex-col justify-center gap-6 py-10">
+    <Container className="flex min-h-[100dvh] flex-col gap-6 py-10">
       <ShareOpenedTracker lostPostId={preview.id} />
+
+      <div className="flex items-center gap-2">
+        <Icon name="paw" size={22} className="text-status-lost" />
+        <Text variant="body" className="font-semibold tracking-tight">
+          PinPaw
+        </Text>
+      </div>
+
       {coverUrl ? (
-        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-2xl bg-gray-100">
+        <div className="bg-surface-soft relative aspect-[4/3] w-full overflow-hidden rounded-2xl">
           <Image
             src={coverUrl}
-            alt={`${preview.petName ?? "강아지"} 대표 사진`}
+            alt={`${petName} 대표 사진`}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, 480px"
             unoptimized
+            priority
           />
         </div>
-      ) : null}
+      ) : (
+        <div className="bg-surface-soft text-text-caption flex aspect-[4/3] w-full items-center justify-center rounded-2xl">
+          <Icon name="paw" size={40} className="text-status-lost/70" />
+        </div>
+      )}
+
       <div>
-        <Text variant="caption" color="caption">
-          PinPaw 공유 미리보기
+        <Text variant="caption" color="caption" className="block">
+          찾는 중 · 공개 미리보기
         </Text>
-        <Text variant="title" className="mt-2">
-          {preview.petName ?? "강아지"}를 찾고 있습니다
+        <Text variant="title" className="mt-2 block">
+          {petName}를 찾고 있습니다
         </Text>
-        {traits ? (
-          <Text variant="body" className="mt-2 text-gray-600">
-            {traits}
-          </Text>
+        {traits.length > 0 ? (
+          <ul className="mt-3 flex flex-wrap gap-1.5">
+            {traits.map((label) => (
+              <li
+                key={label}
+                className="bg-surface-soft text-text-sub rounded-lg px-2.5 py-1 text-xs font-medium"
+              >
+                {label}
+              </li>
+            ))}
+          </ul>
         ) : null}
         <Text variant="caption" color="caption" className="mt-4 block">
-          정확한 위치와 비공개 메모는 공유되지 않습니다.
+          정확한 위치와 비공개 메모는 공유되지 않습니다. 로그인하면 지도에서
+          제보를 이어 볼 수 있어요.
         </Text>
       </div>
-      <Link
-        href={
-          preview.approximateArea
-            ? `/map?lat=${preview.approximateArea.lat}&lng=${preview.approximateArea.lng}`
-            : "/"
-        }
-        className="bg-primary inline-flex items-center justify-center rounded-lg px-4 py-3 font-semibold text-white"
-      >
-        PinPaw에서 보기
-      </Link>
+
+      <div className="mt-auto flex flex-col gap-3">
+        <Link
+          href={mapHref}
+          className="bg-action-primary text-action-on-primary inline-flex min-h-12 items-center justify-center rounded-xl px-4 py-3 text-center font-semibold"
+        >
+          지도에서 주변 보기
+        </Link>
+        <Link
+          href="/my"
+          className="border-border-subtle bg-surface text-text-main inline-flex min-h-12 items-center justify-center rounded-xl border px-4 py-3 text-center font-semibold"
+        >
+          로그인하고 함께 찾기
+        </Link>
+        <Link
+          href="/"
+          className="text-action-primary inline-flex min-h-11 items-center justify-center text-sm font-medium underline-offset-2 hover:underline"
+        >
+          PinPaw에 목격 제보하기
+        </Link>
+      </div>
     </Container>
   );
 }
