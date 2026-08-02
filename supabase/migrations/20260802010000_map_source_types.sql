@@ -55,7 +55,10 @@ begin
         else 'shelter'
       end as source_type
     from public.sightings s
-    left join public.shelter_animal_imports sai
+    left join (
+      select distinct sighting_id
+      from public.shelter_animal_imports
+    ) sai
       on sai.sighting_id = s.id
     where s.location && st_makeenvelope(min_lng, min_lat, max_lng, max_lat, 4326)
       and s.archived_at is null
@@ -214,7 +217,10 @@ begin
         else 'shelter'
       end as source_type
     from public.sightings s
-    left join public.shelter_animal_imports sai
+    left join (
+      select distinct sighting_id
+      from public.shelter_animal_imports
+    ) sai
       on sai.sighting_id = s.id
     where s.archived_at is null
       and s.hidden_at is null

@@ -16,7 +16,7 @@ test("map RPCs derive source type without exposing shelter mapping table", async
   );
   assert.match(
     sql,
-    /left join public\.shelter_animal_imports sai[\s\S]*sai\.sighting_id = s\.id/i
+    /from public\.shelter_animal_imports[\s\S]*sai[\s\S]*sai\.sighting_id = s\.id/i
   );
   assert.match(
     sql,
@@ -28,4 +28,13 @@ test("map RPCs derive source type without exposing shelter mapping table", async
     sql,
     /revoke all on table public\.shelter_animal_imports[\s\S]*from public, anon, authenticated/i
   );
+});
+
+test("both map RPCs deduplicate shelter mappings before counting sightings", async () => {
+  const sql = await readFile(path, "utf8");
+  const deduplicatedJoins = sql.match(
+    /left join\s*\(\s*select distinct sighting_id\s+from public\.shelter_animal_imports\s*\) sai\s+on sai\.sighting_id = s\.id/gi
+  );
+
+  assert.equal(deduplicatedJoins?.length, 2);
 });
