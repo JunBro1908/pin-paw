@@ -48,43 +48,46 @@ export function Icon({ name, size = 24, className }: IconProps) {
           />
         );
       case "paw":
-        // Symmetric filled paw: 4 toes + main pad, mirrored on the vertical axis.
+        // Symmetric filled paw: twin-peak main pad + 4 toe pads
+        // (inner taller/larger, outer smaller and tilted outward).
         return (
           <>
             <ellipse
-              cx="7"
-              cy="7.2"
-              rx="2.15"
-              ry="2.7"
+              cx="5.35"
+              cy="7.55"
+              rx="1.85"
+              ry="2.45"
+              transform="rotate(-34 5.35 7.55)"
               fill="currentColor"
               stroke="none"
             />
             <ellipse
-              cx="17"
-              cy="7.2"
-              rx="2.15"
-              ry="2.7"
+              cx="18.65"
+              cy="7.55"
+              rx="1.85"
+              ry="2.45"
+              transform="rotate(34 18.65 7.55)"
               fill="currentColor"
               stroke="none"
             />
             <ellipse
-              cx="9.6"
-              cy="4.6"
-              rx="2.05"
-              ry="2.55"
+              cx="9.35"
+              cy="4.65"
+              rx="2.2"
+              ry="2.8"
               fill="currentColor"
               stroke="none"
             />
             <ellipse
-              cx="14.4"
-              cy="4.6"
-              rx="2.05"
-              ry="2.55"
+              cx="14.65"
+              cy="4.65"
+              rx="2.2"
+              ry="2.8"
               fill="currentColor"
               stroke="none"
             />
             <path
-              d="M12 21.2c-3.55 0-6.1-2.2-6.1-4.85 0-2.45 2.05-4.05 6.1-4.05s6.1 1.6 6.1 4.05c0 2.65-2.55 4.85-6.1 4.85Z"
+              d="M12 21.75C8.15 21.75 5.45 19.2 5.45 16.3 5.45 14.35 6.6 12.85 8.5 12.2 8.2 10.9 9.3 9.55 10.75 9.55 11.55 9.55 11.95 10.05 12 10.7 12.05 10.05 12.45 9.55 13.25 9.55 14.7 9.55 15.8 10.9 15.5 12.2 17.4 12.85 18.55 14.35 18.55 16.3 18.55 19.2 15.85 21.75 12 21.75Z"
               fill="currentColor"
               stroke="none"
             />

@@ -10,10 +10,13 @@ test("paw icon is a filled symmetric mark and confirm tab uses it", async () => 
 
   assert.match(layout, /href: "\/recommend".*icon: "paw"/s);
   assert.match(icon, /case "paw":/);
-  assert.match(icon, /cx="7"/);
-  assert.match(icon, /cx="17"/);
-  assert.match(icon, /cx="9\.6"/);
-  assert.match(icon, /cx="14\.4"/);
+  assert.match(icon, /cx="5\.35"/);
+  assert.match(icon, /cx="18\.65"/);
+  assert.match(icon, /cx="9\.35"/);
+  assert.match(icon, /cx="14\.65"/);
+  assert.match(icon, /rotate\(-34 5\.35 7\.55\)/);
+  assert.match(icon, /rotate\(34 18\.65 7\.55\)/);
+  assert.match(icon, /fill="currentColor"/);
   assert.match(icon, /Symmetric filled paw/);
 });
 
