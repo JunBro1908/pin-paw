@@ -2,26 +2,41 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-test("my activity leads with an active case and next actions", async () => {
+test("my activity leads with an active case carousel and next actions", async () => {
   const page = await readFile("src/app/(tabs)/my/page.tsx", "utf8");
-  assert.match(page, /<ActiveLostCaseCard/);
+  assert.match(page, /<LostCaseCarousel/);
   assert.match(page, /<LostCaseNextActions/);
   assert.match(page, /내 활동/);
+  assert.doesNotMatch(page, /지난 유실글/);
+  assert.doesNotMatch(page, /<LostPostList/);
 });
 
-test("active case card prioritizes confirmation and freshness", async () => {
+test("active case card prioritizes cover photo, edit, and confirmation CTA", async () => {
   const card = await readFile(
     "src/features/lost-posts/components/ActiveLostCaseCard.tsx",
     "utf8"
   );
-  assert.match(card, /찾는 중/);
+  assert.match(card, /getLostPostCoverUrl/);
   assert.match(card, /마지막 확인/);
   assert.match(card, /확인할 제보 보기/);
   assert.match(card, /\/recommend\?lostPostId=\$\{item\.id\}/);
-  assert.match(card, /업데이트 중/);
+  assert.match(card, /\?edit=1/);
+  assert.match(card, /aria-label="유실글 수정"/);
+  assert.match(card, /bg-surface/);
+  assert.doesNotMatch(card, /bg-black(?!\/)/);
 });
 
-test("next actions cover map, notifications, and case management", async () => {
+test("lost case carousel is horizontal snap and opens detail routes", async () => {
+  const carousel = await readFile(
+    "src/features/lost-posts/components/LostCaseCarousel.tsx",
+    "utf8"
+  );
+  assert.match(carousel, /snap-x snap-mandatory/);
+  assert.match(carousel, /overflow-x-auto/);
+  assert.match(carousel, /<ActiveLostCaseCard/);
+});
+
+test("next actions cover notifications, case management edit, and map focus", async () => {
   const actions = await readFile(
     "src/features/lost-posts/components/LostCaseNextActions.tsx",
     "utf8"
@@ -31,16 +46,7 @@ test("next actions cover map, notifications, and case management", async () => {
   assert.match(actions, /사건 정보 관리/);
   assert.match(actions, /\/map\?lostPostId=\$\{lostPostId\}/);
   assert.match(actions, /\/my\/notifications/);
-  assert.match(actions, /\/my\/lost-posts\/\$\{lostPostId\}/);
-});
-
-test("lost post list accepts parent-provided items without a second fetch", async () => {
-  const list = await readFile(
-    "src/features/lost-posts/components/LostPostList.tsx",
-    "utf8"
-  );
-  assert.match(list, /items\?:/);
-  assert.match(list, /enabled:\s*items\s*===\s*undefined/);
+  assert.match(actions, /\/my\/lost-posts\/\$\{lostPostId\}\?edit=1/);
 });
 
 test("login prompt states the purpose and links policies", async () => {
@@ -55,13 +61,13 @@ test("login prompt states the purpose and links policies", async () => {
   assert.doesNotMatch(prompt, /동의하는 것으로 간주됩니다/);
 });
 
-test("my activity leads with user profile before active case", async () => {
+test("my activity leads with user profile before case carousel", async () => {
   const page = await readFile("src/app/(tabs)/my/page.tsx", "utf8");
   assert.match(page, /<AccountSurface/);
-  assert.match(page, /<ActiveLostCaseCard/);
+  assert.match(page, /<LostCaseCarousel/);
   assert.ok(
-    page.indexOf("<AccountSurface") < page.indexOf("<ActiveLostCaseCard"),
-    "user profile should appear before the active case card"
+    page.indexOf("<AccountSurface") < page.indexOf("<LostCaseCarousel"),
+    "user profile should appear before the case carousel"
   );
   assert.match(page, /max-h-72 overflow-y-auto/);
   assert.match(page, /useMySightings\(\)/);

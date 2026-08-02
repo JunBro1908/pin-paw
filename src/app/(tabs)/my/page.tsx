@@ -2,32 +2,49 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { User } from "@supabase/supabase-js";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { ActiveLostCaseCard } from "@/features/lost-posts/components/ActiveLostCaseCard";
+import { LostCaseCarousel } from "@/features/lost-posts/components/LostCaseCarousel";
 import { LostCaseNextActions } from "@/features/lost-posts/components/LostCaseNextActions";
-import { LostPostList } from "@/features/lost-posts/components/LostPostList";
 import { selectActiveLostCase } from "@/features/lost-posts/lib/active-lost-case";
 import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
+import type { LostPostItem } from "@/features/lost-posts/model/types";
 import { MySightingList } from "@/features/sightings/components/MySightingList";
 import { useMySightings } from "@/features/sightings/hooks/useMySightings";
 import { cn } from "@/shared/lib/cn";
+
+function sortLostCasesForCarousel(items: LostPostItem[]): LostPostItem[] {
+  return items.toSorted((a, b) => {
+    const rank = (status: LostPostItem["status"]) =>
+      status === "searching" ? 0 : status === "found" ? 1 : 2;
+    const byStatus = rank(a.status) - rank(b.status);
+    if (byStatus !== 0) return byStatus;
+    return Date.parse(b.updated_at) - Date.parse(a.updated_at);
+  });
+}
 
 function MyPageContent() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { items, loading, refreshing, error, reload } = useMyLostPosts();
-  // Warm sightings cache on auth so expanding the section feels instant.
   useMySightings();
-  const [lostPostsOpen, setLostPostsOpen] = useState(false);
   const [sightingsOpen, setSightingsOpen] = useState(false);
-
-  const activeCase = selectActiveLostCase(items);
+  const carouselItems = useMemo(
+    () => sortLostCasesForCarousel(items),
+    [items]
+  );
+  const defaultActive = selectActiveLostCase(items);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const selectedCase =
+    carouselItems.find((item) => item.id === selectedId) ??
+    defaultActive ??
+    carouselItems[0] ??
+    null;
 
   const handleSignOut = async () => {
     await signOut();
@@ -42,7 +59,7 @@ function MyPageContent() {
 
       <AccountSurface user={user} onSignOut={handleSignOut} />
 
-      {loading && !activeCase ? (
+      {loading && carouselItems.length === 0 ? (
         <div className="mb-6 space-y-3">
           <div className="bg-border-subtle h-3 w-40 animate-pulse rounded-full" />
           <div className="bg-border-subtle h-3 w-28 animate-pulse rounded-full" />
@@ -63,7 +80,7 @@ function MyPageContent() {
         </div>
       ) : null}
 
-      {!loading && !error && !activeCase ? (
+      {!loading && !error && carouselItems.length === 0 ? (
         <div className="border-border-subtle bg-surface mb-6 rounded-2xl border border-dashed p-6 text-center shadow-sm">
           <Text variant="body" className="mb-2 font-medium">
             찾는 중인 유실 사건이 없어요
@@ -78,64 +95,29 @@ function MyPageContent() {
         </div>
       ) : null}
 
-      {activeCase ? (
+      {carouselItems.length > 0 ? (
         <>
-          <ActiveLostCaseCard item={activeCase} refreshing={refreshing} />
-          <LostCaseNextActions lostPostId={activeCase.id} />
-        </>
-      ) : null}
-
-      <section className="border-border-subtle bg-surface mb-4 overflow-hidden rounded-2xl border shadow-sm">
-        <button
-          type="button"
-          onClick={() => setLostPostsOpen((o) => !o)}
-          className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
-          aria-expanded={lostPostsOpen}
-          aria-controls="my-lost-posts-content"
-          id="my-lost-posts-heading"
-        >
-          <Text variant="title" className="font-semibold">
-            지난 유실글
-          </Text>
-          <span
-            className={cn(
-              "inline-block text-gray-500 transition-transform",
-              !lostPostsOpen && "rotate-90"
-            )}
-            aria-hidden
-          >
-            ▼
-          </span>
-        </button>
-        <div
-          id="my-lost-posts-content"
-          role="region"
-          aria-labelledby="my-lost-posts-heading"
-          className={cn(
-            "border-t border-gray-100 dark:border-gray-800",
-            !lostPostsOpen && "hidden"
-          )}
-        >
-          <div className="flex justify-end px-5 pt-3 pb-1">
+          <LostCaseCarousel
+            items={carouselItems}
+            refreshing={refreshing}
+            selectedId={selectedCase?.id ?? null}
+            onSelect={(item) => setSelectedId(item.id)}
+            primaryAction="recommend"
+            heading="내 유실 사건"
+          />
+          {selectedCase ? (
+            <LostCaseNextActions lostPostId={selectedCase.id} />
+          ) : null}
+          <div className="mb-6 flex justify-end">
             <Link
               href="/my/lost-posts/new"
               className="text-primary text-sm font-medium hover:underline"
             >
-              + 등록
+              + 유실 사건 등록
             </Link>
           </div>
-          <div className="max-h-72 overflow-y-auto px-5 pb-5">
-            {lostPostsOpen ? (
-              <LostPostList
-                items={items}
-                loading={loading}
-                refreshing={refreshing}
-                error={error}
-              />
-            ) : null}
-          </div>
-        </div>
-      </section>
+        </>
+      ) : null}
 
       <section className="border-border-subtle bg-surface mb-4 overflow-hidden rounded-2xl border shadow-sm">
         <button

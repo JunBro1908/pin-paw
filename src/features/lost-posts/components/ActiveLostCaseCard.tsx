@@ -1,75 +1,148 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
+import { StatusBadge } from "./StatusBadge";
+import {
+  formatLostCaseDateTime,
+  getLostPostCoverUrl,
+} from "../lib/lost-post-cover";
 import type { LostPostItem } from "../model/types";
+import { cn } from "@/shared/lib/cn";
 
 interface ActiveLostCaseCardProps {
   item: LostPostItem;
   refreshing?: boolean;
+  /** Compact width for horizontal carousels */
+  compact?: boolean;
+  className?: string;
+  /** Prefer detail over recommend for primary CTA (default: recommend) */
+  primaryAction?: "recommend" | "detail";
 }
 
-function formatDateTime(value: string) {
-  return new Date(value).toLocaleString("ko-KR", {
-    timeZone: "Asia/Seoul",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function EditIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+      <path d="m15 5 4 4" />
+    </svg>
+  );
 }
 
 export function ActiveLostCaseCard({
   item,
   refreshing = false,
+  compact = false,
+  className,
+  primaryAction = "recommend",
 }: ActiveLostCaseCardProps) {
-  const lostAt = item.lost_at ? formatDateTime(item.lost_at) : "";
-  const lastChecked = item.updated_at ? formatDateTime(item.updated_at) : "";
+  const coverUrl = getLostPostCoverUrl(item.cover_photo_key);
+  const lostAt = formatLostCaseDateTime(item.lost_at);
+  const lastChecked = formatLostCaseDateTime(item.updated_at);
+  const detailHref = `/my/lost-posts/${item.id}`;
+  const editHref = `${detailHref}?edit=1`;
+  const recommendHref = `/recommend?lostPostId=${item.id}`;
+  const primaryHref =
+    primaryAction === "detail" ? detailHref : recommendHref;
+  const primaryLabel =
+    primaryAction === "detail" ? "사건 보기" : "확인할 제보 보기";
 
   return (
-    <section
-      aria-labelledby="active-lost-case-heading"
-      className="border-border-subtle bg-surface mb-6 rounded-2xl border p-5 shadow-sm"
+    <article
+      className={cn(
+        "border-border-subtle bg-surface relative overflow-hidden rounded-2xl border shadow-sm",
+        compact ? "w-[min(100%,18.5rem)] shrink-0" : "w-full",
+        className
+      )}
     >
-      <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800 dark:bg-amber-900/30 dark:text-amber-300">
-          찾는 중
-        </span>
+      <Link
+        href={detailHref}
+        className="focus-visible:outline-action-primary block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        aria-label={`${item.pet_name?.trim() || "유실 사건"} 상세 보기`}
+      >
+        <div
+          className={cn(
+            "bg-surface-soft relative overflow-hidden",
+            compact ? "aspect-[16/10]" : "aspect-[2/1] sm:aspect-[21/9]"
+          )}
+        >
+          {coverUrl ? (
+            <Image
+              src={coverUrl}
+              alt=""
+              fill
+              sizes={compact ? "300px" : "(max-width: 768px) 100vw, 720px"}
+              className="object-cover"
+            />
+          ) : (
+            <div
+              className="from-accent-warm/25 via-surface-soft to-primary-soft/40 absolute inset-0 bg-gradient-to-br"
+              aria-hidden
+            />
+          )}
+          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/35 to-transparent" />
+        </div>
+      </Link>
+
+      <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
         {refreshing ? (
-          <Text variant="caption" color="caption">
+          <Text
+            variant="caption"
+            className="bg-surface/90 rounded-full px-2 py-0.5 text-xs shadow-sm"
+          >
             업데이트 중
           </Text>
         ) : null}
-      </div>
-      <Text
-        as="h2"
-        id="active-lost-case-heading"
-        variant="title"
-        className="mb-1 font-semibold"
-      >
-        {item.pet_name?.trim() || "이름 미입력"}
-      </Text>
-      {lostAt ? (
-        <Text
-          variant="body"
-          className="text-sm text-gray-600 dark:text-gray-400"
+        <Link
+          href={editHref}
+          className="border-border-subtle bg-surface/95 text-text-main hover:bg-surface-soft focus-visible:outline-action-primary inline-flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          aria-label="유실글 수정"
+          onClick={(event) => event.stopPropagation()}
         >
-          유실 시각 {lostAt}
-        </Text>
-      ) : null}
-      {lastChecked ? (
-        <Text variant="caption" color="caption" className="mt-1 block">
-          마지막 확인 {lastChecked}
-        </Text>
-      ) : null}
-      <div className="mt-4">
-        <Link href={`/recommend?lostPostId=${item.id}`}>
-          <Button variant="primary" className="w-full sm:w-auto">
-            확인할 제보 보기
+          <EditIcon />
+        </Link>
+      </div>
+
+      <div className="space-y-3 p-4">
+        <div className="flex flex-wrap items-center gap-2">
+          <StatusBadge status={item.status} size="sm" />
+        </div>
+        <div>
+          <Text as="h2" variant="title" className="font-semibold">
+            {item.pet_name?.trim() || "이름 미입력"}
+          </Text>
+          {lostAt ? (
+            <Text
+              variant="body"
+              className="text-text-sub mt-1 block text-sm"
+            >
+              유실 시각 {lostAt}
+            </Text>
+          ) : null}
+          {lastChecked ? (
+            <Text variant="caption" color="caption" className="mt-0.5 block">
+              마지막 확인 {lastChecked}
+            </Text>
+          ) : null}
+        </div>
+        <Link href={primaryHref} className="block">
+          <Button variant="primary" className="min-h-11 w-full">
+            {primaryLabel}
           </Button>
         </Link>
       </div>
-    </section>
+    </article>
   );
 }

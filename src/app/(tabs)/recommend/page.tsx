@@ -9,7 +9,7 @@ import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { LostPostCard } from "@/features/lost-posts/components/LostPostCard";
+import { LostCaseCarousel } from "@/features/lost-posts/components/LostCaseCarousel";
 import { useLostPost } from "@/features/lost-posts/hooks/useLostPost";
 import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
 import { StatusBadge } from "@/features/lost-posts/components/StatusBadge";
@@ -34,7 +34,7 @@ function RecommendContent() {
     reload: reloadLostPosts,
   } = useMyLostPosts();
 
-  // 유실글을 선택하지 않았을 때: 내 유실글 목록을 보여주고, 선택하면 해당 유실글의 추천으로 이동
+  // 유실글을 선택하지 않았을 때: 가로 슬라이드로 선택
   if (!lostPostId) {
     return (
       <Container className="py-10">
@@ -71,28 +71,12 @@ function RecommendContent() {
             </Link>
           </div>
         ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between gap-3">
-              <Text variant="body" className="font-medium">
-                유실글 선택
-              </Text>
-              {refreshing ? (
-                <Text variant="caption" color="caption">
-                  업데이트 중...
-                </Text>
-              ) : null}
-            </div>
-            <ul className="space-y-4">
-              {lostPosts.map((item) => (
-                <li key={item.id}>
-                  <LostPostCard
-                    item={item}
-                    href={`/recommend?lostPostId=${item.id}`}
-                  />
-                </li>
-              ))}
-            </ul>
-          </div>
+          <LostCaseCarousel
+            items={lostPosts}
+            refreshing={refreshing}
+            heading="유실글 선택"
+            primaryAction="recommend"
+          />
         )}
       </Container>
     );
@@ -194,11 +178,36 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
           </Text>
         </div>
       ) : (
-        <div className="border-border-subtle bg-surface mb-6 rounded-2xl border p-4 shadow-sm">
-          <Text variant="caption" color="caption" className="mb-2 block">
-            선택된 유실글
-          </Text>
-          <div className="flex gap-4">
+        <div className="border-border-subtle bg-surface relative mb-6 rounded-2xl border p-4 shadow-sm">
+          <div className="mb-2 flex items-start justify-between gap-3">
+            <Text variant="caption" color="caption">
+              선택된 유실글
+            </Text>
+            <Link
+              href={`/my/lost-posts/${post.id}?edit=1`}
+              className="border-border-subtle text-text-main hover:bg-surface-soft inline-flex h-9 w-9 items-center justify-center rounded-full border"
+              aria-label="유실글 수정"
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                <path d="m15 5 4 4" />
+              </svg>
+            </Link>
+          </div>
+          <Link
+            href={`/my/lost-posts/${post.id}`}
+            className="flex gap-4 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
             <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gray-100">
               {coverUrl ? (
                 <Image
@@ -209,31 +218,21 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
                   className="object-cover"
                 />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-2xl">
-                  📷
-                </div>
+                <div className="from-accent-warm/25 via-surface-soft to-primary-soft/40 absolute inset-0 bg-gradient-to-br" />
               )}
             </div>
             <div className="min-w-0 flex-1">
               <StatusBadge status={post.status} size="sm" className="mb-1" />
               <Text variant="body" className="font-medium">
-                {lostAt}
+                {post.pet_name?.trim() || "이름 미입력"}
               </Text>
-              {[post.trait_color, post.trait_size, post.trait_species].filter(
-                Boolean
-              ).length > 0 && (
-                <Text
-                  variant="caption"
-                  color="caption"
-                  className="block truncate"
-                >
-                  {[post.trait_color, post.trait_size, post.trait_species]
-                    .filter(Boolean)
-                    .join(" · ")}
+              {lostAt ? (
+                <Text variant="caption" color="caption" className="block">
+                  유실 시각 {lostAt}
                 </Text>
-              )}
+              ) : null}
             </div>
-          </div>
+          </Link>
         </div>
       )}
 

@@ -9,16 +9,16 @@ interface LostCaseNextActionsProps {
 
 const ACTIONS = [
   {
-    href: (lostPostId: string) => `/map?lostPostId=${lostPostId}`,
-    label: "지도에서 흔적 보기",
-  },
-  {
     href: () => "/my/notifications",
     label: "알림 확인",
   },
   {
-    href: (lostPostId: string) => `/my/lost-posts/${lostPostId}`,
+    href: (lostPostId: string) => `/my/lost-posts/${lostPostId}?edit=1`,
     label: "사건 정보 관리",
+  },
+  {
+    href: (lostPostId: string) => `/map?lostPostId=${lostPostId}`,
+    label: "지도에서 흔적 보기",
   },
 ] as const;
 
