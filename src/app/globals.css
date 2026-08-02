@@ -1,30 +1,51 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --brand-pin: #03c75a;
+  --action-primary: #087a3e;
+  --action-primary-hover: #066532;
+  --action-on-primary: #ffffff;
+  --background-warm: #fff9f1;
+  --surface: #ffffff;
+  --surface-soft: #f7f0e7;
+  --text-main: #2b251f;
+  --text-sub: #655b52;
+  --text-caption: #74695f;
+  --border-subtle: #e7dccf;
+  --accent-warm: #f2a65a;
+  --accent-warm-text: #9a4e11;
+  --status-lost: #b85c1b;
+  --status-shelter: #28736f;
+  --status-danger: #b93c38;
 
-  --primary: #03c75a;
+  --background: var(--background-warm);
+  --foreground: var(--text-main);
+  --primary: var(--brand-pin);
   --primary-soft: #eafbf2;
-
-  --surface: #f8f9fa;
-  --border-subtle: #eeeeee;
-  --text-main: #202224;
-  --text-sub: #666666;
-  --text-caption: #909090;
-  --error: #f44336;
+  --error: var(--status-danger);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-brand-pin: var(--brand-pin);
+  --color-action-primary: var(--action-primary);
+  --color-action-primary-hover: var(--action-primary-hover);
+  --color-action-on-primary: var(--action-on-primary);
+  --color-background-warm: var(--background-warm);
   --color-primary: var(--primary);
   --color-primary-soft: var(--primary-soft);
   --color-surface: var(--surface);
+  --color-surface-soft: var(--surface-soft);
   --color-border-subtle: var(--border-subtle);
   --color-text-main: var(--text-main);
   --color-text-sub: var(--text-sub);
   --color-text-caption: var(--text-caption);
+  --color-accent-warm: var(--accent-warm);
+  --color-accent-warm-text: var(--accent-warm-text);
+  --color-status-lost: var(--status-lost);
+  --color-status-shelter: var(--status-shelter);
+  --color-status-danger: var(--status-danger);
   --color-error: var(--error);
   --font-sans: Arial, Helvetica, sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
@@ -32,8 +53,16 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background-warm: #171411;
+    --surface: #211d19;
+    --surface-soft: #2b2621;
+    --text-main: #f7efe6;
+    --text-sub: #cbbfb2;
+    --text-caption: #b8aa9c;
+    --border-subtle: #3a332d;
+    --action-primary: #45db8a;
+    --action-primary-hover: #63e49b;
+    --action-on-primary: #171411;
   }
 }
 
@@ -44,8 +73,8 @@ body {
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--background-warm);
+  color: var(--text-main);
   font-family: Arial, Helvetica, sans-serif;
   touch-action: pan-y;
 }
@@ -66,7 +95,7 @@ body {
 }
 
 :focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid var(--action-primary);
   outline-offset: 2px;
 }
 

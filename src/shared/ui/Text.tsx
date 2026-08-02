@@ -1,6 +1,7 @@
 import { cn } from "@/shared/lib/cn";
 
-interface TextProps extends React.ComponentPropsWithoutRef<"p"> {
+interface TextProps extends React.HTMLAttributes<HTMLElement> {
+  as?: "p" | "span" | "h1" | "h2" | "h3";
   variant?: "title" | "body" | "caption";
   color?: "main" | "sub" | "caption" | "error" | "primary";
 }
@@ -10,11 +11,14 @@ interface TextProps extends React.ComponentPropsWithoutRef<"p"> {
  */
 export function Text({
   children,
+  as = "p",
   variant = "body",
   color,
   className,
   ...props
 }: TextProps) {
+  const Component = as;
+
   const variantStyles = {
     title: "text-xl font-bold",
     body: "text-base",
@@ -39,11 +43,11 @@ export function Text({
   const finalColorStyle = color ? colorStyles[color] : defaultColors[variant];
 
   return (
-    <p
+    <Component
       className={cn(variantStyles[variant], finalColorStyle, className)}
       {...props}
     >
       {children}
-    </p>
+    </Component>
   );
 }

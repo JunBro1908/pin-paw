@@ -17,10 +17,11 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    "flex items-center justify-center rounded-lg px-4 py-3 font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
+    "flex min-h-11 items-center justify-center rounded-xl px-4 py-2 font-semibold transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary";
 
   const variants = {
-    primary: "bg-primary text-white",
+    primary:
+      "bg-action-primary text-action-on-primary hover:bg-action-primary-hover",
     secondary: "bg-primary-soft text-primary",
   };
 
@@ -41,7 +42,11 @@ export function Button({
       ) : (
         children
       )}
-      {isLoading ? <span className="sr-only" aria-live="polite">로딩 중</span> : null}
+      {isLoading ? (
+        <span className="sr-only" aria-live="polite">
+          로딩 중
+        </span>
+      ) : null}
     </button>
   );
 }
