@@ -59,7 +59,7 @@ function SimilarityInfoTip() {
           e.stopPropagation();
           setOpen((value) => !value);
         }}
-        className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary inline-flex h-5 w-5 items-center justify-center rounded-full border border-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary inline-flex h-5 w-5 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <Icon name="info" size={12} />
       </button>
@@ -251,58 +251,64 @@ export function RecommendationCard({
         <span className="text-primary text-xs font-medium">✓ 북마크한 제보</span>
       ) : null}
 
-      <ul aria-label="거리·시간" className="flex flex-wrap gap-1.5">
-        {item.contextChips.map((chip) => (
-          <li
-            key={chip}
-            className="bg-surface-soft text-text-sub rounded-lg px-2 py-1 text-xs"
-          >
-            {chip}
-          </li>
-        ))}
-      </ul>
-
       <div className="flex items-start gap-3">
-        <div className="flex min-w-0 flex-1 gap-4">
-          <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
-            {thumbUrl ? (
-              <Image
-                src={thumbUrl}
-                alt="목격 사진"
-                fill
-                sizes="80px"
-                className="object-cover"
-              />
-            ) : (
-              <div className="text-text-caption flex h-full w-full items-center justify-center text-2xl">
-                📷
-              </div>
-            )}
-          </div>
-          <div className="min-w-0 flex-1">
-            <Text
-              variant="body"
-              className="text-text-main block font-semibold"
-            >
-              {occurredAt}
-            </Text>
-            <div className="mt-1.5 flex items-center gap-1.5">
-              <Text
-                as="p"
-                variant="title"
-                className="text-action-primary text-2xl font-bold tracking-tight"
-                aria-label={`유사도 ${item.matchPercent}퍼센트`}
-              >
-                {item.matchPercent}%
-              </Text>
-              <SimilarityInfoTip />
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
+          {thumbUrl ? (
+            <Image
+              src={thumbUrl}
+              alt="목격 사진"
+              fill
+              sizes="80px"
+              className="object-cover"
+            />
+          ) : (
+            <div className="text-text-caption flex h-full w-full items-center justify-center text-2xl">
+              📷
             </div>
-            <span className="text-action-primary mt-3 inline-flex min-h-11 items-center text-sm font-medium">
-              지도에서 보기
-            </span>
-          </div>
+          )}
         </div>
-        {bookmarkButton}
+
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex items-start gap-1">
+            <div className="min-w-0 flex-1">
+              <ul
+                aria-label="거리·시간"
+                className="mb-1.5 flex flex-wrap gap-1.5"
+              >
+                {item.contextChips.map((chip) => (
+                  <li
+                    key={chip}
+                    className="bg-surface-soft text-text-sub rounded-lg px-2 py-1 text-xs"
+                  >
+                    {chip}
+                  </li>
+                ))}
+              </ul>
+              <Text
+                variant="body"
+                className="text-text-main block font-semibold"
+              >
+                {occurredAt}
+              </Text>
+              <div className="mt-1 flex items-center gap-1">
+                <Text
+                  as="p"
+                  variant="caption"
+                  className="text-action-primary text-sm font-medium"
+                  aria-label={`유사도 ${item.matchPercent}퍼센트`}
+                >
+                  {item.matchPercent}%
+                </Text>
+                <SimilarityInfoTip />
+              </div>
+            </div>
+            {bookmarkButton}
+          </div>
+
+          <span className="text-action-primary mt-3 inline-flex min-h-11 items-center text-sm font-medium">
+            지도에서 보기
+          </span>
+        </div>
       </div>
 
       {actionToast ? (

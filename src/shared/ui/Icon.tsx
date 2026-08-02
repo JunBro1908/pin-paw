@@ -14,7 +14,8 @@ export type IconName =
   | "layers"
   | "sparkle"
   | "send"
-  | "info";
+  | "info"
+  | "refresh";
 
 interface IconProps {
   name: IconName;
@@ -74,10 +75,20 @@ export function Icon({ name, size = 24, className }: IconProps) {
       case "send":
         return <path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" />;
       case "info":
+        // Letter-only "i" (no circular stroke) for tip affordances.
         return (
           <>
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 10v6M12 7.5h.01" />
+            <circle cx="12" cy="7" r="1.15" fill="currentColor" stroke="none" />
+            <path d="M12 10.5v7" />
+          </>
+        );
+      case "refresh":
+        return (
+          <>
+            <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+            <path d="M3 3v5h5" />
+            <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+            <path d="M16 16h5v5" />
           </>
         );
       case "paw":

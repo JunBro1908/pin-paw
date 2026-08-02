@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
+import { Icon } from "@/shared/ui/Icon";
 import { BackLink } from "@/shared/ui/BackLink";
 import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
@@ -300,10 +301,11 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
             ) : null}
             <Button
               variant="secondary"
-              className="ml-auto min-h-11 text-sm"
+              className="ml-auto min-h-11 min-w-11 px-0"
               onClick={() => refetchRecommendations()}
+              aria-label="새로고침"
             >
-              새로고침
+              <Icon name="refresh" size={20} />
             </Button>
           </div>
 

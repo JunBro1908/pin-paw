@@ -17,17 +17,33 @@ test("confirmation page presents a review workflow without model or result-count
   );
   assert.match(page, /<summary[^>]*>[\s\S]*?탐색 범위[\s\S]*?<\/summary>/);
   assert.match(page, /반경[\s\S]*?기간[\s\S]*?적용/);
-  assert.match(page, /새로고침/);
+  assert.match(page, /aria-label="새로고침"/);
+  assert.match(page, /name="refresh"/);
+  assert.doesNotMatch(page, />\s*새로고침\s*</);
   assert.doesNotMatch(page, /topK|TOP_K|추천 조건:|개수|toFixed\(1\)/i);
 });
 
 test("confirmation card leads with distance-time chips, date, match percent tip, and map CTA", async () => {
   const card = await readFile(cardPath, "utf8");
 
-  assert.match(card, /<ul\s[\s\S]*?aria-label="거리·시간"[\s\S]*?>/);
+  // Two-column: photo left, chips/date/%/CTA in the right column (not full-bleed above).
+  assert.match(
+    card,
+    /relative h-20 w-20[\s\S]*aria-label="거리·시간"[\s\S]*\{item\.matchPercent\}%[\s\S]*지도에서 보기/
+  );
   assert.match(card, /item\.contextChips\.map/);
-  assert.match(card, /\{item\.matchPercent\}%/);
+  assert.match(card, /variant="body"[\s\S]*font-semibold[\s\S]*\{occurredAt\}/);
+  assert.match(
+    card,
+    /variant="caption"[\s\S]*text-sm[\s\S]*\{item\.matchPercent\}%/
+  );
+  assert.doesNotMatch(card, /variant="title"[\s\S]*\{item\.matchPercent\}%/);
+  assert.doesNotMatch(
+    card,
+    /className="[^"]*text-2xl[^"]*"[\s\S]{0,120}\{item\.matchPercent\}%/
+  );
   assert.match(card, /aria-label="유사도 안내"/);
+  assert.doesNotMatch(card, /rounded-full border border-current/);
   assert.match(
     card,
     /유사도와 근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을 보장하지 않습니다\./
