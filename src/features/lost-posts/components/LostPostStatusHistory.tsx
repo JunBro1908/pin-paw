@@ -37,9 +37,11 @@ export function LostPostStatusHistory({ lostPostId }: { lostPostId: string }) {
 
   if (error) {
     return (
-      <Text variant="caption" color="error">
-        {error}
-      </Text>
+      <div className="border-border-subtle bg-surface-soft rounded-xl border px-3 py-3">
+        <Text variant="caption" color="caption" className="block">
+          상태 이력을 불러오지 못했어요. 잠시 후 다시 확인해 주세요.
+        </Text>
+      </div>
     );
   }
   if (items.length === 0) {
@@ -55,12 +57,12 @@ export function LostPostStatusHistory({ lostPostId }: { lostPostId: string }) {
       {items.map((item) => (
         <li
           key={item.id}
-          className="border-border-subtle rounded-xl border px-3 py-2 text-sm"
+          className="border-border-subtle bg-surface-soft rounded-xl border px-3 py-2 text-sm"
         >
-          <span className="font-medium">
+          <span className="text-text-main font-medium">
             {item.from_status ?? "—"} → {item.to_status}
           </span>
-          <span className="ml-2 text-gray-500">
+          <span className="text-text-caption ml-2">
             {new Date(item.changed_at).toLocaleString("ko-KR", {
               timeZone: "Asia/Seoul",
             })}

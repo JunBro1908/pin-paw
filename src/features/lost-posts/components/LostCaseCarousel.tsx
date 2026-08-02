@@ -108,13 +108,14 @@ export function LostCaseCarousel({
         <Text
           as="h2"
           id={headingId}
-          variant="body"
-          className="min-w-0 shrink font-medium"
+          variant="title"
+          color="main"
+          className="min-w-0 shrink"
         >
           {heading}
         </Text>
         {headingAction ? (
-          <div className="shrink-0">{headingAction}</div>
+          <div className="flex shrink-0 items-center">{headingAction}</div>
         ) : null}
       </div>
 
@@ -145,7 +146,7 @@ export function LostCaseCarousel({
                 className={cn(
                   "w-full max-w-none transition-[box-shadow,ring] duration-200",
                   selected
-                    ? "ring-action-primary/40 ring-2 ring-offset-2 ring-offset-white"
+                    ? "ring-action-primary/30 ring-2 ring-offset-2 ring-offset-[var(--background-warm)]"
                     : "opacity-95"
                 )}
               />

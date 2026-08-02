@@ -43,7 +43,7 @@ export function ActiveLostCaseCard({
   return (
     <article
       className={cn(
-        "border-border-subtle relative overflow-hidden rounded-2xl border bg-white shadow-sm w-full max-w-none",
+        "surface-light border-border-subtle relative w-full max-w-none overflow-hidden rounded-2xl border bg-white shadow-sm",
         className
       )}
     >
@@ -87,19 +87,16 @@ export function ActiveLostCaseCard({
           <StatusBadge status={item.status} size="sm" />
         </div>
         <div>
-          <Text as="h2" variant="title" className="font-semibold text-gray-900">
+          <Text as="h2" variant="title" color="main" className="font-semibold">
             {item.pet_name?.trim() || "이름 미입력"}
           </Text>
           {lostAt ? (
-            <Text
-              variant="body"
-              className="mt-1 block text-sm text-gray-600"
-            >
+            <Text variant="body" color="sub" className="mt-1 block text-sm">
               유실 시각 {lostAt}
             </Text>
           ) : null}
           {lastChecked ? (
-            <Text variant="caption" className="mt-0.5 block text-gray-500">
+            <Text variant="caption" color="caption" className="mt-0.5 block">
               마지막 확인 {lastChecked}
             </Text>
           ) : null}

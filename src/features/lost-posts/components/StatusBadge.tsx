@@ -5,17 +5,15 @@ import { cn } from "@/shared/lib/cn";
 const STATUS_CONFIG: Record<string, { label: string; className: string }> = {
   searching: {
     label: "찾는 중",
-    className:
-      "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+    className: "bg-amber-100 text-amber-800",
   },
   found: {
     label: "찾았어요",
-    className:
-      "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300",
+    className: "bg-emerald-100 text-emerald-800",
   },
   closed: {
     label: "종료",
-    className: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+    className: "bg-gray-100 text-gray-600",
   },
 };
 
