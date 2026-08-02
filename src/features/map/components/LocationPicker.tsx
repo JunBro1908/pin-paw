@@ -13,6 +13,8 @@ import Script from "next/script";
 import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
+import { cn } from "@/shared/lib/cn";
+import { scrollablePanelClass } from "@/shared/ui/ScrollablePanel";
 import type {
   NaverGeocodeResponse,
   NaverMapClickEvent,
@@ -487,7 +489,10 @@ export function LocationPicker({
             {showDropdown && (
               <div
                 ref={dropdownRef}
-                className="border-border-subtle bg-surface absolute top-full right-0 left-0 z-20 mt-1 max-h-48 overflow-auto rounded-xl border shadow-lg"
+                className={cn(
+                  "border-border-subtle bg-surface absolute top-full right-0 left-0 z-20 mt-1 rounded-xl border shadow-lg",
+                  scrollablePanelClass.dropdown
+                )}
               >
                 {searchResults.length === 0 ? (
                   <div className="text-text-caption px-4 py-3 text-sm">

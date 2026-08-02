@@ -6,6 +6,8 @@ import { REPORT_CATEGORIES, type ReportCategory } from "@/shared/lib/api-input";
 import { Button } from "@/shared/ui/Button";
 import { Text } from "@/shared/ui/Text";
 import { useDialogFocus } from "@/shared/ui/dialog-focus";
+import { scrollablePanelClass } from "@/shared/ui/ScrollablePanel";
+import { cn } from "@/shared/lib/cn";
 
 const CATEGORY_LABELS: Record<ReportCategory, string> = {
   immediate_danger: "즉시 위험",
@@ -106,7 +108,10 @@ export function ReportBlockSheet({
       onClick={onClose}
     >
       <div
-        className="bg-surface w-full max-w-md rounded-2xl p-5 shadow-xl"
+        className={cn(
+          "bg-surface w-full max-w-md rounded-2xl p-5 shadow-xl",
+          scrollablePanelClass.sheet
+        )}
         onClick={(event) => event.stopPropagation()}
       >
         <Text variant="title">신고 / 차단</Text>

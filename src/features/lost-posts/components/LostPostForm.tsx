@@ -8,6 +8,7 @@ import { Button } from "@/shared/ui/Button";
 import { cn } from "@/shared/lib/cn";
 import { toLocalDatetimeLocalString } from "@/shared/lib/date";
 import { Toast } from "@/shared/ui/Toast";
+import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import type { LostPostFormData } from "../model/types";
@@ -426,6 +427,7 @@ export function LostPostForm() {
             </span>
           </summary>
           <div className="border-border-subtle space-y-4 border-t px-4 py-5">
+            <ScrollablePanel variant="panel">
             <Text variant="body" className="font-bold">
               색상 · 크기 · 종
             </Text>
@@ -521,6 +523,7 @@ export function LostPostForm() {
                 className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full resize-none rounded-xl border bg-white px-4 py-4 outline-none focus:ring-2"
               />
             </div>
+            </ScrollablePanel>
           </div>
         </details>
 

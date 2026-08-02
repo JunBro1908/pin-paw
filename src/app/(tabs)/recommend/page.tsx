@@ -22,6 +22,7 @@ import {
   updateDraftRange,
 } from "@/features/recommendations/lib/recommendation-interaction";
 import { trackFunnelEvent } from "@/shared/lib/funnel-client";
+import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
 
 function RecommendContent() {
   const searchParams = useSearchParams();
@@ -254,59 +255,61 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
               </span>
             </summary>
             <div className="border-t border-gray-200 px-4 pt-3 pb-4 dark:border-gray-700">
-              <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                <label className="flex items-center gap-1.5">
-                  <Text variant="caption" color="caption">
-                    반경
-                  </Text>
-                  <select
-                    value={range.draft.radiusKm}
-                    onChange={(e) =>
-                      setRange((prev) =>
-                        updateDraftRange(prev, {
-                          radiusKm: Number(e.target.value),
-                        })
-                      )
-                    }
-                    className="border-border-subtle focus:ring-action-primary min-h-11 min-w-0 rounded-xl border bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
-                  >
-                    {RADIUS_OPTIONS.map((v) => (
-                      <option key={v} value={v}>
-                        {v}km
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <label className="flex items-center gap-1.5">
-                  <Text variant="caption" color="caption">
-                    기간
-                  </Text>
-                  <select
-                    value={range.draft.days}
-                    onChange={(e) =>
-                      setRange((prev) =>
-                        updateDraftRange(prev, {
-                          days: Number(e.target.value),
-                        })
-                      )
-                    }
-                    className="border-border-subtle focus:ring-action-primary min-h-11 min-w-0 rounded-xl border bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
-                  >
-                    {DAYS_OPTIONS.map((v) => (
-                      <option key={v} value={v}>
-                        {v}일
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-              <Button
-                variant="primary"
-                className="min-h-11 w-full text-sm"
-                onClick={() => setRange(applyDraftRange)}
-              >
-                적용
-              </Button>
+              <ScrollablePanel variant="panel" className="pr-0.5">
+                <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <label className="flex items-center gap-1.5">
+                    <Text variant="caption" color="caption">
+                      반경
+                    </Text>
+                    <select
+                      value={range.draft.radiusKm}
+                      onChange={(e) =>
+                        setRange((prev) =>
+                          updateDraftRange(prev, {
+                            radiusKm: Number(e.target.value),
+                          })
+                        )
+                      }
+                      className="border-border-subtle focus:ring-action-primary min-h-11 min-w-0 rounded-xl border bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
+                    >
+                      {RADIUS_OPTIONS.map((v) => (
+                        <option key={v} value={v}>
+                          {v}km
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex items-center gap-1.5">
+                    <Text variant="caption" color="caption">
+                      기간
+                    </Text>
+                    <select
+                      value={range.draft.days}
+                      onChange={(e) =>
+                        setRange((prev) =>
+                          updateDraftRange(prev, {
+                            days: Number(e.target.value),
+                          })
+                        )
+                      }
+                      className="border-border-subtle focus:ring-action-primary min-h-11 min-w-0 rounded-xl border bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
+                    >
+                      {DAYS_OPTIONS.map((v) => (
+                        <option key={v} value={v}>
+                          {v}일
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <Button
+                  variant="primary"
+                  className="min-h-11 w-full text-sm"
+                  onClick={() => setRange(applyDraftRange)}
+                >
+                  적용
+                </Button>
+              </ScrollablePanel>
             </div>
           </details>
 

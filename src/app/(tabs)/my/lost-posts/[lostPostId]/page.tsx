@@ -8,6 +8,7 @@ import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { Toast } from "@/shared/ui/Toast";
+import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
 import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useLostPost } from "@/features/lost-posts/hooks/useLostPost";
@@ -486,7 +487,8 @@ function LostPostDetailContent() {
           aria-modal="true"
           aria-labelledby="edit-title"
         >
-          <div className="bg-surface max-h-[90vh] w-full max-w-sm overflow-y-auto rounded-2xl p-6 shadow-xl">
+          <div className="bg-surface w-full max-w-sm rounded-2xl p-6 shadow-xl">
+            <ScrollablePanel variant="sheet" className="max-h-[min(70vh,32rem)] pr-1">
             <Text variant="body" className="font-bold" id="edit-title">
               유실글 수정
             </Text>
@@ -670,6 +672,7 @@ function LostPostDetailContent() {
                 </Button>
               </div>
             </form>
+            </ScrollablePanel>
           </div>
         </div>
       )}

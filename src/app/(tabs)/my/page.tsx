@@ -14,9 +14,10 @@ import { LostCaseNextActions } from "@/features/lost-posts/components/LostCaseNe
 import { selectActiveLostCase } from "@/features/lost-posts/lib/active-lost-case";
 import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
 import type { LostPostItem } from "@/features/lost-posts/model/types";
+import { cn } from "@/shared/lib/cn";
+import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
 import { MySightingList } from "@/features/sightings/components/MySightingList";
 import { useMySightings } from "@/features/sightings/hooks/useMySightings";
-import { cn } from "@/shared/lib/cn";
 
 function sortLostCasesForCarousel(items: LostPostItem[]): LostPostItem[] {
   return items.toSorted((a, b) => {
@@ -154,9 +155,9 @@ function MyPageContent() {
             !sightingsOpen && "hidden"
           )}
         >
-          <div className="max-h-72 overflow-y-auto px-5 pt-3 pb-5">
+          <ScrollablePanel variant="list" className="px-5 pt-3 pb-5">
             {sightingsOpen ? <MySightingList /> : null}
-          </div>
+          </ScrollablePanel>
         </div>
       </section>
     </Container>

@@ -9,6 +9,7 @@ import {
 import { TRAIT_TAGS } from "@/shared/constants/traitTags";
 import { Icon } from "@/shared/ui/Icon";
 import { Text } from "@/shared/ui/Text";
+import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
 import { DOG_BREEDS, getBreedLabel } from "../constants/breeds";
 
 const MAX_TAG_SELECT_SIGHTING = 5;
@@ -58,6 +59,7 @@ export function SightingOptionalDetails({
       </summary>
 
       <div className="border-border-subtle space-y-6 border-t px-4 py-5">
+        <ScrollablePanel variant="panel">
         <div className="space-y-3">
           <Text variant="body" className="text-text-main font-bold">
             색상 · 크기 · 종
@@ -168,6 +170,7 @@ export function SightingOptionalDetails({
             className={cn(inputBase, "resize-none py-4")}
           />
         </div>
+        </ScrollablePanel>
       </div>
     </details>
   );

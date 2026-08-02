@@ -2,6 +2,8 @@
 
 import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
+import { cn } from "@/shared/lib/cn";
+import { scrollablePanelClass } from "@/shared/ui/ScrollablePanel";
 
 /** 지도 상세 카드/추천 모달과 동일한 형식의 제보 상세 (API get_sighting_detail 응답과 호환) */
 export interface SightingDetailData {
@@ -77,7 +79,7 @@ export function SightingDetailCard({
         </button>
       )}
 
-      <div className="max-h-[min(70vh,640px)] overflow-y-auto">
+      <div className={cn(scrollablePanelClass.sheet, "max-h-[min(70vh,32rem)]")}>
         <div className="flex flex-col">
           {sighting.photo_keys?.[0] && (
             <div className="relative aspect-[4/3] max-h-56 w-full overflow-hidden bg-gray-100 sm:max-h-64 dark:bg-gray-800">

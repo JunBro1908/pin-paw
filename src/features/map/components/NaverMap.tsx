@@ -942,7 +942,7 @@ export function NaverMap({
                     ✕
                   </button>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6">
+                <div className="flex-1 overflow-y-auto overscroll-contain p-6 [-webkit-overflow-scrolling:touch]">
                   {bookmarkModalMode === "unregister" ? (
                     <ul className="flex flex-col gap-3">
                       {claimedLostPostsForSighting === null ? (
@@ -1202,7 +1202,7 @@ export function NaverMap({
               className="absolute inset-0"
               onClick={() => setIsListViewOpen(false)}
             />
-            <div className="bg-surface animate-in slide-in-from-bottom-full relative flex max-h-[85vh] w-full flex-col rounded-t-[32px] shadow-2xl duration-500">
+            <div className="bg-surface animate-in slide-in-from-bottom-full relative flex max-h-[min(calc(85vh-var(--bottom-nav-height)-env(safe-area-inset-bottom,0px)),36rem)] w-full flex-col rounded-t-[32px] pb-[env(safe-area-inset-bottom)] shadow-2xl duration-500">
               <div className="flex items-center justify-between p-6">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
@@ -1237,7 +1237,7 @@ export function NaverMap({
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-6 pb-10">
+              <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-10 [-webkit-overflow-scrolling:touch]">
                 {itemsInView.filter((i) => i.type === "point").length === 0 ? (
                   <div className="flex h-60 flex-col items-center justify-center space-y-4 text-center">
                     <div className="rounded-full bg-gray-100 p-6 dark:bg-gray-800">

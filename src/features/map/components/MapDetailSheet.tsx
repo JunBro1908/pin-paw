@@ -3,6 +3,8 @@
 import Image from "next/image";
 import { useCallback, useEffect, useRef } from "react";
 import type { ReactNode, Ref, SyntheticEvent } from "react";
+import { cn } from "@/shared/lib/cn";
+import { scrollablePanelClass } from "@/shared/ui/ScrollablePanel";
 import type { LostPostMapItem } from "../lib/map-data-state";
 import type { MapItem } from "../types/naver";
 
@@ -230,7 +232,12 @@ function LostPostDetail({
   );
 
   return (
-    <div className="max-h-[min(70vh,640px)] overflow-y-auto">
+    <div
+      className={cn(
+        scrollablePanelClass.sheet,
+        "max-h-[min(70vh,32rem)]"
+      )}
+    >
       <div className="bg-surface-soft relative aspect-[4/3] max-h-56 w-full overflow-hidden sm:max-h-64">
         {item.cover_photo_key ? (
           <Image
