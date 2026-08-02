@@ -95,6 +95,51 @@ test("my activity leads with user profile before case carousel", async () => {
   assert.doesNotMatch(page, /LostCaseNextActions/);
 });
 
+test("my empty lost-post state centers title, copy, and CTA", async () => {
+  const page = await readFile("src/app/(tabs)/my/page.tsx", "utf8");
+  const emptyBlock = page.match(
+    /아직 올린 유실글이 없어요[\s\S]{0,500}?유실글 올리기/
+  );
+  assert.ok(emptyBlock, "empty lost-post copy and CTA should appear together");
+  const container = page.match(
+    /<div className="([^"]*items-center[^"]*justify-center[^"]*text-center[^"]*)"[\s\S]*?아직 올린 유실글이 없어요/
+  );
+  assert.ok(container, "empty lost-post container should center content");
+  assert.match(container[1], /flex-col/);
+  assert.doesNotMatch(container[1], /sm:text-left|sm:justify-start/);
+  assert.match(
+    page,
+    /href="\/my\/lost-posts\/new"[\s\S]{0,200}?유실글 올리기/
+  );
+  assert.match(emptyBlock[0], /min-h-11/);
+});
+
+test("recommend empty lost-post state centers CTA", async () => {
+  const page = await readFile("src/app/(tabs)/recommend/page.tsx", "utf8");
+  const container = page.match(
+    /<div className="([^"]*items-center[^"]*justify-center[^"]*text-center[^"]*)"[\s\S]*?아직 올린 유실글이 없어요[\s\S]{0,400}?유실글 올리기/
+  );
+  assert.ok(container, "recommend empty lost-post state should be centered");
+  assert.match(container[1], /flex-col/);
+  assert.match(
+    page,
+    /href="\/my\/lost-posts\/new"[\s\S]{0,200}?유실글 올리기/
+  );
+});
+
+test("my sighting empty state stays centered with hierarchy", async () => {
+  const list = await readFile(
+    "src/features/sightings/components/MySightingList.tsx",
+    "utf8"
+  );
+  const container = list.match(
+    /<div className="([^"]*items-center[^"]*justify-center[^"]*text-center[^"]*)"[\s\S]*?아직 작성한 제보가 없어요[\s\S]{0,400}?제보하러 가기/
+  );
+  assert.ok(container, "my sighting empty state should be centered");
+  assert.match(container[1], /flex-col/);
+  assert.match(list, /min-h-11/);
+});
+
 test("my sighting cards use a top-right edit icon instead of text", async () => {
   const card = await readFile(
     "src/features/sightings/components/MySightingCard.tsx",

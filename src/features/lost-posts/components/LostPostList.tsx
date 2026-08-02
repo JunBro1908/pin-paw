@@ -52,15 +52,17 @@ export function LostPostList({
 
   if (resolvedItems.length === 0) {
     return (
-      <div className="flex min-h-[180px] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 py-10 dark:border-gray-700 dark:bg-gray-800/30">
-        <Text variant="body" color="caption" className="text-center">
-          아직 등록된 유실글이 없어요.
+      <div className="border-border-subtle bg-surface flex min-h-[180px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-5 py-10 text-center shadow-sm">
+        <Text as="h2" variant="title" color="main">
+          아직 올린 유실글이 없어요
         </Text>
-        <Text variant="caption" color="caption" className="text-center">
-          유실글을 등록하면 비슷한 목격 제보를 추천해 드려요.
+        <Text variant="body" color="sub" className="max-w-sm">
+          유실글을 올리면 비슷한 목격 제보를 추천해 드려요.
         </Text>
-        <Link href="/my/lost-posts/new">
-          <Button variant="primary">첫 유실글 등록하기</Button>
+        <Link href="/my/lost-posts/new" className="mt-1">
+          <Button variant="primary" className="min-h-11">
+            유실글 올리기
+          </Button>
         </Link>
       </div>
     );

@@ -101,18 +101,18 @@ function MyPageContent() {
       ) : null}
 
       {!loading && !error && carouselItems.length === 0 ? (
-        <div className="mb-6 py-2">
-          <header className="mb-6 text-center sm:text-left">
-            <Text as="h2" variant="title" color="main">
-              아직 올린 유실글이 없어요
-            </Text>
-            <Text variant="body" color="sub" className="mt-1">
-              가족을 찾고 있다면, 유실글 하나로 PinPaw 찾기를 시작해 보세요.
-            </Text>
-          </header>
-          <div className="flex justify-center sm:justify-start">
-            <NewLostPostButton />
-          </div>
+        <div className="border-border-subtle bg-surface mb-6 flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-5 py-10 text-center shadow-sm">
+          <Text as="h2" variant="title" color="main">
+            아직 올린 유실글이 없어요
+          </Text>
+          <Text variant="body" color="sub" className="max-w-sm">
+            가족을 찾고 있다면, 유실글 하나로 PinPaw 찾기를 시작해 보세요.
+          </Text>
+          <Link href="/my/lost-posts/new" className="mt-1">
+            <Button variant="primary" className="min-h-11">
+              유실글 올리기
+            </Button>
+          </Link>
         </div>
       ) : null}
 

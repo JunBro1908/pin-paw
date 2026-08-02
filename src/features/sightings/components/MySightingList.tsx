@@ -41,12 +41,17 @@ export function MySightingList() {
 
   if (items.length === 0) {
     return (
-      <div className="flex min-h-[120px] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 py-8 dark:border-gray-700 dark:bg-gray-800/30">
-        <Text variant="body" color="caption" className="text-center">
-          아직 작성한 제보가 없습니다.
+      <div className="border-border-subtle bg-surface flex min-h-[140px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-5 py-8 text-center shadow-sm">
+        <Text as="h3" variant="title" color="main">
+          아직 작성한 제보가 없어요
         </Text>
-        <Link href="/">
-          <Button variant="primary">제보하러 가기</Button>
+        <Text variant="body" color="sub" className="max-w-sm">
+          길에서 반려동물을 보셨다면, 짧은 제보 하나로 가족을 도울 수 있어요.
+        </Text>
+        <Link href="/" className="mt-1">
+          <Button variant="primary" className="min-h-11">
+            제보하러 가기
+          </Button>
         </Link>
       </div>
     );

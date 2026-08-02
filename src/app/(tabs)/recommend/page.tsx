@@ -65,12 +65,17 @@ function RecommendContent() {
             </Button>
           </div>
         ) : lostPosts.length === 0 ? (
-          <div className="border-border-subtle bg-surface rounded-2xl border border-dashed p-8 text-center shadow-sm">
-            <Text variant="body" color="caption" className="mb-4 block">
-              등록된 유실글이 없습니다.
+          <div className="border-border-subtle bg-surface flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-5 py-10 text-center shadow-sm">
+            <Text as="h2" variant="title" color="main">
+              아직 올린 유실글이 없어요
             </Text>
-            <Link href="/my/lost-posts/new">
-              <Button variant="primary">유실글 올리기</Button>
+            <Text variant="body" color="sub" className="max-w-sm">
+              유실글을 올리면 비슷한 목격 제보를 모아 보여드려요.
+            </Text>
+            <Link href="/my/lost-posts/new" className="mt-1">
+              <Button variant="primary" className="min-h-11">
+                유실글 올리기
+              </Button>
             </Link>
           </div>
         ) : (
