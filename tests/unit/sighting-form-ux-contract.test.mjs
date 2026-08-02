@@ -29,6 +29,15 @@ test("photo control is semantic and optional section stays in-page", async () =>
   assert.match(essentials, /aria-live="polite"/);
   assert.match(optional, /<details/);
   assert.match(optional, /특징을 더 알려주기 \(선택\)/);
+  assert.match(
+    essentials,
+    /border-border-subtle bg-surface flex items-center justify-between gap-3 rounded-xl border px-4 py-3/
+  );
+  assert.match(essentials, /위치 수정/);
+  assert.doesNotMatch(
+    essentials,
+    /위치 수정[\s\S]*?min-h-11/
+  );
 });
 
 test("optional color input has an associated label", async () => {

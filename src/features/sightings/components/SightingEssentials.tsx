@@ -147,14 +147,14 @@ export function SightingEssentials({
         <div
           aria-live="polite"
           className={cn(
-            "border-border-subtle bg-surface flex items-center justify-between gap-3 rounded-xl border px-4 py-4 shadow-sm",
+            "border-border-subtle bg-surface flex items-center justify-between gap-3 rounded-xl border px-4 py-3 shadow-sm",
             locationError && "border-error"
           )}
         >
           <Text
             variant="body"
             className={cn(
-              "font-medium",
+              "min-w-0 truncate font-medium",
               locationStatus === "ready" ? "text-text-main" : "text-text-sub"
             )}
           >
@@ -164,9 +164,9 @@ export function SightingEssentials({
             type="button"
             onClick={onOpenLocationPicker}
             disabled={disabled}
-            className="bg-surface-soft text-action-primary hover:bg-accent-warm/20 focus-visible:outline-action-primary flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="bg-surface-soft text-action-primary hover:bg-accent-warm/20 focus-visible:outline-action-primary flex h-8 shrink-0 items-center gap-1 rounded-lg px-2.5 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <Icon name="map" size={18} />
+            <Icon name="map" size={16} />
             위치 수정
           </button>
         </div>
