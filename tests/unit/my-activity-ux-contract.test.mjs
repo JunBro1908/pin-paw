@@ -71,11 +71,25 @@ test("login prompt states the purpose and links policies", async () => {
     "src/features/auth/components/LoginPrompt.tsx",
     "utf8"
   );
+  const guard = await readFile(
+    "src/features/auth/components/AuthGuard.tsx",
+    "utf8"
+  );
+  const tabsLayout = await readFile("src/app/(tabs)/layout.tsx", "utf8");
+
   assert.match(prompt, /로그인이 필요합니다/);
   assert.match(prompt, /유실글 등록, 내 제보 확인/);
   assert.match(prompt, /href="\/terms"/);
   assert.match(prompt, /href="\/privacy"/);
   assert.doesNotMatch(prompt, /동의하는 것으로 간주됩니다/);
+  assert.match(
+    prompt,
+    /min-h-\[calc\(100dvh-var\(--bottom-nav-height\)-env\(safe-area-inset-bottom/
+  );
+  assert.match(prompt, /flex-1 flex-col items-center justify-center gap-8/);
+  assert.match(prompt, /mt-auto[\s\S]*href="\/terms"/);
+  assert.match(guard, /flex min-h-0 w-full flex-1 flex-col/);
+  assert.match(tabsLayout, /flex flex-1 flex-col pb-\[calc\(var\(--bottom-nav-height\)/);
 });
 
 test("my activity leads with user profile before case carousel", async () => {

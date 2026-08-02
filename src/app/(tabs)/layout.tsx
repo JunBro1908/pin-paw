@@ -32,7 +32,7 @@ export default function TabsLayout({
       </a>
       <main
         id="main-content"
-        className="flex-1 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1rem)]"
+        className="flex flex-1 flex-col pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1rem)]"
         tabIndex={-1}
       >
         {children}

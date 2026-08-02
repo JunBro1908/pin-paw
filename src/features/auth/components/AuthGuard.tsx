@@ -21,18 +21,22 @@ export function AuthGuard({ children, fallback }: AuthGuardProps) {
 
   if (isLoading) {
     return (
-      <>
+      <div className="flex min-h-[calc(100dvh-var(--bottom-nav-height)-env(safe-area-inset-bottom,0px)-1rem)] w-full flex-1 flex-col">
         {fallback ?? (
-          <div className="flex min-h-[60vh] flex-col items-center justify-center px-5">
+          <div className="flex flex-1 flex-col items-center justify-center px-5">
             <p className="text-text-sub text-center text-sm">로딩 중...</p>
           </div>
         )}
-      </>
+      </div>
     );
   }
 
   if (!user) {
-    return <LoginPrompt />;
+    return (
+      <div className="flex min-h-0 w-full flex-1 flex-col">
+        <LoginPrompt />
+      </div>
+    );
   }
 
   return <>{children}</>;

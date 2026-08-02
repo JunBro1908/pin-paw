@@ -25,8 +25,8 @@ export function LoginPrompt() {
   };
 
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center px-5 py-10">
-      <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center">
+    <div className="flex min-h-[calc(100dvh-var(--bottom-nav-height)-env(safe-area-inset-bottom,0px)-1rem)] w-full flex-1 flex-col items-center px-5 pt-10 pb-4">
+      <div className="flex w-full max-w-sm flex-1 flex-col items-center justify-center gap-8 text-center">
         <div className="flex flex-col items-center gap-2">
           <Text as="h1" variant="title" className="block">
             로그인이 필요합니다
@@ -52,19 +52,19 @@ export function LoginPrompt() {
             priority
           />
         </button>
-
-        <Text variant="caption" color="caption" className="block text-xs">
-          로그인 전에{" "}
-          <Link href="/terms" className="underline underline-offset-2">
-            이용약관
-          </Link>
-          과{" "}
-          <Link href="/privacy" className="underline underline-offset-2">
-            개인정보 처리방침
-          </Link>
-          을 확인해 주세요.
-        </Text>
       </div>
+
+      <Text variant="caption" color="caption" className="mt-auto block pb-1 text-xs">
+        로그인 전에{" "}
+        <Link href="/terms" className="underline underline-offset-2">
+          이용약관
+        </Link>
+        과{" "}
+        <Link href="/privacy" className="underline underline-offset-2">
+          개인정보 처리방침
+        </Link>
+        을 확인해 주세요.
+      </Text>
     </div>
   );
 }
