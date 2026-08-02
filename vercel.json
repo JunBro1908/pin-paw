@@ -15,7 +15,7 @@
     },
     {
       "path": "/api/v1/internal/shelter-animals/import",
-      "schedule": "0 4 * * 1"
+      "schedule": "1 2 * * *"
     }
   ]
 }

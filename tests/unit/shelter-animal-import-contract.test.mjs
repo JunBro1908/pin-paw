@@ -48,7 +48,7 @@ test("weekly cron and cron-auth route are wired", async () => {
     vercel.crons.some(
       (cron) =>
         cron.path === "/api/v1/internal/shelter-animals/import" &&
-        cron.schedule === "0 4 * * 1"
+        cron.schedule === "1 2 * * *"
     )
   );
   assert.deepEqual(vercel.regions, ["icn1"]);
