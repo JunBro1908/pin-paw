@@ -1,11 +1,6 @@
 import type { BookmarkPath, Coordinate } from "./map-domain";
 import type { LostPostMapItem } from "./map-data-state";
 import type { NaverMapAdapter } from "./naver-map-adapter";
-// @ts-expect-error -- Node's direct TypeScript test runner requires the explicit .ts extension.
-import {
-  getMapMarkerPresentation,
-  getSightingPinStatusColor,
-} from "./map-marker-presentation.ts";
 import type {
   MapItem,
   NaverLatLng,
@@ -50,6 +45,8 @@ interface MapLayerRendererDependencies {
   normalizeId(id: string): string;
   getPathCoordinates(path: BookmarkPath): Coordinate[];
   interpolatePath(coordinates: Coordinate[], progress: number): Coordinate[];
+  getMapMarkerPresentation: typeof import("./map-marker-presentation").getMapMarkerPresentation;
+  getSightingPinStatusColor: typeof import("./map-marker-presentation").getSightingPinStatusColor;
 }
 
 interface RenderSightingsInput {
@@ -109,6 +106,8 @@ export function createMapLayerRenderer({
   normalizeId,
   getPathCoordinates,
   interpolatePath,
+  getMapMarkerPresentation,
+  getSightingPinStatusColor,
 }: MapLayerRendererDependencies): MapLayerRenderer {
   let staticPolylines: NaverPolylineInstance[] = [];
   let animationPolylines: NaverPolylineInstance[] = [];
