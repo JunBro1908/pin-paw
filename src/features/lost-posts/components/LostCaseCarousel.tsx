@@ -55,11 +55,18 @@ export function LostCaseCarousel({
       className={cn("mb-6", className)}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-3">
-          <Text as="h2" id={headingId} variant="body" className="font-medium">
+        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
+          <Text
+            as="h2"
+            id={headingId}
+            variant="body"
+            className="shrink-0 font-medium"
+          >
             {heading}
           </Text>
-          {headingAction}
+          {headingAction ? (
+            <div className="min-w-0 shrink-0">{headingAction}</div>
+          ) : null}
         </div>
         {items.length > 1 ? (
           <Text variant="caption" color="caption" className="shrink-0">
@@ -69,7 +76,7 @@ export function LostCaseCarousel({
       </div>
       <ul
         ref={scrollerRef}
-        className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex w-full snap-x snap-mandatory overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-label={heading}
       >
         {items.map((item) => {
@@ -77,7 +84,7 @@ export function LostCaseCarousel({
           return (
             <li
               key={item.id}
-              className="w-full shrink-0 snap-center snap-always"
+              className="w-full min-w-full basis-full shrink-0 snap-center snap-always"
               onFocusCapture={() => {
                 setActiveId(item.id);
                 onSelect?.(item);

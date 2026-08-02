@@ -111,7 +111,7 @@ function MyPageContent() {
             headingAction={
               <Link
                 href="/my/lost-posts/new"
-                className="text-action-primary text-sm font-medium underline-offset-4 hover:underline"
+                className="text-action-primary shrink-0 text-sm font-semibold underline decoration-action-primary/50 underline-offset-4"
               >
                 유실글 올리기
               </Link>

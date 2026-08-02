@@ -20,7 +20,8 @@ test("active case card prioritizes cover photo, edit, and find CTA", async () =>
   );
   assert.match(card, /getLostPostCoverUrl/);
   assert.match(card, /마지막 확인/);
-  assert.match(card, /비슷한 제보 보기/);
+  assert.match(card, /추천 제보 보기/);
+  assert.doesNotMatch(card, /확인할 제보 보기/);
   assert.match(card, /\/recommend\?lostPostId=\$\{item\.id\}/);
   assert.match(card, /\?edit=1/);
   assert.match(card, /aria-label="유실글 수정"/);
@@ -35,12 +36,13 @@ test("lost case carousel shows one full-width snap card at a time", async () => 
   );
   assert.match(carousel, /snap-x snap-mandatory/);
   assert.match(carousel, /overflow-x-auto/);
-  assert.match(carousel, /w-full shrink-0 snap-center/);
+  assert.match(carousel, /min-w-full basis-full shrink-0 snap-center/);
   assert.match(carousel, /compact=\{false\}/);
   assert.match(carousel, /headingAction/);
   assert.match(carousel, /<ActiveLostCaseCard/);
   assert.doesNotMatch(carousel, /w-\[min\(100%,18\.5rem\)\]/);
   assert.doesNotMatch(carousel, /gap-3 overflow-x-auto/);
+  assert.doesNotMatch(carousel, /compact=\{items\.length > 1\}/);
 });
 
 test("next actions cover notifications, case management edit, and map focus", async () => {
