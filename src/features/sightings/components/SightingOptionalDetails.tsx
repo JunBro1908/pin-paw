@@ -62,7 +62,11 @@ export function SightingOptionalDetails({
           <Text variant="body" className="text-text-main font-bold">
             색상 · 크기 · 종
           </Text>
+          <label htmlFor="sighting-trait-color" className="sr-only">
+            색상
+          </label>
           <input
+            id="sighting-trait-color"
             type="text"
             name="traitColor"
             value={traitColor}

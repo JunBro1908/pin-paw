@@ -30,3 +30,17 @@ test("photo control is semantic and optional section stays in-page", async () =>
   assert.match(optional, /<details/);
   assert.match(optional, /특징을 더 알려주기 \(선택\)/);
 });
+
+test("optional color input has an associated label", async () => {
+  const optional = await readFile(
+    "src/features/sightings/components/SightingOptionalDetails.tsx",
+    "utf8"
+  );
+
+  assert.match(
+    optional,
+    /<label[^>]+htmlFor="sighting-trait-color"[^>]*>[^<]*색상[^<]*<\/label>/s
+  );
+  assert.match(optional, /<input[^>]+id="sighting-trait-color"/s);
+  assert.match(optional, /name="traitColor"/);
+});
