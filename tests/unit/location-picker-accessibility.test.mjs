@@ -19,6 +19,46 @@ test("LocationPicker is a labelled keyboard-contained modal", async () => {
   assert.match(picker, /previouslyFocusedElement\?\.focus\(\)/);
 });
 
+test("LocationPicker keeps teardown mount-only while Escape uses the latest onClose", async () => {
+  const picker = await readFile(
+    "src/features/map/components/LocationPicker.tsx",
+    "utf8"
+  );
+  const lifecycleStart = picker.indexOf(
+    "// 1. 컴포넌트 마운트 및 스크롤 잠금 처리"
+  );
+  const lifecycleEnd = picker.indexOf(
+    "// 드롭다운 외부 클릭 시 닫기",
+    lifecycleStart
+  );
+  assert.notEqual(lifecycleStart, -1);
+  assert.notEqual(lifecycleEnd, -1);
+
+  const lifecycleEffect = picker.slice(lifecycleStart, lifecycleEnd);
+  assert.doesNotMatch(
+    lifecycleEffect,
+    /\}, \[onClose\]\);/,
+    "onClose identity changes must not tear down a mounted picker"
+  );
+  assert.match(lifecycleEffect, /\}, \[\]\);/);
+  assert.match(lifecycleEffect, /onCloseRef\.current\(\)/);
+  assert.match(lifecycleEffect, /document\.body\.style\.overflow = "hidden"/);
+  assert.match(lifecycleEffect, /document\.removeEventListener\("keydown"/);
+  assert.match(
+    lifecycleEffect,
+    /document\.body\.style\.overflow = previousOverflow/
+  );
+  assert.match(lifecycleEffect, /previouslyFocusedElement\?\.focus\(\)/);
+  assert.match(lifecycleEffect, /Event\.clearInstanceListeners\(/);
+  assert.match(lifecycleEffect, /mapInstanceRef\.current\.destroy\(\)/);
+
+  assert.match(picker, /const onCloseRef = useRef\(onClose\);/);
+  assert.match(
+    picker,
+    /useEffect\(\(\) => \{\s*onCloseRef\.current = onClose;\s*\}, \[onClose\]\);/
+  );
+});
+
 test("LocationPicker controls have labels, targets, and semantic surfaces", async () => {
   const picker = await readFile(
     "src/features/map/components/LocationPicker.tsx",

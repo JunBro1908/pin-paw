@@ -79,6 +79,11 @@ export function LocationPicker({
   >(null);
   const [isLocating, setIsLocating] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
 
   // 1. 컴포넌트 마운트 및 스크롤 잠금 처리
   useEffect(() => {
@@ -95,7 +100,7 @@ export function LocationPicker({
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.preventDefault();
-        onClose();
+        onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !dialogRef.current) return;
@@ -141,7 +146,7 @@ export function LocationPicker({
         mapInstanceRef.current = null;
       }
     };
-  }, [onClose]);
+  }, []);
 
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
