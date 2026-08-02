@@ -26,6 +26,7 @@ export interface SightingFormErrors {
 /**
  * 내 제보 목록 API 단건 (GET /api/v1/me/sightings)
  * lat, lng는 지도에서 보기 링크용으로 포함 (목록에서 쿼리 스트링으로 전달)
+ * trait_* 는 리스트 카드 태그 표시용
  */
 export interface MySightingItem {
   id: string;
@@ -33,6 +34,9 @@ export interface MySightingItem {
   occurred_at: string;
   note: string | null;
   created_at: string;
+  trait_color?: string | null;
+  trait_size?: string | null;
+  trait_species?: string | null;
   lat?: number;
   lng?: number;
 }

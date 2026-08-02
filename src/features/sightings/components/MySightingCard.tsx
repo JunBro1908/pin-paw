@@ -6,6 +6,9 @@ import { useRef, useState } from "react";
 import { Text } from "@/shared/ui/Text";
 import { createClient } from "@/shared/supabase/client";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { formatSeoulMonthDay } from "@/shared/lib/date";
+import { normalizeSize, SIZE_LABELS } from "@/shared/constants/traitSizes";
+import { SPECIES_UNKNOWN } from "../constants/breeds";
 import type { MySightingItem } from "../model/types";
 
 interface MySightingCardProps {
@@ -15,6 +18,33 @@ interface MySightingCardProps {
 
 const quietIconClass =
   "inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary disabled:opacity-50";
+
+const traitChipClass =
+  "bg-surface-soft text-text-sub rounded-lg px-2.5 py-1 text-xs font-medium";
+
+function buildTraitTags(item: MySightingItem): string[] {
+  const tags: string[] = [];
+
+  const species = item.trait_species?.trim();
+  if (species && species !== SPECIES_UNKNOWN && species !== "모름") {
+    tags.push(species);
+  }
+
+  const sizeRaw = item.trait_size?.trim();
+  if (sizeRaw) {
+    const normalized = normalizeSize(sizeRaw);
+    if (normalized && normalized !== "unknown") {
+      tags.push(SIZE_LABELS[normalized]);
+    }
+  }
+
+  const color = item.trait_color?.trim();
+  if (color) {
+    tags.push(color);
+  }
+
+  return tags;
+}
 
 export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
   const { session } = useAuth();
@@ -27,15 +57,8 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
   const thumbUrl =
     ref && firstKey ? ref.getPublicUrl(firstKey).data.publicUrl : "";
 
-  const occurredAt = item.occurred_at
-    ? new Date(item.occurred_at).toLocaleString("ko-KR", {
-        timeZone: "Asia/Seoul",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "";
+  const occurredAt = formatSeoulMonthDay(item.occurred_at);
+  const traitTags = buildTraitTags(item);
 
   const handleDelete = async () => {
     if (!session?.access_token) return;
@@ -84,18 +107,20 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
         )}
       </div>
 
-      <div className="min-w-0 flex-1">
-        <Text variant="body" className="font-medium">
-          {occurredAt}
-        </Text>
-        {item.note ? (
-          <Text
-            variant="caption"
-            color="caption"
-            className="mt-0.5 line-clamp-2"
-          >
-            {item.note}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        {occurredAt ? (
+          <Text variant="body" className="font-medium">
+            {occurredAt}
           </Text>
+        ) : null}
+        {traitTags.length > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {traitTags.map((tag) => (
+              <span key={tag} className={traitChipClass}>
+                {tag}
+              </span>
+            ))}
+          </div>
         ) : null}
         <Link
           href={
@@ -103,13 +128,13 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
               ? `/map?lat=${item.lat}&lng=${item.lng}&sightingId=${item.id}`
               : `/map?sightingId=${item.id}`
           }
-          className="text-action-primary mt-2 inline-block text-sm font-medium hover:underline"
+          className="text-action-primary inline-block text-sm font-medium hover:underline"
         >
           지도에서 보기
         </Link>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 self-center">
+      <div className="flex shrink-0 items-center self-center">
         <Link
           href={`/my/sightings/${item.id}/edit`}
           className={`${quietIconClass} text-text-main hover:bg-surface-soft`}
@@ -131,31 +156,37 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
           </svg>
         </Link>
         {session ? (
-          <button
-            type="button"
-            onClick={() => setShowConfirm(true)}
-            disabled={deleting}
-            className={`${quietIconClass} text-text-caption hover:bg-surface-soft hover:text-error`}
-            aria-label="삭제"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
+          <>
+            <span
+              className="bg-border-subtle mx-0.5 h-5 w-px shrink-0"
               aria-hidden
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm(true)}
+              disabled={deleting}
+              className={`${quietIconClass} text-text-caption hover:bg-surface-soft hover:text-error`}
+              aria-label="삭제"
             >
-              <path d="M3 6h18" />
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              <line x1="10" y1="11" x2="10" y2="17" />
-              <line x1="14" y1="11" x2="14" y2="17" />
-            </svg>
-          </button>
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden
+              >
+                <path d="M3 6h18" />
+                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                <line x1="10" y1="11" x2="10" y2="17" />
+                <line x1="14" y1="11" x2="14" y2="17" />
+              </svg>
+            </button>
+          </>
         ) : null}
       </div>
 

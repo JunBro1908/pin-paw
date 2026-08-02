@@ -8,7 +8,7 @@ import { parsePagination } from "@/shared/lib/api-input";
 /**
  * GET /api/v1/me/sightings — 내 제보 목록 (인증 필수, userId 기반)
  * Query: limit (default 20), offset (default 0)
- * created_at DESC 정렬
+ * created_at DESC 정렬. trait_color/size/species 포함 (카드 태그용).
  */
 export async function GET(request: Request) {
   const supabase = await createServerSupabaseClient();
