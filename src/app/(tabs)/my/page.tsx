@@ -3,76 +3,85 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type { User } from "@supabase/supabase-js";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
+import { Button } from "@/shared/ui/Button";
 import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { ActiveLostCaseCard } from "@/features/lost-posts/components/ActiveLostCaseCard";
+import { LostCaseNextActions } from "@/features/lost-posts/components/LostCaseNextActions";
 import { LostPostList } from "@/features/lost-posts/components/LostPostList";
+import { selectActiveLostCase } from "@/features/lost-posts/lib/active-lost-case";
+import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
 import { MySightingList } from "@/features/sightings/components/MySightingList";
 import { cn } from "@/shared/lib/cn";
 
 function MyPageContent() {
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const [lostPostsOpen, setLostPostsOpen] = useState(true);
-  const [sightingsOpen, setSightingsOpen] = useState(true);
+  const { items, loading, refreshing, error, reload } = useMyLostPosts();
+  const [lostPostsOpen, setLostPostsOpen] = useState(false);
+  const [sightingsOpen, setSightingsOpen] = useState(false);
+
+  const activeCase = selectActiveLostCase(items);
 
   const handleSignOut = async () => {
     await signOut();
     router.push("/");
   };
 
-  const displayName =
-    user?.user_metadata?.name ??
-    user?.user_metadata?.nickname ??
-    user?.email?.split("@")[0] ??
-    "사용자";
-  const displayEmail = user?.email ?? "";
-
   return (
     <Container className="py-10">
-      <div className="border-border-subtle bg-surface mb-6 rounded-2xl border p-5 shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="bg-primary-soft h-14 w-14 shrink-0 rounded-full" />
-          <div className="min-w-0 flex-1">
-            <Text variant="body" className="font-bold">
-              {displayName}님
-            </Text>
-            {displayEmail ? (
-              <Text
-                variant="caption"
-                color="caption"
-                className="block truncate"
-              >
-                {displayEmail}
-              </Text>
-            ) : null}
-          </div>
-          <button
-            type="button"
-            onClick={handleSignOut}
-            className="text-primary text-sm font-medium hover:underline"
-          >
-            로그아웃
-          </button>
-        </div>
-        <div className="mt-4 flex flex-wrap gap-3">
-          <Link
-            href="/my/notifications"
-            className="text-primary text-sm font-medium hover:underline"
-          >
-            알림
-          </Link>
-          <Link
-            href="/my/settings"
-            className="text-primary text-sm font-medium hover:underline"
-          >
-            설정
-          </Link>
-        </div>
-      </div>
+      <Text as="h1" variant="title" className="mb-6">
+        내 활동
+      </Text>
 
-      {/* 내 유실글 — 드롭다운 */}
+      {loading && !activeCase ? (
+        <div className="mb-6 space-y-3">
+          <div className="bg-border-subtle h-3 w-40 animate-pulse rounded-full" />
+          <div className="bg-border-subtle h-3 w-28 animate-pulse rounded-full" />
+          <Text variant="caption" color="caption">
+            활성 사건을 불러오는 중...
+          </Text>
+        </div>
+      ) : null}
+
+      {error && items.length === 0 ? (
+        <div className="border-border-subtle bg-surface mb-6 rounded-2xl border p-5 text-center shadow-sm">
+          <Text variant="body" color="error" className="mb-3 block">
+            {error}
+          </Text>
+          <Button variant="secondary" onClick={() => void reload()}>
+            다시 시도
+          </Button>
+        </div>
+      ) : null}
+
+      {!loading && !error && !activeCase ? (
+        <div className="border-border-subtle bg-surface mb-6 rounded-2xl border border-dashed p-6 text-center shadow-sm">
+          <Text variant="body" className="mb-2 font-medium">
+            찾는 중인 유실 사건이 없어요
+          </Text>
+          <Text variant="caption" color="caption" className="mb-4 block">
+            유실 사건을 등록하면 확인할 제보와 지도 흔적을 여기서 이어서 볼 수
+            있어요.
+          </Text>
+          <Link href="/my/lost-posts/new">
+            <Button variant="primary">유실 사건 등록하기</Button>
+          </Link>
+        </div>
+      ) : null}
+
+      {activeCase ? (
+        <>
+          <ActiveLostCaseCard item={activeCase} refreshing={refreshing} />
+          <LostCaseNextActions lostPostId={activeCase.id} />
+        </>
+      ) : null}
+
+      <AccountSurface user={user} onSignOut={handleSignOut} />
+
       <section className="border-border-subtle bg-surface mb-4 overflow-hidden rounded-2xl border shadow-sm">
         <button
           type="button"
@@ -83,7 +92,7 @@ function MyPageContent() {
           id="my-lost-posts-heading"
         >
           <Text variant="title" className="font-semibold">
-            내 유실글
+            지난 유실글
           </Text>
           <span
             className={cn(
@@ -113,12 +122,18 @@ function MyPageContent() {
             </Link>
           </div>
           <div className="px-5 pb-5">
-            {lostPostsOpen ? <LostPostList /> : null}
+            {lostPostsOpen ? (
+              <LostPostList
+                items={items}
+                loading={loading}
+                refreshing={refreshing}
+                error={error}
+              />
+            ) : null}
           </div>
         </div>
       </section>
 
-      {/* 내 제보 — 드롭다운 */}
       <section className="border-border-subtle bg-surface mb-4 overflow-hidden rounded-2xl border shadow-sm">
         <button
           type="button"
@@ -156,6 +171,60 @@ function MyPageContent() {
         </div>
       </section>
     </Container>
+  );
+}
+
+function AccountSurface({
+  user,
+  onSignOut,
+}: {
+  user: User | null;
+  onSignOut: () => void | Promise<void>;
+}) {
+  const displayName =
+    user?.user_metadata?.name ??
+    user?.user_metadata?.nickname ??
+    user?.email?.split("@")[0] ??
+    "사용자";
+  const displayEmail = user?.email ?? "";
+
+  return (
+    <div className="border-border-subtle bg-surface mb-6 rounded-2xl border p-5 shadow-sm">
+      <div className="flex items-center gap-4">
+        <div className="bg-primary-soft h-14 w-14 shrink-0 rounded-full" />
+        <div className="min-w-0 flex-1">
+          <Text variant="body" className="font-bold">
+            {displayName}님
+          </Text>
+          {displayEmail ? (
+            <Text variant="caption" color="caption" className="block truncate">
+              {displayEmail}
+            </Text>
+          ) : null}
+        </div>
+        <button
+          type="button"
+          onClick={() => void onSignOut()}
+          className="text-primary text-sm font-medium hover:underline"
+        >
+          로그아웃
+        </button>
+      </div>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <Link
+          href="/my/notifications"
+          className="text-primary text-sm font-medium hover:underline"
+        >
+          알림
+        </Link>
+        <Link
+          href="/my/settings"
+          className="text-primary text-sm font-medium hover:underline"
+        >
+          설정
+        </Link>
+      </div>
+    </div>
   );
 }
 

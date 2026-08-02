@@ -5,9 +5,28 @@ import { Button } from "@/shared/ui/Button";
 import Link from "next/link";
 import { LostPostCard } from "./LostPostCard";
 import { useMyLostPosts } from "../hooks/useMyLostPosts";
+import type { LostPostItem } from "../model/types";
 
-export function LostPostList() {
-  const { items, loading, refreshing, error } = useMyLostPosts();
+interface LostPostListProps {
+  items?: LostPostItem[];
+  loading?: boolean;
+  refreshing?: boolean;
+  error?: string | null;
+}
+
+export function LostPostList({
+  items,
+  loading: providedLoading,
+  refreshing: providedRefreshing,
+  error: providedError,
+}: LostPostListProps = {}) {
+  const hooked = useMyLostPosts({ enabled: items === undefined });
+  const resolvedItems = items ?? hooked.items;
+  const loading =
+    items !== undefined ? Boolean(providedLoading) : hooked.loading;
+  const refreshing =
+    items !== undefined ? Boolean(providedRefreshing) : hooked.refreshing;
+  const error = items !== undefined ? (providedError ?? null) : hooked.error;
 
   if (loading) {
     return (
@@ -21,7 +40,7 @@ export function LostPostList() {
     );
   }
 
-  if (error && items.length === 0) {
+  if (error && resolvedItems.length === 0) {
     return (
       <div className="flex min-h-[200px] flex-col items-center justify-center gap-2">
         <Text variant="body" color="error">
@@ -31,7 +50,7 @@ export function LostPostList() {
     );
   }
 
-  if (items.length === 0) {
+  if (resolvedItems.length === 0) {
     return (
       <div className="flex min-h-[180px] flex-col items-center justify-center gap-4 rounded-2xl border border-dashed border-gray-200 bg-gray-50/50 py-10 dark:border-gray-700 dark:bg-gray-800/30">
         <Text variant="body" color="caption" className="text-center">
@@ -59,7 +78,7 @@ export function LostPostList() {
         </Text>
       ) : null}
       <ul className="space-y-4">
-        {items.map((item) => (
+        {resolvedItems.map((item) => (
           <li key={item.id}>
             <LostPostCard item={item} />
           </li>
