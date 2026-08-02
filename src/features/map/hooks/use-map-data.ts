@@ -312,11 +312,10 @@ export function useMapData({
   return {
     ...view,
     items: filteredItems,
-    // Own lost posts + bookmark trails appear on "전체" and bookmark.
+    // Own lost-post pins appear on "전체" and bookmark; trails only on bookmark.
     lostPosts:
       layer === "bookmark" || layer === "default" ? view.lostPosts : [],
-    paths:
-      layer === "bookmark" || layer === "default" ? view.paths : [],
+    paths: layer === "bookmark" ? view.paths : [],
     loadViewport,
     reloadBookmark,
     patchFeedback,

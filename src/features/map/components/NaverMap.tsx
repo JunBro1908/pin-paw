@@ -128,10 +128,15 @@ export function NaverMap({
     setClaimedLostPostsForSighting(null);
   }, []);
 
-  /** 지도 마커 레이어 필터 (전체 / 안 본 것 / 북마크) — localStorage로 유지 */
-  const [mapLayer, setMapLayer] = useState<MapLayer>(() =>
-    readStoredMapLayer()
-  );
+  /** 지도 마커 레이어 필터 (전체 / 안 본 것 / 북마크) — localStorage로 유지.
+   * 추천 「지도에서 보기」진입 시에는 북마크/신규 레이어면 제보가 안 보이므로 ALL로 강제. */
+  const [mapLayer, setMapLayer] = useState<MapLayer>(() => {
+    if (initialFocusSightingId) {
+      writeStoredMapLayer("default");
+      return "default";
+    }
+    return readStoredMapLayer();
+  });
   const {
     items: itemsInView,
     feedback: sightingFeedbackMap,
@@ -750,7 +755,7 @@ export function NaverMap({
     if (mapLayer !== "bookmark" && prev === "bookmark") fetchClusters();
   }, [mapLayer, isLoaded, fetchClusters]);
 
-  // Own lost posts + trail paths load for "전체" and bookmark.
+  // Own lost posts load for "전체" and bookmark; trail animation is bookmark-only.
   // Lost-post pins stay outside sighting clusters (separate marker group + zIndex).
   useEffect(() => {
     if (!isAuthenticated || !accessToken) return;
@@ -766,7 +771,7 @@ export function NaverMap({
     renderer.renderPaths({
       map: mapInstanceRef.current,
       paths: pathData,
-      enabled: mapLayer === "bookmark" || mapLayer === "default",
+      enabled: mapLayer === "bookmark",
     });
     return () => renderer.clearPaths();
   }, [isLoaded, mapLayer, pathData]);

@@ -31,7 +31,8 @@ test("default map layer renders own lost posts with sightings", async () => {
     data,
     /layer === "bookmark" \|\| layer === "default" \? view\.lostPosts/
   );
-  assert.match(
+  assert.match(data, /paths: layer === "bookmark" \? view\.paths/);
+  assert.doesNotMatch(
     data,
     /layer === "bookmark" \|\| layer === "default" \? view\.paths/
   );
@@ -39,7 +40,8 @@ test("default map layer renders own lost posts with sightings", async () => {
     map,
     /mapLayer === "bookmark" \|\| mapLayer === "default"/
   );
-  assert.match(
+  assert.match(map, /enabled: mapLayer === "bookmark"/);
+  assert.doesNotMatch(
     map,
     /enabled: mapLayer === "bookmark" \|\| mapLayer === "default"/
   );
@@ -51,7 +53,7 @@ test("default map layer renders own lost posts with sightings", async () => {
   );
 });
 
-test("bookmark trails use action-primary green on all layers", async () => {
+test("bookmark trails animate only on the bookmark layer", async () => {
   const renderer = await readFile(
     "src/features/map/lib/map-layer-renderer.ts",
     "utf8"

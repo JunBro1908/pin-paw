@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Icon, type IconName } from "@/shared/ui/Icon";
+import { Icon } from "@/shared/ui/Icon";
 import { cn } from "@/shared/lib/cn";
 import type { MapLayer } from "../lib/map-domain";
 
@@ -18,10 +18,11 @@ interface MapToolbarProps {
 const LAYER_FILTERS: ReadonlyArray<{
   layer: MapLayer;
   label: string;
-  icon: IconName;
+  text?: "All" | "New";
+  icon?: "star";
 }> = [
-  { layer: "default", label: "전체", icon: "layers" },
-  { layer: "unseen", label: "신규 제보", icon: "sparkle" },
+  { layer: "default", label: "전체", text: "All" },
+  { layer: "unseen", label: "신규 제보", text: "New" },
   { layer: "bookmark", label: "북마크", icon: "star" },
 ];
 
@@ -53,18 +54,23 @@ export function MapToolbar({
                 aria-label={filter.label}
                 aria-pressed={selected}
                 data-layer={filter.layer}
-                data-layer-icon={filter.icon}
                 onClick={() => onLayerChange(filter.layer)}
                 className={cn(
                   "flex h-11 w-full items-center justify-center rounded-xl transition-colors",
                   selected
                     ? filter.layer === "bookmark"
-                      ? "bg-primary-soft text-yellow-500"
+                      ? "bg-primary-soft text-orange-500"
                       : "bg-primary-soft text-action-primary"
                     : "text-text-sub hover:bg-surface-soft"
                 )}
               >
-                <Icon name={filter.icon} size={20} />
+                {filter.text ? (
+                  <span className="text-xs font-semibold tracking-tight">
+                    {filter.text}
+                  </span>
+                ) : (
+                  <Icon name="star" size={20} className="text-orange-500" />
+                )}
               </button>
             );
           })}
