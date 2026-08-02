@@ -16,7 +16,7 @@ export function BackLink({ href, children, className }: BackLinkProps) {
     <Link
       href={href}
       className={cn(
-        "text-action-primary focus-visible:outline-action-primary mb-6 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
+        "text-action-primary focus-visible:outline-action-primary mb-6 inline-flex min-h-11 items-center gap-1.5 text-sm font-medium no-underline hover:no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
         className
       )}
     >
