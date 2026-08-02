@@ -31,6 +31,7 @@ test("icons are local SVGs and Text supports real headings", async () => {
 test("buttons expose 44px target and primary action token", async () => {
   const button = await read("src/shared/ui/Button.tsx");
   assert.match(button, /min-h-11/);
+  assert.match(button, /min-w-11/);
   assert.match(button, /bg-action-primary/);
   assert.match(button, /focus-visible/);
 });
