@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
     ".venv/**",
     "sim_test/.venv/**",
     "sim_test/out/**",
+    ".worktrees/**",
   ]),
 ]);
 

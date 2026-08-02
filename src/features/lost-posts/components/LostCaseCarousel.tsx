@@ -41,7 +41,6 @@ export function LostCaseCarousel({
 }: LostCaseCarouselProps) {
   const scrollerRef = useRef<HTMLDivElement>(null);
   const headingId = useId();
-  const [pageIndex, setPageIndex] = useState(0);
 
   const resolveIndex = useCallback(
     (id: string | null | undefined) => {
@@ -52,9 +51,15 @@ export function LostCaseCarousel({
     [items]
   );
 
-  useEffect(() => {
-    setPageIndex(resolveIndex(selectedId ?? items[0]?.id));
-  }, [items, selectedId, resolveIndex]);
+  const propPageIndex = resolveIndex(selectedId ?? items[0]?.id);
+  const [pageIndex, setPageIndex] = useState(propPageIndex);
+  const [syncedPropPageIndex, setSyncedPropPageIndex] = useState(propPageIndex);
+
+  // Keep pager aligned with selectedId/items without an effect-driven setState.
+  if (propPageIndex !== syncedPropPageIndex) {
+    setSyncedPropPageIndex(propPageIndex);
+    setPageIndex(propPageIndex);
+  }
 
   useEffect(() => {
     const scroller = scrollerRef.current;
