@@ -205,7 +205,8 @@ extraneous 패키지가 6개 표시되므로, 승인 후 `npm ci`로 깨끗한 �
 - [x] emoji 없는 4개 하단 탐색
 - [x] 비회원 한 화면 제보와 원시 좌표 비노출
 - [x] 기존 upload intent/idempotency 회귀 없음
-- [ ] typecheck, lint, unit test, production build 통과
+- [x] typecheck, 변경 파일 ESLint/Prettier, unit test 277개 통과
+- [ ] production build, 브라우저, DB gate 통과
 
 2026-08-02 KST 검증에서
 `source /Users/junbro1908/.nvm/nvm.sh && nvm use --silent && npm run typecheck && npm run lint && npm test && npm run build`는
@@ -221,6 +222,11 @@ extraneous 패키지가 6개 표시되므로, 승인 후 `npm ci`로 깨끗한 �
 `src/app/(tabs)/layout.tsx`이며, 총 6개 파일(`layout.tsx` 및 `src/features/sightings` 내
 5개 파일)이 formatting 차이로 보고됐다. 이 checkpoint에서는 기존 formatting/lint
 부채를 수정하지 않는다.
+
+2026-08-02 KST 최종 UX 수정 후 별도 검증에서 `npm test`는 277개 모두 통과했고,
+`npm run typecheck`도 오류 없이 통과했다. 이번 변경 파일만 대상으로 한 ESLint와
+Prettier 검사도 종료 코드 0이었다. 이 수정 wave에서는 production build, 브라우저
+실기기 탭 테스트, DB gate를 실행하지 않았으므로 해당 항목은 완료로 표시하지 않는다.
 
 ## 9. 진행도 추정
 
