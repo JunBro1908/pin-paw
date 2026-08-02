@@ -7,11 +7,12 @@ import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 import { parseRecommendationQuery } from "@/shared/lib/api-input";
 import { createRequestLogger } from "@/shared/lib/structured-log";
 import { protectRecommendationLocations } from "@/shared/lib/privacy-location";
+import { toPublicRecommendationItem } from "@/features/recommendations/lib/recommendation-presentation";
 
 const CACHE_TTL_SECONDS = 180;
 
 function buildCacheKey(radiusKm: number, days: number, topK: number): string {
-  return `${radiusKm}_${days}_${topK}`;
+  return `evidence-v2_${radiusKm}_${days}_${topK}`;
 }
 
 /**
@@ -81,6 +82,9 @@ export async function GET(request: Request) {
   type RecoItem = {
     sightingId: string;
     similarity: number;
+    distanceKm: number;
+    timeDeltaHours: number;
+    matchedTraits: string[];
     photoKeys: string[];
     occurredAt: string;
     lat: number;
@@ -92,10 +96,9 @@ export async function GET(request: Request) {
     locationPrecision: "approximate";
     claimedAsMyDog: boolean;
   };
-
   const applyFeedback = async (
     rawItems: RecoItem[]
-  ): Promise<ProtectedRecoItem[]> => {
+  ): Promise<ReturnType<typeof toPublicRecommendationItem>[]> => {
     if (rawItems.length === 0) return [];
     const { data: visibleIds, error: visibilityError } = await supabaseAuth.rpc(
       "filter_blocked_sighting_ids",
@@ -130,12 +133,13 @@ export async function GET(request: Request) {
       ...visibleItems.filter((i) => claimedSet.has(i.sightingId)),
       ...visibleItems.filter((i) => !claimedSet.has(i.sightingId)),
     ];
-    return protectRecommendationLocations(
+    const protectedItems: ProtectedRecoItem[] = protectRecommendationLocations(
       claimedFirst.map((i) => ({
         ...i,
         claimedAsMyDog: claimedSet.has(i.sightingId),
       }))
     );
+    return protectedItems.map(toPublicRecommendationItem);
   };
 
   if (!cacheError && cached?.result) {

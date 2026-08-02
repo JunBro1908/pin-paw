@@ -16,12 +16,16 @@ import { StatusBadge } from "@/features/lost-posts/components/StatusBadge";
 import { createClient } from "@/shared/supabase/client";
 import { useRecommendations } from "@/features/recommendations/hooks/useRecommendations";
 import { RecommendationCard } from "@/features/recommendations/components/RecommendationCard";
+import {
+  applyDraftRange,
+  createRangeState,
+  updateDraftRange,
+} from "@/features/recommendations/lib/recommendation-interaction";
 import { trackFunnelEvent } from "@/shared/lib/funnel-client";
 
 function RecommendContent() {
   const searchParams = useSearchParams();
   const lostPostId = searchParams.get("lostPostId");
-  const { session } = useAuth();
   const {
     items: lostPosts,
     loading,
@@ -34,11 +38,11 @@ function RecommendContent() {
   if (!lostPostId) {
     return (
       <Container className="py-10">
-        <Text variant="title" className="mb-2">
-          추천
+        <Text as="h1" variant="title" className="mb-2">
+          확인할 제보
         </Text>
         <Text variant="caption" color="caption" className="mb-6 block">
-          유실글을 선택하면 해당 유실글에 맞는 추천 제보를 볼 수 있습니다.
+          찾고 있는 동물을 선택하면 먼저 확인할 목격 제보를 모아 보여드려요.
         </Text>
         {loading ? (
           <div className="space-y-3">
@@ -100,17 +104,15 @@ function RecommendContent() {
 
 const RADIUS_OPTIONS = [1, 2, 5, 8, 10, 20, 50, 100] as const;
 const DAYS_OPTIONS = [1, 3, 7, 8, 14, 30] as const;
-const TOP_K_OPTIONS = [5, 10, 20, 30] as const;
 
 const DEFAULT_RADIUS_KM = 8;
 const DEFAULT_DAYS = 8;
-const DEFAULT_TOP_K = 10;
 
 function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
   const { session } = useAuth();
-  const [radiusKm, setRadiusKm] = useState(DEFAULT_RADIUS_KM);
-  const [days, setDays] = useState(DEFAULT_DAYS);
-  const [topK, setTopK] = useState(DEFAULT_TOP_K);
+  const [range, setRange] = useState(() =>
+    createRangeState({ radiusKm: DEFAULT_RADIUS_KM, days: DEFAULT_DAYS })
+  );
 
   const { data: post, isLoading, error } = useLostPost(lostPostId);
   const {
@@ -118,11 +120,7 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
     error: recoError,
     isLoading: recoLoading,
     mutate: refetchRecommendations,
-  } = useRecommendations(lostPostId, session?.access_token, {
-    radiusKm,
-    days,
-    topK,
-  });
+  } = useRecommendations(lostPostId, session?.access_token, range.applied);
 
   useEffect(() => {
     if (!session?.access_token || recommendations?.status !== "ready") return;
@@ -131,8 +129,8 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
       lostPostId,
       properties: {
         count: recommendations.items?.length ?? 0,
-        radiusKm,
-        days,
+        radiusKm: range.applied.radiusKm,
+        days: range.applied.days,
       },
     });
   }, [
@@ -140,8 +138,8 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
     recommendations?.status,
     recommendations?.items?.length,
     lostPostId,
-    radiusKm,
-    days,
+    range.applied.radiusKm,
+    range.applied.days,
   ]);
 
   const client = createClient();
@@ -179,8 +177,8 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
         ← 다른 유실글 선택
       </Link>
 
-      <Text variant="title" className="mb-3">
-        추천 제보
+      <Text as="h1" variant="title" className="mb-3">
+        확인할 제보
       </Text>
 
       {isLoading ? (
@@ -242,9 +240,10 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
       {error || !post ? null : (
         <>
           <details className="border-border-subtle bg-surface mb-6 rounded-xl border shadow-sm">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 px-4 py-3 text-sm [&::-webkit-details-marker]:hidden">
+            <summary className="focus-visible:outline-action-primary flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
               <Text variant="caption" color="caption">
-                추천 조건: 반경 {radiusKm}km · {days}일 · {topK}개
+                탐색 범위 · 반경 {range.applied.radiusKm}km ·{" "}
+                {range.applied.days}일
               </Text>
               <span className="text-caption shrink-0 select-none" aria-hidden>
                 ▼
@@ -257,9 +256,15 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
                     반경
                   </Text>
                   <select
-                    value={radiusKm}
-                    onChange={(e) => setRadiusKm(Number(e.target.value))}
-                    className="border-border-subtle focus:ring-primary min-w-0 rounded-md border bg-transparent px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
+                    value={range.draft.radiusKm}
+                    onChange={(e) =>
+                      setRange((prev) =>
+                        updateDraftRange(prev, {
+                          radiusKm: Number(e.target.value),
+                        })
+                      )
+                    }
+                    className="border-border-subtle focus:ring-action-primary min-h-11 min-w-0 rounded-xl border bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
                   >
                     {RADIUS_OPTIONS.map((v) => (
                       <option key={v} value={v}>
@@ -273,9 +278,15 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
                     기간
                   </Text>
                   <select
-                    value={days}
-                    onChange={(e) => setDays(Number(e.target.value))}
-                    className="border-border-subtle focus:ring-primary min-w-0 rounded-md border bg-transparent px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
+                    value={range.draft.days}
+                    onChange={(e) =>
+                      setRange((prev) =>
+                        updateDraftRange(prev, {
+                          days: Number(e.target.value),
+                        })
+                      )
+                    }
+                    className="border-border-subtle focus:ring-action-primary min-h-11 min-w-0 rounded-xl border bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
                   >
                     {DAYS_OPTIONS.map((v) => (
                       <option key={v} value={v}>
@@ -284,36 +295,20 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
                     ))}
                   </select>
                 </label>
-                <label className="flex items-center gap-1.5">
-                  <Text variant="caption" color="caption">
-                    개수
-                  </Text>
-                  <select
-                    value={topK}
-                    onChange={(e) => setTopK(Number(e.target.value))}
-                    className="border-border-subtle focus:ring-primary min-w-0 rounded-md border bg-transparent px-2.5 py-1.5 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
-                  >
-                    {TOP_K_OPTIONS.map((v) => (
-                      <option key={v} value={v}>
-                        {v}개
-                      </option>
-                    ))}
-                  </select>
-                </label>
               </div>
               <Button
                 variant="primary"
-                className="w-full py-2 text-sm"
-                onClick={() => refetchRecommendations()}
+                className="min-h-11 w-full text-sm"
+                onClick={() => setRange(applyDraftRange)}
               >
-                조회
+                적용
               </Button>
             </div>
           </details>
 
           <div className="mb-4 flex flex-wrap items-center gap-2">
             <Text variant="caption" color="caption">
-              이 유실글과 유사한 목격 제보입니다.
+              거리, 목격 시각, 특징을 바탕으로 확인 순서를 정리했습니다.
             </Text>
             {calculatedAtLabel && (
               <Text variant="caption" color="caption">
@@ -322,7 +317,7 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
             )}
             <Button
               variant="secondary"
-              className="ml-auto py-1.5 text-sm"
+              className="ml-auto min-h-11 text-sm"
               onClick={() => refetchRecommendations()}
             >
               새로고침
@@ -338,14 +333,14 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
           ) : recoLoading || recommendations?.status === "pending" ? (
             <div className="border-border-subtle rounded-xl border p-6 text-center">
               <Text variant="body" color="caption">
-                추천 준비중...
+                확인할 제보를 정리하고 있습니다...
               </Text>
             </div>
           ) : recommendations?.status === "ready" &&
             (!recommendations.items || recommendations.items.length === 0) ? (
             <div className="border-border-subtle rounded-xl border p-6 text-center">
               <Text variant="body" color="caption">
-                아직 유사한 목격 제보가 없습니다.
+                이 탐색 범위에는 아직 확인할 목격 제보가 없습니다.
               </Text>
             </div>
           ) : (

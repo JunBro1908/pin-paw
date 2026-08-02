@@ -2,12 +2,10 @@
 
 import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import {
-  REPORT_CATEGORIES,
-  type ReportCategory,
-} from "@/shared/lib/api-input";
+import { REPORT_CATEGORIES, type ReportCategory } from "@/shared/lib/api-input";
 import { Button } from "@/shared/ui/Button";
 import { Text } from "@/shared/ui/Text";
+import { useDialogFocus } from "@/shared/ui/dialog-focus";
 
 const CATEGORY_LABELS: Record<ReportCategory, string> = {
   immediate_danger: "즉시 위험",
@@ -38,6 +36,10 @@ export function ReportBlockSheet({
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { dialogRef, closeButtonRef } = useDialogFocus({
+    active: true,
+    onClose,
+  });
 
   const submitReport = async () => {
     if (!session?.access_token) return;
@@ -96,6 +98,7 @@ export function ReportBlockSheet({
 
   return (
     <div
+      ref={dialogRef as React.RefObject<HTMLDivElement>}
       className="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 p-4 sm:items-center"
       role="dialog"
       aria-modal="true"
@@ -114,7 +117,7 @@ export function ReportBlockSheet({
         <label className="mt-4 block text-sm font-medium">
           신고 유형
           <select
-            className="mt-1 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 dark:border-gray-600 dark:bg-gray-800"
+            className="mt-1 min-h-11 w-full rounded-xl border border-gray-200 bg-white px-3 py-3 dark:border-gray-600 dark:bg-gray-800"
             value={category}
             onChange={(event) =>
               setCategory(event.target.value as ReportCategory)
@@ -150,7 +153,7 @@ export function ReportBlockSheet({
         <div className="mt-4 space-y-2">
           <Button
             type="button"
-            className="w-full"
+            className="min-h-11 w-full"
             isLoading={busy}
             disabled={reason.trim().length < 2}
             onClick={() => void submitReport()}
@@ -161,21 +164,21 @@ export function ReportBlockSheet({
             <Button
               type="button"
               variant="secondary"
-              className="w-full"
+              className="min-h-11 w-full"
               isLoading={busy}
               onClick={() => void blockAuthor()}
             >
               작성자 차단
             </Button>
           ) : null}
-          <Button
+          <button
+            ref={closeButtonRef}
             type="button"
-            variant="secondary"
-            className="w-full"
+            className="border-action-primary bg-surface text-text-main hover:bg-surface-soft focus-visible:outline-action-primary flex min-h-11 w-full min-w-11 items-center justify-center rounded-xl border px-4 py-2 font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-95"
             onClick={onClose}
           >
             닫기
-          </Button>
+          </button>
         </div>
       </div>
     </div>

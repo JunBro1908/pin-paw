@@ -11,7 +11,11 @@ import { SightingDetailCard } from "@/features/sightings/components/SightingDeta
 import type { SightingDetailData } from "@/features/sightings/components/SightingDetailCard";
 import { ReportBlockSheet } from "@/features/moderation/components/ReportBlockSheet";
 import { trackFunnelEvent } from "@/shared/lib/funnel-client";
-import type { RecommendationItem } from "../model/types";
+import { useDialogFocus } from "@/shared/ui/dialog-focus";
+import {
+  RECOMMENDATION_PRIORITY_LABELS,
+  type RecommendationItem,
+} from "../model/types";
 
 interface RecommendationCardProps {
   item: RecommendationItem;
@@ -38,6 +42,12 @@ export function RecommendationCard({
   const [actionToast, setActionToast] = useState<string | null>(null);
   const [claimed, setClaimed] = useState(Boolean(item.claimedAsMyDog));
   const [claimPending, setClaimPending] = useState(false);
+
+  const closeModal = useCallback(() => setModalOpen(false), []);
+  const { dialogRef } = useDialogFocus({
+    active: !reportOpen && modalOpen,
+    onClose: closeModal,
+  });
 
   useEffect(() => {
     setClaimed(Boolean(item.claimedAsMyDog));
@@ -108,8 +118,6 @@ export function RecommendationCard({
       .catch(() => setDetailError("제보를 불러오는 중 오류가 발생했습니다."))
       .finally(() => setDetailLoading(false));
   }, [item.sightingId, accessToken, handleRecordSeen]);
-
-  const closeModal = useCallback(() => setModalOpen(false), []);
 
   const handleMapClick = useCallback(() => {
     closeModal();
@@ -190,7 +198,7 @@ export function RecommendationCard({
           e.stopPropagation();
           void handleClaimToggle(e);
         }}
-        className="rounded-full p-2 transition-transform active:scale-95 disabled:opacity-60"
+        className="focus-visible:outline-action-primary flex min-h-11 min-w-11 items-center justify-center rounded-full p-1.5 transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-95 disabled:opacity-60"
         aria-label={claimed ? "북마크 해제" : "북마크 등록"}
       >
         {claimed ? (
@@ -229,17 +237,13 @@ export function RecommendationCard({
           <Link
             href={mapHref}
             onClick={handleRecordSeen}
-            className="text-primary ml-auto text-xs font-medium"
+            className="text-action-primary focus-visible:outline-action-primary ml-auto inline-flex min-h-11 items-center rounded-lg px-2 text-xs font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
           >
             지도에서 보기 →
           </Link>
         </div>
         <div className="flex items-start justify-between gap-3">
-          <button
-            type="button"
-            onClick={openModal}
-            className="flex min-w-0 flex-1 gap-4 text-left transition-shadow hover:shadow-md"
-          >
+          <div className="flex min-w-0 flex-1 gap-4">
             <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-gray-100">
               {thumbUrl ? (
                 <Image
@@ -256,32 +260,59 @@ export function RecommendationCard({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <Text variant="body" className="font-medium">
+              <Text
+                variant="caption"
+                className="text-action-primary inline-flex rounded-full bg-green-50 px-2 py-1 font-bold dark:bg-green-950/40"
+              >
+                {RECOMMENDATION_PRIORITY_LABELS[item.priority]}
+              </Text>
+              <Text variant="body" className="mt-2 block font-semibold">
                 {occurredAt}
               </Text>
-              <Text variant="caption" color="caption" className="mt-0.5 block">
-                유사도 {(item.similarity * 100).toFixed(1)}%
-              </Text>
+              <ul
+                aria-label="확인 근거"
+                className="mt-2 flex flex-wrap gap-1.5"
+              >
+                {item.evidence.map((evidence) => (
+                  <li
+                    key={evidence}
+                    className="bg-surface-soft text-text-sub rounded-lg px-2 py-1 text-xs"
+                  >
+                    {evidence}
+                  </li>
+                ))}
+              </ul>
               <Text
                 variant="caption"
                 color="caption"
-                className="text-primary mt-1 block"
+                className="mt-2 block leading-relaxed"
+              >
+                {
+                  "근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을 보장하지 않습니다."
+                }
+              </Text>
+              <button
+                type="button"
+                onClick={openModal}
+                className="text-primary focus-visible:outline-action-primary mt-1 inline-flex min-h-11 items-center rounded-lg text-sm font-medium focus-visible:outline-2 focus-visible:outline-offset-2"
               >
                 상세 보기
-              </Text>
+              </button>
             </div>
-          </button>
+          </div>
           {bookmarkButton}
         </div>
       </div>
 
-      {/* 상세 팝업 모달 (지도 상세와 동일한 카드 내용, 중앙 배치) */}
       {modalOpen && (
         <div
+          ref={dialogRef as React.RefObject<HTMLDivElement>}
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
           onClick={closeModal}
           role="dialog"
-          aria-modal="true"
+          aria-modal={reportOpen ? undefined : "true"}
+          aria-hidden={reportOpen ? true : undefined}
+          inert={reportOpen ? true : undefined}
           aria-label="제보 상세"
         >
           <div
@@ -289,14 +320,14 @@ export function RecommendationCard({
             onClick={(e) => e.stopPropagation()}
           >
             {detailLoading && (
-              <div className="bg-surface rounded-[32px] border border-gray-200 px-6 py-12 text-center shadow-[0_8px_40px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:border-gray-700 dark:ring-white/10">
+              <div className="border-border-subtle bg-surface rounded-2xl border px-6 py-12 text-center shadow-sm">
                 <Text variant="body" color="caption">
                   로딩 중...
                 </Text>
               </div>
             )}
             {detailError && !detailLoading && (
-              <div className="bg-surface rounded-[32px] border border-gray-200 px-6 py-8 shadow-[0_8px_40px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:border-gray-700 dark:ring-white/10">
+              <div className="border-border-subtle bg-surface rounded-2xl border px-6 py-8 shadow-sm">
                 <Text variant="body" color="caption" className="mb-4 block">
                   {detailError}
                 </Text>
