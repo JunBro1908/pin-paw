@@ -9,7 +9,10 @@ export type IconName =
   | "location"
   | "clock"
   | "paw"
-  | "star";
+  | "star"
+  | "user"
+  | "layers"
+  | "sparkle";
 
 interface IconProps {
   name: IconName;
@@ -46,6 +49,25 @@ export function Icon({ name, size = 24, className }: IconProps) {
             fill="currentColor"
             stroke="none"
           />
+        );
+      case "user":
+        return (
+          <>
+            <circle cx="12" cy="8" r="3.5" />
+            <path d="M5.5 19.5c1.6-3.2 4-4.8 6.5-4.8s4.9 1.6 6.5 4.8" />
+          </>
+        );
+      case "layers":
+        return (
+          <>
+            <path d="m12 3.5 8 4.5-8 4.5-8-4.5z" />
+            <path d="m4 12.5 8 4.5 8-4.5" />
+            <path d="m4 16.5 8 4.5 8-4.5" />
+          </>
+        );
+      case "sparkle":
+        return (
+          <path d="M12 3.5 13.4 9 19 10.5 13.4 12 12 17.5 10.6 12 5 10.5 10.6 9z" />
         );
       case "paw":
         // Symmetric filled paw: twin-peak main pad + 4 toe pads

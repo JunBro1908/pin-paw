@@ -142,6 +142,25 @@ body {
   scroll-snap-stop: always;
 }
 
+/**
+ * Force light-mode surface tokens on white cards/modals so dark OS
+ * preference does not wash out text or inflate neon action colors.
+ */
+.surface-light {
+  --surface: #ffffff;
+  --surface-soft: #f7f0e7;
+  --text-main: #2b251f;
+  --text-sub: #655b52;
+  --text-caption: #74695f;
+  --border-subtle: #e7dccf;
+  --action-primary: #087a3e;
+  --action-primary-hover: #066532;
+  --action-on-primary: #ffffff;
+  --primary: #03c75a;
+  --primary-soft: #eafbf2;
+  color: var(--text-main);
+}
+
 :focus-visible {
   outline: 2px solid var(--action-primary);
   outline-offset: 2px;
