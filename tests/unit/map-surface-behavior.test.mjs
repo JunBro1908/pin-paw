@@ -23,6 +23,33 @@ async function loadTsx(relativePath) {
   const localRequire = (specifier) => {
     if (specifier === "react/jsx-runtime") return jsxRuntime;
     if (specifier === "next/image") return { __esModule: true, default: "img" };
+    if (specifier === "@/shared/lib/cn") {
+      return {
+        cn: (...inputs) =>
+          inputs
+            .filter(Boolean)
+            .map((input) => {
+              if (typeof input === "object" && input !== null) {
+                return Object.entries(input)
+                  .filter(([, value]) => value)
+                  .map(([key]) => key)
+                  .join(" ");
+              }
+              return input;
+            })
+            .join(" "),
+      };
+    }
+    if (specifier === "@/shared/ui/ScrollablePanel") {
+      return {
+        scrollablePanelClass: {
+          dropdown: "scrollable-panel-dropdown",
+          panel: "scrollable-panel-panel",
+          list: "scrollable-panel-list",
+          sheet: "scrollable-panel-sheet",
+        },
+      };
+    }
     if (specifier === "@/shared/ui/Icon") {
       return {
         Icon: (props) => ({ type: "icon", props }),
@@ -30,6 +57,9 @@ async function loadTsx(relativePath) {
     }
     if (specifier === "react") {
       return {
+        useCallback(fn) {
+          return fn;
+        },
         useEffect() {},
         useRef(value) {
           return { current: value };
