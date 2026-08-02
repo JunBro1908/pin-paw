@@ -26,12 +26,14 @@ export default function HomePage() {
 
       <SightingForm />
 
-      <Link
-        href="/my/lost-posts/new"
-        className="mt-6 block text-center text-sm font-medium text-action-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
-      >
-        반려동물을 잃어버렸나요? 유실 등록하기
-      </Link>
+      <div className="mt-6 flex justify-center">
+        <Link
+          href="/my/lost-posts/new"
+          className="text-action-primary focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 items-center justify-center text-center text-sm font-medium underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          반려동물을 잃어버렸나요? 유실 등록하기
+        </Link>
+      </div>
 
       <footer className="mt-12 pb-8 text-center">
         <Text variant="caption" className="text-text-caption">

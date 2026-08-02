@@ -64,3 +64,11 @@ test("home has a real h1 and secondary lost-registration link", async () => {
   assert.match(page, /반려동물을 잃어버렸나요\?/);
   assert.match(page, /href="\/my\/lost-posts\/new"/);
 });
+
+test("lost-registration link exposes a 44px target", async () => {
+  const page = await read("src/app/(tabs)/page.tsx");
+  assert.match(
+    page,
+    /href="\/my\/lost-posts\/new"[\s\S]*?className="[^"]*inline-flex min-h-11 min-w-11 items-center justify-center/
+  );
+});
