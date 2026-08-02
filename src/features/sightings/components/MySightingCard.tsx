@@ -13,6 +13,9 @@ interface MySightingCardProps {
   onDeleted?: () => void;
 }
 
+const quietIconClass =
+  "inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary disabled:opacity-50";
+
 export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
   const { session } = useAuth();
   const [deleting, setDeleting] = useState(false);
@@ -64,56 +67,7 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
   };
 
   return (
-    <div className="border-border-subtle bg-surface relative flex gap-4 rounded-2xl border p-4 shadow-sm">
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-1">
-        <Link
-          href={`/my/sightings/${item.id}/edit`}
-          className="border-border-subtle bg-surface/95 text-text-main hover:bg-surface-soft inline-flex h-9 w-9 items-center justify-center rounded-full border shadow-sm"
-          aria-label="제보 수정"
-        >
-          <svg
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-            <path d="m15 5 4 4" />
-          </svg>
-        </Link>
-        {session ? (
-          <button
-            type="button"
-            onClick={() => setShowConfirm(true)}
-            disabled={deleting}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full p-1.5 text-gray-400 hover:text-gray-600 disabled:opacity-50 dark:text-gray-500 dark:hover:text-gray-300"
-            aria-label="삭제"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden
-            >
-              <path d="M3 6h18" />
-              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-              <line x1="10" y1="11" x2="10" y2="17" />
-              <line x1="14" y1="11" x2="14" y2="17" />
-            </svg>
-          </button>
-        ) : null}
-      </div>
+    <div className="border-border-subtle bg-surface flex items-center gap-3 rounded-2xl border p-4 shadow-sm">
       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
         {thumbUrl ? (
           <Image
@@ -129,7 +83,8 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
           </div>
         )}
       </div>
-      <div className="min-w-0 flex-1 pr-20">
+
+      <div className="min-w-0 flex-1">
         <Text variant="body" className="font-medium">
           {occurredAt}
         </Text>
@@ -152,6 +107,56 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
         >
           지도에서 보기
         </Link>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1 self-center">
+        <Link
+          href={`/my/sightings/${item.id}/edit`}
+          className={`${quietIconClass} text-text-main hover:bg-surface-soft`}
+          aria-label="제보 수정"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+          >
+            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+            <path d="m15 5 4 4" />
+          </svg>
+        </Link>
+        {session ? (
+          <button
+            type="button"
+            onClick={() => setShowConfirm(true)}
+            disabled={deleting}
+            className={`${quietIconClass} text-text-caption hover:bg-surface-soft hover:text-error`}
+            aria-label="삭제"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
+          </button>
+        ) : null}
       </div>
 
       {showConfirm && (

@@ -167,12 +167,20 @@ test("my sighting empty state stays centered with hierarchy", async () => {
   assert.match(list, /min-h-11/);
 });
 
-test("my sighting cards use a top-right edit icon instead of text", async () => {
+test("my sighting cards pair quiet edit and delete icon actions", async () => {
   const card = await readFile(
     "src/features/sightings/components/MySightingCard.tsx",
     "utf8"
   );
   assert.match(card, /aria-label="제보 수정"/);
+  assert.match(card, /aria-label="삭제"/);
   assert.match(card, /\/my\/sightings\/\$\{item\.id\}\/edit/);
+  assert.match(card, /지도에서 보기/);
+  assert.match(card, /flex items-center gap-3/);
+  assert.match(card, /flex shrink-0 items-center gap-1 self-center/);
+  assert.match(card, /min-h-11 min-w-11/);
+  assert.match(card, /text-text-caption/);
   assert.doesNotMatch(card, />\s*수정\s*</);
+  assert.doesNotMatch(card, /rounded-full border/);
+  assert.doesNotMatch(card, /absolute top-3 right-3/);
 });
