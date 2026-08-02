@@ -115,13 +115,15 @@ test("authenticated toolbar exposes filter state and executes every callback", a
   });
 
   const nodes = materialize(tree);
-  const buttonByText = (label) =>
-    nodes.find((node) => node.type === "button" && textContent(node) === label);
+  const buttonByLabel = (label) =>
+    nodes.find(
+      (node) => node.type === "button" && node.props?.["aria-label"] === label
+    );
   const bookmark = nodes.find(
-    (node) => node.props?.["aria-label"] === "저장한 흔적"
+    (node) => node.props?.["aria-label"] === "북마크"
   );
   assert.equal(bookmark.props["aria-pressed"], true);
-  buttonByText("New").props.onClick();
+  buttonByLabel("신규 제보").props.onClick();
   nodes
     .find((node) => node.props?.["aria-label"] === "현재 위치로 이동")
     .props.onClick();
@@ -170,18 +172,12 @@ test("guest toolbar hides authenticated controls but keeps locate available", as
   });
   const nodes = materialize(tree);
 
-  for (const label of ["ALL", "New"]) {
+  for (const label of ["전체", "신규 제보", "북마크"]) {
     assert.equal(
-      nodes.some(
-        (node) => node.type === "button" && textContent(node) === label
-      ),
+      nodes.some((node) => node.props?.["aria-label"] === label),
       false
     );
   }
-  assert.equal(
-    nodes.some((node) => node.props?.["aria-label"] === "저장한 흔적"),
-    false
-  );
   assert.equal(
     nodes.some((node) => node.props?.["aria-label"] === "제보 목록 보기"),
     false

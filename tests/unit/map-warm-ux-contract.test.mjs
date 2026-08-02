@@ -24,6 +24,8 @@ test("legend restores top-left title with pin status colors", async () => {
 
   assert.match(legend, /PinPaw 지도/);
   assert.match(legend, /반려동물의 흔적을 찾아보세요/);
+  assert.match(legend, /name="paw"/);
+  assert.match(legend, /text-status-lost/);
   assert.match(legend, /aria-label="지도 제목"/);
   assert.match(legend, /aria-label="지도 범례"/);
   assert.match(legend, /top-3 left-3/);
@@ -45,17 +47,20 @@ test("toolbar keeps layer semantics explicit and guest-safe", async () => {
     "utf8"
   );
 
-  assert.match(toolbar, />\s*ALL\s*</);
-  assert.match(toolbar, />\s*New\s*</);
-  assert.match(toolbar, /aria-label="저장한 흔적"/);
-  assert.match(toolbar, /name="star"/);
-  assert.match(toolbar, /BookmarkPinIcon/);
+  assert.match(toolbar, /label: "전체"/);
+  assert.match(toolbar, /label: "신규 제보"/);
+  assert.match(toolbar, /label: "북마크"/);
+  assert.match(toolbar, /aria-label=\{filter\.label\}/);
+  assert.match(toolbar, /icon: "layers"/);
+  assert.match(toolbar, /icon: "sparkle"/);
+  assert.match(toolbar, /icon: "star"/);
+  assert.match(toolbar, /bg-primary-soft text-action-primary/);
   assert.match(toolbar, /w-14/);
   assert.match(toolbar, /layer !== "bookmark"/);
   assert.match(toolbar, /grid/);
-  assert.doesNotMatch(toolbar, /전체/);
-  assert.doesNotMatch(toolbar, /신규 제보/);
-  assert.doesNotMatch(toolbar, /새 목격/);
+  assert.doesNotMatch(toolbar, />\s*ALL\s*</);
+  assert.doesNotMatch(toolbar, />\s*New\s*</);
+  assert.doesNotMatch(toolbar, /BookmarkPinIcon/);
   assert.doesNotMatch(toolbar, />저장한 흔적</);
   assert.match(toolbar, /authenticated/);
   assert.match(toolbar, /min-h-11|min-h-\[44px\]|h-11|h-12/);

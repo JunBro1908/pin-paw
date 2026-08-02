@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { Icon } from "@/shared/ui/Icon";
+import { Icon, type IconName } from "@/shared/ui/Icon";
+import { cn } from "@/shared/lib/cn";
 import type { MapLayer } from "../lib/map-domain";
 
 interface MapToolbarProps {
@@ -14,23 +15,15 @@ interface MapToolbarProps {
   onToggleList: () => void;
 }
 
-function BookmarkPinIcon({ active }: { active: boolean }) {
-  return (
-    <span
-      aria-hidden="true"
-      className="relative flex h-7 w-5 items-start justify-center"
-    >
-      <span
-        className={`absolute top-0 h-5 w-5 rotate-45 rounded-full rounded-bl-none shadow-sm ${
-          active ? "bg-amber-300" : "bg-amber-400"
-        }`}
-      />
-      <span className="relative z-10 mt-0.5 flex h-4 w-4 items-center justify-center text-amber-950">
-        <Icon name="star" size={12} />
-      </span>
-    </span>
-  );
-}
+const LAYER_FILTERS: ReadonlyArray<{
+  layer: MapLayer;
+  label: string;
+  icon: IconName;
+}> = [
+  { layer: "default", label: "전체", icon: "layers" },
+  { layer: "unseen", label: "신규 제보", icon: "sparkle" },
+  { layer: "bookmark", label: "북마크", icon: "star" },
+];
 
 export function MapToolbar({
   layer,
@@ -51,43 +44,26 @@ export function MapToolbar({
           role="group"
           aria-label="지도 표시 범위"
         >
-          <button
-            type="button"
-            aria-pressed={layer === "default"}
-            onClick={() => onLayerChange("default")}
-            className={`flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold transition-colors ${
-              layer === "default"
-                ? "bg-action-primary text-action-on-primary"
-                : "text-text-sub hover:bg-surface-soft"
-            }`}
-          >
-            ALL
-          </button>
-          <button
-            type="button"
-            aria-pressed={layer === "unseen"}
-            onClick={() => onLayerChange("unseen")}
-            className={`flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold transition-colors ${
-              layer === "unseen"
-                ? "bg-action-primary text-action-on-primary"
-                : "text-text-sub hover:bg-surface-soft"
-            }`}
-          >
-            New
-          </button>
-          <button
-            type="button"
-            aria-label="저장한 흔적"
-            aria-pressed={layer === "bookmark"}
-            onClick={() => onLayerChange("bookmark")}
-            className={`flex h-11 w-full items-center justify-center rounded-xl transition-colors ${
-              layer === "bookmark"
-                ? "bg-action-primary"
-                : "hover:bg-surface-soft"
-            }`}
-          >
-            <BookmarkPinIcon active={layer === "bookmark"} />
-          </button>
+          {LAYER_FILTERS.map((filter) => {
+            const selected = layer === filter.layer;
+            return (
+              <button
+                key={filter.layer}
+                type="button"
+                aria-label={filter.label}
+                aria-pressed={selected}
+                onClick={() => onLayerChange(filter.layer)}
+                className={cn(
+                  "flex h-11 w-full items-center justify-center rounded-xl transition-colors",
+                  selected
+                    ? "bg-primary-soft text-action-primary"
+                    : "text-text-sub hover:bg-surface-soft"
+                )}
+              >
+                <Icon name={filter.icon} size={20} />
+              </button>
+            );
+          })}
         </div>
       )}
 
