@@ -29,10 +29,10 @@ export function LoginPrompt() {
       <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center">
         <div className="flex flex-col items-center gap-2">
           <Text as="h1" variant="title" className="block">
-            유실 사건을 이어서 관리하려면 로그인해 주세요
+            로그인이 필요합니다
           </Text>
           <Text variant="caption" color="caption" className="block">
-            내 유실 사건, 확인할 제보, 저장한 흔적을 안전하게 연결합니다.
+            유실글 등록, 내 제보 확인 등 서비스를 이용하려면 로그인해 주세요.
           </Text>
         </div>
 
