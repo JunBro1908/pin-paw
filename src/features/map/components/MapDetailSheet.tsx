@@ -14,6 +14,7 @@ interface MapDetailSheetProps {
   selection: MapDetailSelection;
   onClose: () => void;
   getLostPostImageUrl: (key: string) => string;
+  keyboardActive?: boolean;
   children?: ReactNode;
 }
 
@@ -35,16 +36,52 @@ function stopPropagation(event: SyntheticEvent) {
   event.stopPropagation();
 }
 
+export function trapDialogTab(
+  event: Pick<KeyboardEvent, "key" | "shiftKey" | "preventDefault">,
+  dialog: HTMLElement,
+  activeElement: Element | null = document.activeElement
+): boolean {
+  if (event.key !== "Tab") return false;
+
+  const focusable = Array.from(
+    dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+  ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+  if (focusable.length === 0) {
+    event.preventDefault();
+    dialog.focus();
+    return true;
+  }
+
+  const first = focusable[0];
+  const last = focusable[focusable.length - 1];
+  if (
+    event.shiftKey &&
+    (activeElement === first || !dialog.contains(activeElement))
+  ) {
+    event.preventDefault();
+    last.focus();
+  } else if (
+    !event.shiftKey &&
+    (activeElement === last || !dialog.contains(activeElement))
+  ) {
+    event.preventDefault();
+    first.focus();
+  }
+  return true;
+}
+
 export function MapDetailSheet({
   selection,
   onClose,
   getLostPostImageUrl,
+  keyboardActive = true,
   children,
 }: MapDetailSheetProps) {
   const dialogRef = useRef<HTMLElement>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
+  const hasFocusedRef = useRef(false);
 
   useEffect(() => {
     onCloseRef.current = onClose;
@@ -59,7 +96,18 @@ export function MapDetailSheet({
       document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
-    closeButtonRef.current?.focus();
+
+    return () => {
+      previousFocusRef.current?.focus();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!keyboardActive) return;
+    if (!hasFocusedRef.current) {
+      closeButtonRef.current?.focus();
+      hasFocusedRef.current = true;
+    }
 
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -67,46 +115,21 @@ export function MapDetailSheet({
         onCloseRef.current();
         return;
       }
-      if (event.key !== "Tab") return;
-
       const dialog = dialogRef.current;
       if (!dialog) return;
-      const focusable = Array.from(
-        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
-      if (focusable.length === 0) {
-        event.preventDefault();
-        closeButtonRef.current?.focus();
-        return;
-      }
-
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      const active = document.activeElement;
-      if (event.shiftKey && (active === first || !dialog.contains(active))) {
-        event.preventDefault();
-        last.focus();
-      } else if (
-        !event.shiftKey &&
-        (active === last || !dialog.contains(active))
-      ) {
-        event.preventDefault();
-        first.focus();
-      }
+      trapDialogTab(event, dialog);
     };
 
     document.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.removeEventListener("keydown", handleKeyDown);
-      previousFocusRef.current?.focus();
-    };
-  }, []);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [keyboardActive]);
 
   return (
     <MapDetailSheetSurface
       selection={selection}
       onClose={closeDialog}
       getLostPostImageUrl={getLostPostImageUrl}
+      keyboardActive={keyboardActive}
       closeButtonRef={closeButtonRef}
       dialogRef={dialogRef}
     >
@@ -119,6 +142,7 @@ export function MapDetailSheetSurface({
   selection,
   onClose,
   getLostPostImageUrl,
+  keyboardActive = true,
   closeButtonRef,
   dialogRef,
   children,
@@ -127,7 +151,10 @@ export function MapDetailSheetSurface({
     <aside
       ref={dialogRef}
       role="dialog"
-      aria-modal="true"
+      aria-modal={keyboardActive ? "true" : undefined}
+      aria-hidden={keyboardActive ? undefined : true}
+      inert={keyboardActive ? undefined : true}
+      tabIndex={-1}
       aria-label="선택한 지도 정보"
       className="absolute inset-x-0 bottom-[104px] z-50 flex justify-center px-4 sm:px-6"
       onMouseDown={stopPropagation}

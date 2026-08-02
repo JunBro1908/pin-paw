@@ -13,7 +13,7 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
 import { SightingDetailCard } from "@/features/sightings/components/SightingDetailCard";
 import type { SightingDetailData } from "@/features/sightings/components/SightingDetailCard";
-import { MapDetailSheet } from "./MapDetailSheet";
+import { MapDetailSheet, trapDialogTab } from "./MapDetailSheet";
 import { MapLegend } from "./MapLegend";
 import { MapToolbar } from "./MapToolbar";
 import type { LostPostMapItem } from "../lib/map-data-state";
@@ -108,6 +108,13 @@ export function NaverMap({
     useState<
       { id: string; pet_name?: string; lost_at?: string | null }[] | null
     >(null);
+  const bookmarkDialogRef = useRef<HTMLDivElement>(null);
+  const bookmarkCloseButtonRef = useRef<HTMLButtonElement>(null);
+  const bookmarkOpenerRef = useRef<HTMLElement | null>(null);
+  const closeBookmarkModal = useCallback(() => {
+    setBookmarkModalOpen(false);
+    setClaimedLostPostsForSighting(null);
+  }, []);
 
   /** 지도 마커 레이어 필터 (전체 / 안 본 것 / 북마크) — localStorage로 유지 */
   const [mapLayer, setMapLayer] = useState<MapLayer>(() =>
@@ -397,15 +404,30 @@ export function NaverMap({
   }, [fetchClusters]);
 
   /** 7-5: 북마크 버튼에 사용할 유실글 ID (URL 기준 또는 내 유실글 1개 또는 선택값) */
-  /** 7-5: 북마크 모달 열려 있을 때 Escape로 닫기 */
+  /** 7-5: 북마크 모달이 열리면 하위 상세 시트 대신 키보드 포커스를 소유 */
   useEffect(() => {
     if (!bookmarkModalOpen) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setBookmarkModalOpen(false);
+    bookmarkOpenerRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    bookmarkCloseButtonRef.current?.focus();
+
+    const handleBookmarkKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        closeBookmarkModal();
+        return;
+      }
+      const dialog = bookmarkDialogRef.current;
+      if (dialog) trapDialogTab(event, dialog);
     };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [bookmarkModalOpen]);
+    document.addEventListener("keydown", handleBookmarkKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleBookmarkKeyDown);
+      bookmarkOpenerRef.current?.focus();
+    };
+  }, [bookmarkModalOpen, closeBookmarkModal]);
 
   /**
    * 지도 초기화 함수 (싱글톤 — 한 번만 생성)
@@ -780,6 +802,7 @@ export function NaverMap({
         {mapDetailSelection && (
           <MapDetailSheet
             selection={mapDetailSelection}
+            keyboardActive={!bookmarkModalOpen}
             onClose={() => {
               setSelectedSighting(null);
               setSelectedLostPostForCard(null);
@@ -887,11 +910,9 @@ export function NaverMap({
           "id" in selectedSighting &&
           accessToken && (
             <div
+              ref={bookmarkDialogRef}
               className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4"
-              onClick={() => {
-                setBookmarkModalOpen(false);
-                setClaimedLostPostsForSighting(null);
-              }}
+              onClick={closeBookmarkModal}
               role="dialog"
               aria-modal="true"
               aria-label="유실글 선택"
@@ -907,13 +928,11 @@ export function NaverMap({
                       : "등록할 대상을 선택하세요"}
                   </Text>
                   <button
+                    ref={bookmarkCloseButtonRef}
                     type="button"
-                    className="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    onClick={() => {
-                      setBookmarkModalOpen(false);
-                      setClaimedLostPostsForSighting(null);
-                    }}
-                    aria-label="닫기"
+                    className="hover:bg-surface-soft flex h-11 w-11 items-center justify-center rounded-xl text-gray-500 transition-colors hover:text-gray-700 dark:hover:text-gray-300"
+                    onClick={closeBookmarkModal}
+                    aria-label="북마크 선택 닫기"
                   >
                     ✕
                   </button>
@@ -976,8 +995,7 @@ export function NaverMap({
                                   if (remaining <= 0) {
                                     patchFeedback(sid, { claimed: false });
                                   }
-                                  setBookmarkModalOpen(false);
-                                  setClaimedLostPostsForSighting(null);
+                                  closeBookmarkModal();
                                   setToast({
                                     message: "북마크를 해제했습니다.",
                                     type: "success",
@@ -1079,8 +1097,7 @@ export function NaverMap({
 
                                 // Optimistic: fill star and close modal immediately.
                                 patchFeedback(sid, { claimed: true });
-                                setBookmarkModalOpen(false);
-                                setClaimedLostPostsForSighting(null);
+                                closeBookmarkModal();
                                 if (switchToBookmark) {
                                   setMapLayer("bookmark");
                                 }

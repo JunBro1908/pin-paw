@@ -11,7 +11,7 @@ test("map controller delegates the warm map surfaces", async () => {
   );
 
   for (const component of components) {
-    assert.match(map, new RegExp(`import \\{ ${component} \\}`));
+    assert.match(map, new RegExp(`import \\{[^}]*\\b${component}\\b[^}]*\\}`));
     assert.match(map, new RegExp(`<${component}`));
   }
 });
@@ -59,7 +59,7 @@ test("detail sheet has one labelled surface and an accessible close target", asy
   );
   assert.match(detail, /aria-label="선택한 지도 정보"/);
   assert.match(detail, /role="dialog"/);
-  assert.match(detail, /aria-modal="true"/);
+  assert.match(detail, /aria-modal=\{keyboardActive \? "true" : undefined\}/);
   assert.match(detail, /aria-label="선택한 지도 정보 닫기"/);
   assert.match(detail, /h-11 w-11|min-h-\[44px\].*min-w-\[44px\]/);
 });
@@ -76,11 +76,31 @@ test("detail dialog owns a mount-only keyboard and focus lifecycle", async () =>
   assert.match(detail, /event\.key === "Escape"/);
   assert.match(detail, /event\.key !== "Tab"/);
   assert.match(detail, /querySelectorAll<HTMLElement>/);
-  assert.match(detail, /!dialog\.contains\(active\)/);
+  assert.match(detail, /!dialog\.contains\(activeElement\)/);
   assert.match(detail, /previousFocusRef\.current\?\.focus\(\)/);
   assert.match(detail, /\}, \[\]\);/);
   assert.match(map, /\{mapDetailSelection && \(/);
   assert.match(map, /selection=\{mapDetailSelection\}/);
+});
+
+test("bookmark dialog is the only keyboard owner while nested", async () => {
+  const [detail, map] = await Promise.all([
+    readFile("src/features/map/components/MapDetailSheet.tsx", "utf8"),
+    readFile("src/features/map/components/NaverMap.tsx", "utf8"),
+  ]);
+
+  assert.match(detail, /keyboardActive/);
+  assert.match(detail, /if \(!keyboardActive\) return;/);
+  assert.match(detail, /\}, \[keyboardActive\]\);/);
+  assert.match(detail, /aria-hidden=\{keyboardActive \? undefined : true\}/);
+  assert.match(detail, /inert=\{keyboardActive \? undefined : true\}/);
+  assert.match(map, /keyboardActive=\{!bookmarkModalOpen\}/);
+  assert.match(map, /bookmarkDialogRef/);
+  assert.match(map, /bookmarkCloseButtonRef\.current\?\.focus\(\)/);
+  assert.match(map, /bookmarkOpenerRef\.current\?\.focus\(\)/);
+  assert.match(map, /trapDialogTab\(event, dialog\)/);
+  assert.match(map, /aria-label="북마크 선택 닫기"/);
+  assert.match(map, /h-11 w-11/);
 });
 
 test("extracted controller surfaces use only restrained warm treatments", async () => {

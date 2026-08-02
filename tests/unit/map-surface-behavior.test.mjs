@@ -162,3 +162,65 @@ test("detail surface executes close and selects sighting versus lost content", a
   assert.match(textContent(lost), /보리/);
   assert.doesNotMatch(textContent(lost), /목격 상세/);
 });
+
+test("suspended detail surface is hidden and non-modal beneath bookmark dialog", async () => {
+  const { MapDetailSheetSurface } = await loadTsx(
+    "src/features/map/components/MapDetailSheet.tsx"
+  );
+  const baseProps = {
+    selection: {
+      kind: "sighting",
+      item: { id: "s-1", type: "point", source_type: "sighting" },
+    },
+    onClose() {},
+    getLostPostImageUrl: () => "",
+  };
+
+  const activeAside = MapDetailSheetSurface({
+    ...baseProps,
+    keyboardActive: true,
+  });
+  assert.equal(activeAside.props["aria-modal"], "true");
+  assert.equal(activeAside.props["aria-hidden"], undefined);
+  assert.equal(activeAside.props.inert, undefined);
+
+  const suspendedAside = MapDetailSheetSurface({
+    ...baseProps,
+    keyboardActive: false,
+  });
+  assert.equal(suspendedAside.props["aria-modal"], undefined);
+  assert.equal(suspendedAside.props["aria-hidden"], true);
+  assert.equal(suspendedAside.props.inert, true);
+});
+
+test("shared dialog tab helper contains focus in both directions", async () => {
+  const { trapDialogTab } = await loadTsx(
+    "src/features/map/components/MapDetailSheet.tsx"
+  );
+  const focused = [];
+  const first = {
+    focus: () => focused.push("first"),
+    getAttribute: () => null,
+  };
+  const last = { focus: () => focused.push("last"), getAttribute: () => null };
+  const dialog = {
+    querySelectorAll: () => [first, last],
+    contains: (element) => element === first || element === last,
+  };
+  const event = (shiftKey) => ({
+    key: "Tab",
+    shiftKey,
+    prevented: false,
+    preventDefault() {
+      this.prevented = true;
+    },
+  });
+
+  const forward = event(false);
+  assert.equal(trapDialogTab(forward, dialog, last), true);
+  assert.equal(forward.prevented, true);
+  const backward = event(true);
+  assert.equal(trapDialogTab(backward, dialog, first), true);
+  assert.equal(backward.prevented, true);
+  assert.deepEqual(focused, ["first", "last"]);
+});
