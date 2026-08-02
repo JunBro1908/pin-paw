@@ -41,11 +41,11 @@ test("primary buttons use the action token when pressed", async () => {
   assert.match(button, /active:bg-action-primary-hover/);
 });
 
-test("secondary buttons use semantic high-contrast colors", async () => {
+test("secondary buttons expose the semantic high-contrast boundary", async () => {
   const button = await read("src/shared/ui/Button.tsx");
   assert.match(
     button,
-    /border border-border-subtle bg-surface-soft text-text-main hover:bg-border-subtle/
+    /border border-action-primary bg-surface text-text-main hover:bg-surface-soft/
   );
 });
 

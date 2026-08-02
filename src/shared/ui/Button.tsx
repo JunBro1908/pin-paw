@@ -23,7 +23,7 @@ export function Button({
     primary:
       "bg-action-primary text-action-on-primary hover:bg-action-primary-hover active:bg-action-primary-hover",
     secondary:
-      "border border-border-subtle bg-surface-soft text-text-main hover:bg-border-subtle",
+      "border border-action-primary bg-surface text-text-main hover:bg-surface-soft",
   };
 
   const variantStyles = variant ? variants[variant] : "";
