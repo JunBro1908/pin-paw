@@ -27,7 +27,7 @@ export function MapToolbar({
     <div className="absolute right-4 bottom-24 z-10 flex max-w-[calc(100%-2rem)] flex-col items-end gap-2">
       {authenticated && (
         <div
-          className="border-border-subtle bg-surface flex max-w-full gap-1 overflow-x-auto rounded-2xl border p-1 shadow-sm"
+          className="border-border-subtle bg-surface flex max-w-full flex-col gap-1 rounded-2xl border p-1 shadow-sm"
           role="group"
           aria-label="지도 표시 범위"
         >

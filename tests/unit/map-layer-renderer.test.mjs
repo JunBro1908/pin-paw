@@ -283,11 +283,11 @@ test("keeps source identity outside feedback state and exposes accessible marker
   );
   assert.match(
     fake.markers[1].options.icon.content,
-    /border: 2\.5px solid #087A3E/
+    /border: 2\.5px solid #EAB308/
   );
-  assert.match(
+  assert.doesNotMatch(
     fake.markers[1].options.icon.content,
-    /box-shadow: inset 0 0 0 3px #22c55e/
+    /#22c55e|#ef4444|#dc2626|#087A3E/i
   );
   assert.match(
     fake.markers[1].options.icon.content,
@@ -304,13 +304,13 @@ test("keeps source identity outside feedback state and exposes accessible marker
   );
   assert.match(
     fake.markers[2].options.icon.content,
-    /border: 2\.5px solid #28736F/
+    /border: 2\.5px solid #9CA3AF/
   );
   assert.match(fake.markers[2].options.icon.content, /border-radius: 12px/);
   assert.deepEqual(fake.markers[2].options.icon.anchor, { x: 22, y: 44 });
-  assert.match(
+  assert.doesNotMatch(
     fake.markers[2].options.icon.content,
-    /box-shadow: inset 0 0 0 3px #6b7280/
+    /box-shadow: inset|#22c55e/i
   );
 
   fake.listeners[0].handler();
@@ -358,11 +358,11 @@ test("renders bookmark sightings and lost posts in independent groups", () => {
   assert.equal(fake.markerGroups.get("lost-posts").length, 1);
   assert.match(
     fake.markers[0].options.icon.content,
-    /border: 2\.5px solid #28736F/
+    /border: 2\.5px solid #EAB308/
   );
-  assert.match(
+  assert.doesNotMatch(
     fake.markers[0].options.icon.content,
-    /box-shadow: inset 0 0 0 3px #22c55e/
+    /box-shadow: inset|#22c55e/i
   );
   assert.deepEqual(fake.markers[0].options.icon.anchor, { x: 22, y: 44 });
   assert.match(fake.markers[1].options.icon.content, /#B85C1B/);

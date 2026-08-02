@@ -16,16 +16,22 @@ test("map controller delegates the warm map surfaces", async () => {
   }
 });
 
-test("legend keeps a compact brand chip without colored source tags", async () => {
+test("legend restores top-left title with pin status colors", async () => {
   const legend = await readFile(
     "src/features/map/components/MapLegend.tsx",
     "utf8"
   );
 
   assert.match(legend, /PinPaw 지도/);
+  assert.match(legend, /반려동물의 흔적을 찾아보세요/);
   assert.match(legend, /aria-label="지도 제목"/);
-  assert.match(legend, /left-1\/2|-translate-x-1\/2/);
-  assert.doesNotMatch(legend, /#087A3E|#B85C1B|#28736F/);
+  assert.match(legend, /top-3 left-3/);
+  assert.match(legend, /안 본 제보/);
+  assert.match(legend, /본 제보/);
+  assert.match(legend, /즐겨찾기/);
+  assert.match(legend, /MAP_PIN_STATUS_COLORS/);
+  assert.doesNotMatch(legend, /left-1\/2|-translate-x-1\/2/);
+  assert.doesNotMatch(legend, /#ef4444|#dc2626|#22c55e|#087A3E/i);
 });
 
 test("toolbar keeps layer semantics explicit and guest-safe", async () => {
@@ -38,6 +44,7 @@ test("toolbar keeps layer semantics explicit and guest-safe", async () => {
   assert.match(toolbar, /신규 제보/);
   assert.match(toolbar, /aria-label="저장한 흔적"/);
   assert.match(toolbar, /name="star"/);
+  assert.match(toolbar, /flex-col/);
   assert.doesNotMatch(toolbar, /새 목격/);
   assert.doesNotMatch(toolbar, />저장한 흔적</);
   assert.match(toolbar, /authenticated/);

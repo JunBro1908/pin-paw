@@ -2,7 +2,10 @@ import type { BookmarkPath, Coordinate } from "./map-domain";
 import type { LostPostMapItem } from "./map-data-state";
 import type { NaverMapAdapter } from "./naver-map-adapter";
 // @ts-expect-error -- Node's direct TypeScript test runner requires the explicit .ts extension.
-import { getMapMarkerPresentation } from "./map-marker-presentation.ts";
+import {
+  getMapMarkerPresentation,
+  getSightingPinStatusColor,
+} from "./map-marker-presentation.ts";
 import type {
   MapItem,
   NaverLatLng,
@@ -144,11 +147,7 @@ export function createMapLayerRenderer({
     }
 
     const itemFeedback = feedback[normalizeId(item.id)];
-    const statusRingColor = itemFeedback?.claimed
-      ? "#22c55e"
-      : itemFeedback?.seen
-        ? "#6b7280"
-        : null;
+    const pinColor = getSightingPinStatusColor(itemFeedback);
     const thumbnailUrl = item.photo_keys?.[0]
       ? getImageUrl(item.photo_keys[0])
       : "/icons/marker.png";
@@ -156,23 +155,19 @@ export function createMapLayerRenderer({
     const markerRadius = isPin ? "50% 50% 50% 0" : "12px";
     const markerTransform = isPin ? "rotate(-45deg)" : "none";
     const thumbnailTransform = isPin ? "rotate(45deg)" : "none";
-    const statusRing = statusRingColor
-      ? `box-shadow: inset 0 0 0 3px ${statusRingColor};`
-      : "";
 
     return `<div role="img" aria-label="${ariaLabel}" style="cursor: pointer; position: relative; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
       <div style="
         width: 44px;
         height: 44px;
         background: white;
-        border: 2.5px solid ${presentation.color};
+        border: 2.5px solid ${pinColor};
         border-radius: ${markerRadius};
         transform: ${markerTransform};
         display: flex;
         align-items: center;
         justify-content: center;
         overflow: hidden;
-        ${statusRing}
       ">
         <div style="
           width: 34px;
@@ -185,7 +180,7 @@ export function createMapLayerRenderer({
           border: 1px solid rgba(0,0,0,0.1);
         "></div>
       </div>
-      ${isPin ? `<div style="width: 2px; height: 6px; background: ${presentation.color}; margin-top: -2px;"></div>` : ""}
+      ${isPin ? `<div style="width: 2px; height: 6px; background: ${pinColor}; margin-top: -2px;"></div>` : ""}
     </div>`;
   };
 
@@ -367,7 +362,7 @@ export function createMapLayerRenderer({
       adapter.createPolyline({
         map,
         path: coordinates.map(toLatLng),
-        strokeColor: "#86efac",
+        strokeColor: "#FDE68A",
         strokeWeight: 4,
         zIndex: 0,
       })
@@ -376,7 +371,7 @@ export function createMapLayerRenderer({
       adapter.createPolyline({
         map,
         path: [toLatLng(coordinates[0])],
-        strokeColor: "#22c55e",
+        strokeColor: "#EAB308",
         strokeWeight: 5,
         zIndex: 1,
       })
