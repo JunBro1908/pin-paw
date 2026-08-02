@@ -14,6 +14,7 @@ export interface SightingDetailData {
   trait_size?: string;
   trait_species?: string;
   note?: string;
+  source_type?: "sighting" | "shelter";
 }
 
 interface SightingDetailCardProps {
@@ -39,6 +40,16 @@ export function SightingDetailCard({
   className = "",
   showCloseButton = true,
 }: SightingDetailCardProps) {
+  const sourceCopy =
+    sighting.source_type === "shelter"
+      ? {
+          title: "보호소",
+          body: "보호소·공공 데이터에서 가져온 보호 동물 위치입니다. 현장 목격 제보와 출처가 달라요.",
+        }
+      : {
+          title: "목격 제보",
+          body: "사용자가 현장에서 올린 목격 기록입니다. 유실 사건·보호소 기록과 구분해 확인할 수 있어요.",
+        };
   return (
     <div
       className={`bg-surface relative mx-auto w-full max-w-md overflow-hidden rounded-[28px] shadow-[0_8px_40px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:ring-white/10 ${className}`}
@@ -83,6 +94,15 @@ export function SightingDetailCard({
           )}
 
           <div className="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
+            <div className="border-border-subtle bg-surface-soft rounded-xl border px-3 py-2.5">
+              <p className="text-text-main text-sm font-semibold">
+                {sourceCopy.title}
+              </p>
+              <p className="text-text-sub mt-1 text-xs leading-relaxed">
+                {sourceCopy.body}
+              </p>
+            </div>
+
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <Text variant="title" className="text-lg font-bold sm:text-xl">

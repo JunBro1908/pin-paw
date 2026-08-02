@@ -16,21 +16,16 @@ test("map controller delegates the warm map surfaces", async () => {
   }
 });
 
-test("legend explains every map source with text and shape", async () => {
+test("legend keeps a compact brand chip without colored source tags", async () => {
   const legend = await readFile(
     "src/features/map/components/MapLegend.tsx",
     "utf8"
   );
 
-  for (const label of ["목격", "유실", "보호소"]) {
-    assert.match(legend, new RegExp(label));
-  }
-  for (const color of ["#087A3E", "#B85C1B", "#28736F"]) {
-    assert.match(legend, new RegExp(color));
-  }
-  assert.match(legend, /aria-label="지도 표시 종류"/);
-  assert.match(legend, /rounded-square/);
-  assert.match(legend, /pin/);
+  assert.match(legend, /PinPaw 지도/);
+  assert.match(legend, /aria-label="지도 제목"/);
+  assert.match(legend, /left-1\/2|-translate-x-1\/2/);
+  assert.doesNotMatch(legend, /#087A3E|#B85C1B|#28736F/);
 });
 
 test("toolbar keeps layer semantics explicit and guest-safe", async () => {
@@ -39,11 +34,25 @@ test("toolbar keeps layer semantics explicit and guest-safe", async () => {
     "utf8"
   );
 
-  for (const label of ["전체", "새 목격", "저장한 흔적"]) {
-    assert.match(toolbar, new RegExp(label));
-  }
+  assert.match(toolbar, /전체/);
+  assert.match(toolbar, /신규 제보/);
+  assert.match(toolbar, /aria-label="저장한 흔적"/);
+  assert.match(toolbar, /name="star"/);
+  assert.doesNotMatch(toolbar, /새 목격/);
+  assert.doesNotMatch(toolbar, />저장한 흔적</);
   assert.match(toolbar, /authenticated/);
   assert.match(toolbar, /min-h-11|min-h-\[44px\]|h-11|h-12/);
+});
+
+test("detail sheet explains source type for lost posts", async () => {
+  const detail = await readFile(
+    "src/features/map/components/MapDetailSheet.tsx",
+    "utf8"
+  );
+
+  assert.match(detail, /MapSourceExplanation/);
+  assert.match(detail, /유실 사건/);
+  assert.match(detail, /보호자가 등록한 유실/);
 });
 
 test("detail sheet has one labelled surface and an accessible close target", async () => {

@@ -23,6 +23,11 @@ async function loadTsx(relativePath) {
   const localRequire = (specifier) => {
     if (specifier === "react/jsx-runtime") return jsxRuntime;
     if (specifier === "next/image") return { __esModule: true, default: "img" };
+    if (specifier === "@/shared/ui/Icon") {
+      return {
+        Icon: (props) => ({ type: "icon", props }),
+      };
+    }
     if (specifier === "react") {
       return {
         useEffect() {},
@@ -82,8 +87,11 @@ test("authenticated toolbar exposes filter state and executes every callback", a
   const nodes = materialize(tree);
   const buttonByText = (label) =>
     nodes.find((node) => node.type === "button" && textContent(node) === label);
-  assert.equal(buttonByText("저장한 흔적").props["aria-pressed"], true);
-  buttonByText("새 목격").props.onClick();
+  const bookmark = nodes.find(
+    (node) => node.props?.["aria-label"] === "저장한 흔적"
+  );
+  assert.equal(bookmark.props["aria-pressed"], true);
+  buttonByText("신규 제보").props.onClick();
   nodes
     .find((node) => node.props?.["aria-label"] === "현재 위치로 이동")
     .props.onClick();
@@ -111,7 +119,7 @@ test("guest toolbar hides authenticated controls but keeps locate available", as
   });
   const nodes = materialize(tree);
 
-  for (const label of ["전체", "새 목격", "저장한 흔적"]) {
+  for (const label of ["전체", "신규 제보"]) {
     assert.equal(
       nodes.some(
         (node) => node.type === "button" && textContent(node) === label
@@ -119,6 +127,10 @@ test("guest toolbar hides authenticated controls but keeps locate available", as
       false
     );
   }
+  assert.equal(
+    nodes.some((node) => node.props?.["aria-label"] === "저장한 흔적"),
+    false
+  );
   assert.equal(
     nodes.some((node) => node.props?.["aria-label"] === "제보 목록 보기"),
     false

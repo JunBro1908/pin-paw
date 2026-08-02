@@ -691,9 +691,10 @@ export function NaverMap({
     if (mapLayer !== "bookmark" && prev === "bookmark") fetchClusters();
   }, [mapLayer, isLoaded, fetchClusters]);
 
-  // "내 유실글 + 북마크" 레이어 선택 시 유실글·경로 한 번에 조회 (동시 표시)
+  // Own lost posts load for "전체" and bookmark; paths only render on bookmark.
   useEffect(() => {
-    if (mapLayer !== "bookmark" || !isAuthenticated || !accessToken) return;
+    if (!isAuthenticated || !accessToken) return;
+    if (mapLayer !== "bookmark" && mapLayer !== "default") return;
     fetchBookmarkLayerData();
   }, [mapLayer, isAuthenticated, accessToken, fetchBookmarkLayerData]);
 
@@ -750,7 +751,10 @@ export function NaverMap({
 
     renderer.renderLostPosts({
       map: activeMap,
-      lostPosts: mapLayer === "bookmark" ? lostPostsForMap : [],
+      lostPosts:
+        mapLayer === "bookmark" || mapLayer === "default"
+          ? lostPostsForMap
+          : [],
       getImageUrl: getLostPostImageUrl,
       onLostPostClick(lostPost, marker) {
         activeMap.panTo(marker.getPosition());

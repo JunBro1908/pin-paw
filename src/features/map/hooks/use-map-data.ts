@@ -312,7 +312,9 @@ export function useMapData({
   return {
     ...view,
     items: filteredItems,
-    lostPosts: layer === "bookmark" ? view.lostPosts : [],
+    // Own lost posts appear on "전체" and bookmark; paths stay bookmark-only.
+    lostPosts:
+      layer === "bookmark" || layer === "default" ? view.lostPosts : [],
     paths: layer === "bookmark" ? view.paths : [],
     loadViewport,
     reloadBookmark,

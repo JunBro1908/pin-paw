@@ -203,6 +203,21 @@ export function MapDetailSheetSurface({
   );
 }
 
+function MapSourceExplanation({
+  title,
+  body,
+}: {
+  title: string;
+  body: string;
+}) {
+  return (
+    <div className="border-border-subtle bg-surface-soft rounded-xl border px-3 py-2.5">
+      <p className="text-text-main text-sm font-semibold">{title}</p>
+      <p className="text-text-sub mt-1 text-xs leading-relaxed">{body}</p>
+    </div>
+  );
+}
+
 function LostPostDetail({
   item,
   getImageUrl,
@@ -234,9 +249,13 @@ function LostPostDetail({
       </div>
 
       <div className="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
+        <MapSourceExplanation
+          title="유실 사건"
+          body="보호자가 등록한 유실 반려동물의 마지막 위치입니다. 제보·보호소 기록과 구분해 확인할 수 있어요."
+        />
+
         <div>
-          <p className="text-sm font-bold text-[#B85C1B]">유실</p>
-          <h2 className="text-text-main mt-1 pr-12 text-lg font-semibold">
+          <h2 className="text-text-main pr-12 text-lg font-semibold">
             {item.pet_name?.trim() || "이름 없음"}
           </h2>
           {item.lost_at && (

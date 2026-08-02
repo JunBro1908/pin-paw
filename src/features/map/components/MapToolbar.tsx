@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { Icon } from "@/shared/ui/Icon";
 import type { MapLayer } from "../lib/map-domain";
 
 interface MapToolbarProps {
@@ -12,12 +13,6 @@ interface MapToolbarProps {
   onLocate: () => void;
   onToggleList: () => void;
 }
-
-const LAYERS = [
-  { value: "default", label: "전체" },
-  { value: "unseen", label: "새 목격" },
-  { value: "bookmark", label: "저장한 흔적" },
-] as const satisfies ReadonlyArray<{ value: MapLayer; label: string }>;
 
 export function MapToolbar({
   layer,
@@ -36,21 +31,43 @@ export function MapToolbar({
           role="group"
           aria-label="지도 표시 범위"
         >
-          {LAYERS.map(({ value, label }) => (
-            <button
-              key={value}
-              type="button"
-              aria-pressed={layer === value}
-              onClick={() => onLayerChange(value)}
-              className={`min-h-11 shrink-0 rounded-xl px-3 text-sm font-semibold transition-colors ${
-                layer === value
-                  ? "bg-action-primary text-action-on-primary"
-                  : "text-text-sub hover:bg-surface-soft"
-              }`}
-            >
-              {label}
-            </button>
-          ))}
+          <button
+            type="button"
+            aria-pressed={layer === "default"}
+            onClick={() => onLayerChange("default")}
+            className={`min-h-11 shrink-0 rounded-xl px-3 text-sm font-semibold transition-colors ${
+              layer === "default"
+                ? "bg-action-primary text-action-on-primary"
+                : "text-text-sub hover:bg-surface-soft"
+            }`}
+          >
+            전체
+          </button>
+          <button
+            type="button"
+            aria-pressed={layer === "unseen"}
+            onClick={() => onLayerChange("unseen")}
+            className={`min-h-11 shrink-0 rounded-xl px-3 text-sm font-semibold transition-colors ${
+              layer === "unseen"
+                ? "bg-action-primary text-action-on-primary"
+                : "text-text-sub hover:bg-surface-soft"
+            }`}
+          >
+            신규 제보
+          </button>
+          <button
+            type="button"
+            aria-label="저장한 흔적"
+            aria-pressed={layer === "bookmark"}
+            onClick={() => onLayerChange("bookmark")}
+            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors ${
+              layer === "bookmark"
+                ? "bg-action-primary text-amber-300"
+                : "text-amber-400 hover:bg-surface-soft"
+            }`}
+          >
+            <Icon name="star" size={20} />
+          </button>
         </div>
       )}
 
