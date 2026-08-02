@@ -20,6 +20,8 @@ interface ActiveLostCaseCardProps {
   className?: string;
   /** Prefer detail over recommend for primary CTA (default: detail) */
   primaryAction?: "recommend" | "detail";
+  /** When set, primary CTA runs in place instead of navigating. */
+  onPrimaryAction?: (item: LostPostItem) => void;
 }
 
 export function ActiveLostCaseCard({
@@ -28,6 +30,7 @@ export function ActiveLostCaseCard({
   compact: _compact = false,
   className,
   primaryAction = "detail",
+  onPrimaryAction,
 }: ActiveLostCaseCardProps) {
   void _compact;
   const coverUrl = getLostPostCoverUrl(item.cover_photo_key);
@@ -101,11 +104,25 @@ export function ActiveLostCaseCard({
             </Text>
           ) : null}
         </div>
-        <Link href={primaryHref} className="block">
-          <Button variant="primary" className="min-h-11 w-full">
+        {onPrimaryAction ? (
+          <Button
+            type="button"
+            variant="primary"
+            className="min-h-11 w-full"
+            onClick={(event) => {
+              event.stopPropagation();
+              onPrimaryAction(item);
+            }}
+          >
             {primaryLabel}
           </Button>
-        </Link>
+        ) : (
+          <Link href={primaryHref} className="block">
+            <Button variant="primary" className="min-h-11 w-full">
+              {primaryLabel}
+            </Button>
+          </Link>
+        )}
       </div>
     </article>
   );

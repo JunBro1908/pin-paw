@@ -60,6 +60,35 @@ test("confirmation page presents a review workflow without model or result-count
   assert.doesNotMatch(page, /topK|TOP_K|추천 조건:|개수|toFixed\(1\)/i);
 });
 
+test("recommend shows matches under the selected lost post without a full view swap", async () => {
+  const page = await readFile(pagePath, "utf8");
+  const card = await readFile(
+    "src/features/lost-posts/components/ActiveLostCaseCard.tsx",
+    "utf8"
+  );
+  const carousel = await readFile(
+    "src/features/lost-posts/components/LostCaseCarousel.tsx",
+    "utf8"
+  );
+
+  assert.match(page, /appliedLostPostId/);
+  assert.match(page, /draftLostPostId/);
+  assert.match(page, /searchParams\.get\("lostPostId"\)/);
+  assert.match(page, /onPrimaryAction=\{handlePrimaryAction\}/);
+  assert.match(page, /primaryAction="recommend"/);
+  assert.match(
+    page,
+    /<LostCaseCarousel[\s\S]*?\{appliedLostPostId \? \([\s\S]*?<RecommendWithLostPost/
+  );
+  assert.doesNotMatch(page, /다른 유실글 선택/);
+  assert.doesNotMatch(page, /선택된 유실글/);
+  assert.doesNotMatch(page, /if \(!lostPostId\)/);
+  assert.match(page, /router\.replace\(next, \{ scroll: false \}\)/);
+  assert.match(card, /onPrimaryAction\?:/);
+  assert.match(card, /onPrimaryAction\(item\)/);
+  assert.match(carousel, /onPrimaryAction=\{onPrimaryAction\}/);
+});
+
 test("confirmation card leads with distance-time chips, date, match percent tip, and map CTA", async () => {
   const card = await readFile(cardPath, "utf8");
 

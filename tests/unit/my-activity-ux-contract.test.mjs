@@ -26,6 +26,7 @@ test("active case card prioritizes cover photo and detail CTA", async () => {
   assert.doesNotMatch(card, /확인할 제보 보기/);
   assert.match(card, /\/my\/lost-posts\/\$\{item\.id\}/);
   assert.match(card, /\/recommend\?lostPostId=\$\{item\.id\}/);
+  assert.match(card, /onPrimaryAction\?:/);
   assert.doesNotMatch(card, /\?edit=1/);
   assert.doesNotMatch(card, /aria-label="유실글 수정"/);
   assert.match(card, /bg-white/);

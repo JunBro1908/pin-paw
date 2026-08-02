@@ -20,6 +20,7 @@ interface LostCaseCarouselProps {
   selectedId?: string | null;
   onSelect?: (item: LostPostItem) => void;
   primaryAction?: "recommend" | "detail";
+  onPrimaryAction?: (item: LostPostItem) => void;
   heading?: string;
   headingAction?: ReactNode;
   className?: string;
@@ -35,6 +36,7 @@ export function LostCaseCarousel({
   selectedId = null,
   onSelect,
   primaryAction = "detail",
+  onPrimaryAction,
   heading = "유실글",
   headingAction,
   className,
@@ -143,6 +145,7 @@ export function LostCaseCarousel({
                 refreshing={refreshing && selected}
                 compact={false}
                 primaryAction={primaryAction}
+                onPrimaryAction={onPrimaryAction}
                 className={cn(
                   "w-full max-w-none transition-[box-shadow,ring] duration-200",
                   selected

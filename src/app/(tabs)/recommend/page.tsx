@@ -1,21 +1,17 @@
 "use client";
 
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useState } from "react";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { Icon } from "@/shared/ui/Icon";
-import { BackLink } from "@/shared/ui/BackLink";
 import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { LostCaseCarousel } from "@/features/lost-posts/components/LostCaseCarousel";
-import { useLostPost } from "@/features/lost-posts/hooks/useLostPost";
 import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
-import { StatusBadge } from "@/features/lost-posts/components/StatusBadge";
-import { createClient } from "@/shared/supabase/client";
+import type { LostPostItem } from "@/features/lost-posts/model/types";
 import { useRecommendations } from "@/features/recommendations/hooks/useRecommendations";
 import { RecommendationCard } from "@/features/recommendations/components/RecommendationCard";
 import {
@@ -28,7 +24,9 @@ import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
 
 function RecommendContent() {
   const searchParams = useSearchParams();
-  const lostPostId = searchParams.get("lostPostId");
+  const router = useRouter();
+  // URL lostPostId is the applied selection (CTA / deep link). Draft is carousel index.
+  const appliedLostPostId = searchParams.get("lostPostId");
   const {
     items: lostPosts,
     loading,
@@ -37,61 +35,111 @@ function RecommendContent() {
     reload: reloadLostPosts,
   } = useMyLostPosts();
 
-  if (!lostPostId) {
-    return (
-      <Container className="py-8">
-        <header className="mb-8">
-          <Text as="h1" variant="title" className="text-2xl">
-            비슷한 제보 찾기
+  const [draftLostPostId, setDraftLostPostId] = useState<string | null>(
+    appliedLostPostId
+  );
+  const [syncedAppliedId, setSyncedAppliedId] = useState(appliedLostPostId);
+
+  // Keep draft aligned when deep link / applied URL changes (render-time sync).
+  if (appliedLostPostId !== syncedAppliedId) {
+    setSyncedAppliedId(appliedLostPostId);
+    if (appliedLostPostId) {
+      setDraftLostPostId(appliedLostPostId);
+    }
+  }
+
+  const selectedLostPostId =
+    draftLostPostId ?? lostPosts[0]?.id ?? null;
+
+  const syncUrl = useCallback(
+    (lostPostId: string) => {
+      const next = `/recommend?lostPostId=${lostPostId}`;
+      if (typeof window !== "undefined") {
+        const current = `${window.location.pathname}${window.location.search}`;
+        if (current === next) return;
+      }
+      router.replace(next, { scroll: false });
+    },
+    [router]
+  );
+
+  const handleSelect = useCallback(
+    (item: LostPostItem) => {
+      setDraftLostPostId(item.id);
+      if (appliedLostPostId) {
+        syncUrl(item.id);
+      }
+    },
+    [appliedLostPostId, syncUrl]
+  );
+
+  const handlePrimaryAction = useCallback(
+    (item: LostPostItem) => {
+      setDraftLostPostId(item.id);
+      syncUrl(item.id);
+    },
+    [syncUrl]
+  );
+
+  return (
+    <Container className="py-8">
+      <header className="mb-8">
+        <Text as="h1" variant="title" className="text-2xl">
+          비슷한 제보 찾기
+        </Text>
+        <Text variant="body" color="sub" className="mt-1">
+          유실글을 고르면 가능성이 높은 목격 제보를 모아 보여드려요.
+        </Text>
+      </header>
+      {loading ? (
+        <div className="space-y-3">
+          <div className="bg-border-subtle h-3 w-40 animate-pulse rounded-full" />
+          <div className="bg-border-subtle h-3 w-28 animate-pulse rounded-full" />
+          <Text variant="caption" color="caption">
+            유실글을 불러오는 중...
           </Text>
-          <Text variant="body" color="sub" className="mt-1">
-            유실글을 고르면 가능성이 높은 목격 제보를 모아 보여드려요.
+        </div>
+      ) : listError && lostPosts.length === 0 ? (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-900/20">
+          <Text variant="body" color="caption" className="mb-2 block">
+            {listError}
           </Text>
-        </header>
-        {loading ? (
-          <div className="space-y-3">
-            <div className="bg-border-subtle h-3 w-40 animate-pulse rounded-full" />
-            <div className="bg-border-subtle h-3 w-28 animate-pulse rounded-full" />
-            <Text variant="caption" color="caption">
-              유실글을 불러오는 중...
-            </Text>
-          </div>
-        ) : listError && lostPosts.length === 0 ? (
-          <div className="rounded-xl border border-amber-200 bg-amber-50 p-6 text-center dark:border-amber-800 dark:bg-amber-900/20">
-            <Text variant="body" color="caption" className="mb-2 block">
-              {listError}
-            </Text>
-            <Button variant="secondary" onClick={() => void reloadLostPosts()}>
-              다시 시도
+          <Button variant="secondary" onClick={() => void reloadLostPosts()}>
+            다시 시도
+          </Button>
+        </div>
+      ) : lostPosts.length === 0 ? (
+        <div className="border-border-subtle bg-surface flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-5 py-10 text-center shadow-sm">
+          <Text as="h2" variant="title" color="main">
+            아직 올린 유실글이 없어요
+          </Text>
+          <Text variant="body" color="sub" className="max-w-sm">
+            유실글을 올리면 비슷한 목격 제보를 모아 보여드려요.
+          </Text>
+          <Link href="/my/lost-posts/new" className="mt-1">
+            <Button variant="primary" className="min-h-11">
+              유실글 올리기
             </Button>
-          </div>
-        ) : lostPosts.length === 0 ? (
-          <div className="border-border-subtle bg-surface flex min-h-[200px] flex-col items-center justify-center gap-3 rounded-2xl border border-dashed px-5 py-10 text-center shadow-sm">
-            <Text as="h2" variant="title" color="main">
-              아직 올린 유실글이 없어요
-            </Text>
-            <Text variant="body" color="sub" className="max-w-sm">
-              유실글을 올리면 비슷한 목격 제보를 모아 보여드려요.
-            </Text>
-            <Link href="/my/lost-posts/new" className="mt-1">
-              <Button variant="primary" className="min-h-11">
-                유실글 올리기
-              </Button>
-            </Link>
-          </div>
-        ) : (
+          </Link>
+        </div>
+      ) : (
+        <>
           <LostCaseCarousel
             items={lostPosts}
             refreshing={refreshing}
+            selectedId={selectedLostPostId}
+            onSelect={handleSelect}
+            onPrimaryAction={handlePrimaryAction}
             heading="유실글 선택"
             primaryAction="recommend"
           />
-        )}
-      </Container>
-    );
-  }
-
-  return <RecommendWithLostPost lostPostId={lostPostId} />;
+          {appliedLostPostId ? (
+            <RecommendWithLostPost lostPostId={appliedLostPostId} />
+          ) : null}
+        </>
+      )}
+    </Container>
+  );
 }
 
 const RADIUS_OPTIONS = [1, 2, 5, 8, 10, 20, 50, 100] as const;
@@ -106,7 +154,6 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
     createRangeState({ radiusKm: DEFAULT_RADIUS_KM, days: DEFAULT_DAYS })
   );
 
-  const { data: post, isLoading, error } = useLostPost(lostPostId);
   const {
     data: recommendations,
     error: recoError,
@@ -134,21 +181,6 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
     range.applied.days,
   ]);
 
-  const client = createClient();
-  const storageRef = client?.storage?.from("lost");
-  const coverUrl =
-    post && storageRef
-      ? storageRef.getPublicUrl(post.cover_photo_key).data.publicUrl
-      : "";
-  const lostAt = post?.lost_at
-    ? new Date(post.lost_at).toLocaleString("ko-KR", {
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "";
-
   const calculatedAtLabel =
     recommendations?.calculatedAt && recommendations.status === "ready"
       ? new Date(recommendations.calculatedAt).toLocaleString("ko-KR", {
@@ -161,193 +193,128 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
       : null;
 
   return (
-    <Container className="py-8">
-      <BackLink href="/recommend">다른 유실글 선택</BackLink>
-
-      <header className="mb-6">
-        <Text as="h1" variant="title" className="text-2xl">
-          비슷한 제보 찾기
-        </Text>
-        <Text variant="body" color="sub" className="mt-1">
-          거리·시각·특징을 바탕으로 먼저 볼 제보를 정리했어요.
-        </Text>
-      </header>
-
-      {isLoading ? (
-        <div className="border-border-subtle mb-6 rounded-2xl border p-4">
+    <section aria-label="추천 제보" className="mt-2">
+      <details className="border-border-subtle bg-surface mb-6 rounded-xl border shadow-sm">
+        <summary className="focus-visible:outline-action-primary flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
           <Text variant="caption" color="caption">
-            로딩 중...
+            탐색 범위 · 반경 {range.applied.radiusKm}km · {range.applied.days}일
+          </Text>
+          <span className="text-caption shrink-0 select-none" aria-hidden>
+            ▼
+          </span>
+        </summary>
+        <div className="border-t border-gray-200 px-4 py-3 dark:border-gray-700">
+          <ScrollablePanel variant="panel" className="space-y-3 pr-0.5">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+              <label className="flex items-center gap-2">
+                <Text variant="caption" color="caption" className="shrink-0">
+                  반경
+                </Text>
+                <select
+                  value={range.draft.radiusKm}
+                  onChange={(e) =>
+                    setRange((prev) =>
+                      updateDraftRange(prev, {
+                        radiusKm: Number(e.target.value),
+                      })
+                    )
+                  }
+                  className="border-border-subtle focus:ring-action-primary h-11 min-h-11 min-w-[5.5rem] rounded-xl border bg-transparent px-3 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
+                >
+                  {RADIUS_OPTIONS.map((v) => (
+                    <option key={v} value={v}>
+                      {v}km
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="flex items-center gap-2">
+                <Text variant="caption" color="caption" className="shrink-0">
+                  기간
+                </Text>
+                <select
+                  value={range.draft.days}
+                  onChange={(e) =>
+                    setRange((prev) =>
+                      updateDraftRange(prev, {
+                        days: Number(e.target.value),
+                      })
+                    )
+                  }
+                  className="border-border-subtle focus:ring-action-primary h-11 min-h-11 min-w-[5.5rem] rounded-xl border bg-transparent px-3 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
+                >
+                  {DAYS_OPTIONS.map((v) => (
+                    <option key={v} value={v}>
+                      {v}일
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <Button
+              variant="secondary"
+              className="h-11 min-h-11 w-full py-0 text-sm"
+              onClick={() => setRange(applyDraftRange)}
+            >
+              적용
+            </Button>
+          </ScrollablePanel>
+        </div>
+      </details>
+
+      <div className="mb-3 flex flex-wrap items-end gap-2">
+        {calculatedAtLabel ? (
+          <Text
+            variant="caption"
+            color="caption"
+            className="text-xs leading-none"
+          >
+            {calculatedAtLabel} 기준
+          </Text>
+        ) : null}
+        <button
+          type="button"
+          className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary ml-auto inline-flex min-h-11 min-w-11 items-end justify-center pb-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          onClick={() => refetchRecommendations()}
+          aria-label="새로고침"
+        >
+          <Icon name="refresh" size={18} />
+        </button>
+      </div>
+
+      {recoError ? (
+        <div className="border-border-subtle mb-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
+          <Text variant="caption" color="caption">
+            비슷한 제보를 불러오는 중 오류가 났습니다.
           </Text>
         </div>
-      ) : error || !post ? (
-        <div className="border-border-subtle mb-6 rounded-2xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-          <Text variant="caption" color="caption">
-            유실글을 찾을 수 없습니다. 다른 유실글을 선택해 주세요.
+      ) : recoLoading || recommendations?.status === "pending" ? (
+        <div className="border-border-subtle rounded-xl border p-6 text-center">
+          <Text variant="body" color="caption">
+            비슷한 제보를 정리하고 있습니다...
+          </Text>
+        </div>
+      ) : recommendations?.status === "ready" &&
+        (!recommendations.items || recommendations.items.length === 0) ? (
+        <div className="border-border-subtle rounded-xl border p-6 text-center">
+          <Text variant="body" color="caption">
+            이 탐색 범위에는 아직 볼 목격 제보가 없습니다.
           </Text>
         </div>
       ) : (
-        <div className="border-border-subtle relative mb-6 rounded-2xl border bg-white p-4 shadow-sm">
-          <Text variant="caption" color="caption" className="mb-2 block">
-            선택된 유실글
-          </Text>
-          <Link
-            href={`/my/lost-posts/${post.id}`}
-            className="flex gap-4 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-          >
-            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-gray-100">
-              {coverUrl ? (
-                <Image
-                  src={coverUrl}
-                  alt=""
-                  fill
-                  sizes="64px"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="from-accent-warm/25 via-surface-soft to-primary-soft/40 absolute inset-0 bg-gradient-to-br" />
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <StatusBadge status={post.status} size="sm" className="mb-1" />
-              <Text variant="body" className="font-medium">
-                {post.pet_name?.trim() || "이름 미입력"}
-              </Text>
-              {lostAt ? (
-                <Text variant="caption" color="caption" className="block">
-                  유실 시각 {lostAt}
-                </Text>
-              ) : null}
-            </div>
-          </Link>
-        </div>
+        <ScrollablePanel variant="results" className="flex flex-col gap-4">
+          {recommendations?.items?.map((item) => (
+            <RecommendationCard
+              key={item.sightingId}
+              item={item}
+              lostPostId={lostPostId}
+              onFeedbackChange={refetchRecommendations}
+              accessToken={session?.access_token}
+            />
+          ))}
+        </ScrollablePanel>
       )}
-
-      {error || !post ? null : (
-        <>
-          <details className="border-border-subtle bg-surface mb-6 rounded-xl border shadow-sm">
-            <summary className="focus-visible:outline-action-primary flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 rounded-xl px-4 py-3 text-sm focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
-              <Text variant="caption" color="caption">
-                탐색 범위 · 반경 {range.applied.radiusKm}km ·{" "}
-                {range.applied.days}일
-              </Text>
-              <span className="text-caption shrink-0 select-none" aria-hidden>
-                ▼
-              </span>
-            </summary>
-            <div className="border-t border-gray-200 px-4 py-3 dark:border-gray-700">
-              <ScrollablePanel variant="panel" className="space-y-3 pr-0.5">
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
-                  <label className="flex items-center gap-2">
-                    <Text variant="caption" color="caption" className="shrink-0">
-                      반경
-                    </Text>
-                    <select
-                      value={range.draft.radiusKm}
-                      onChange={(e) =>
-                        setRange((prev) =>
-                          updateDraftRange(prev, {
-                            radiusKm: Number(e.target.value),
-                          })
-                        )
-                      }
-                      className="border-border-subtle focus:ring-action-primary h-11 min-h-11 min-w-[5.5rem] rounded-xl border bg-transparent px-3 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
-                    >
-                      {RADIUS_OPTIONS.map((v) => (
-                        <option key={v} value={v}>
-                          {v}km
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="flex items-center gap-2">
-                    <Text variant="caption" color="caption" className="shrink-0">
-                      기간
-                    </Text>
-                    <select
-                      value={range.draft.days}
-                      onChange={(e) =>
-                        setRange((prev) =>
-                          updateDraftRange(prev, {
-                            days: Number(e.target.value),
-                          })
-                        )
-                      }
-                      className="border-border-subtle focus:ring-action-primary h-11 min-h-11 min-w-[5.5rem] rounded-xl border bg-transparent px-3 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
-                    >
-                      {DAYS_OPTIONS.map((v) => (
-                        <option key={v} value={v}>
-                          {v}일
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <Button
-                  variant="secondary"
-                  className="h-11 min-h-11 w-full py-0 text-sm"
-                  onClick={() => setRange(applyDraftRange)}
-                >
-                  적용
-                </Button>
-              </ScrollablePanel>
-            </div>
-          </details>
-
-          <div className="mb-3 flex flex-wrap items-end gap-2">
-            {calculatedAtLabel ? (
-              <Text
-                variant="caption"
-                color="caption"
-                className="text-xs leading-none"
-              >
-                {calculatedAtLabel} 기준
-              </Text>
-            ) : null}
-            <button
-              type="button"
-              className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary ml-auto inline-flex min-h-11 min-w-11 items-end justify-center pb-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-              onClick={() => refetchRecommendations()}
-              aria-label="새로고침"
-            >
-              <Icon name="refresh" size={18} />
-            </button>
-          </div>
-
-          {recoError ? (
-            <div className="border-border-subtle mb-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
-              <Text variant="caption" color="caption">
-                비슷한 제보를 불러오는 중 오류가 났습니다.
-              </Text>
-            </div>
-          ) : recoLoading || recommendations?.status === "pending" ? (
-            <div className="border-border-subtle rounded-xl border p-6 text-center">
-              <Text variant="body" color="caption">
-                비슷한 제보를 정리하고 있습니다...
-              </Text>
-            </div>
-          ) : recommendations?.status === "ready" &&
-            (!recommendations.items || recommendations.items.length === 0) ? (
-            <div className="border-border-subtle rounded-xl border p-6 text-center">
-              <Text variant="body" color="caption">
-                이 탐색 범위에는 아직 볼 목격 제보가 없습니다.
-              </Text>
-            </div>
-          ) : (
-            <ScrollablePanel variant="results" className="flex flex-col gap-4">
-              {recommendations?.items?.map((item) => (
-                <RecommendationCard
-                  key={item.sightingId}
-                  item={item}
-                  lostPostId={lostPostId}
-                  onFeedbackChange={refetchRecommendations}
-                  accessToken={session?.access_token}
-                />
-              ))}
-            </ScrollablePanel>
-          )}
-        </>
-      )}
-    </Container>
+    </section>
   );
 }
 
