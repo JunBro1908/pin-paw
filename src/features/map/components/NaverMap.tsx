@@ -29,6 +29,13 @@ import {
 } from "../lib/map-domain";
 import type { MapLayer, SightingFeedbackMap } from "../lib/map-domain";
 import {
+  buildFocusedSightingFromDetail,
+  DEEP_LINK_FOCUS_ZOOM,
+  findFocusedPointInItems,
+  resolveDeepLinkCenter,
+  type SightingDetailPayload,
+} from "../lib/map-deep-link-focus";
+import {
   createNaverMapAdapter,
   type NaverMapAdapter,
 } from "../lib/naver-map-adapter";
@@ -40,7 +47,6 @@ import {
 import {
   getMapMarkerPresentation,
   getSightingPinStatusColor,
-  normalizeMapSourceType,
 } from "../lib/map-marker-presentation";
 import { useMapData } from "../hooks/use-map-data";
 import {
@@ -81,6 +87,10 @@ export function NaverMap({
   const accessToken = session?.access_token;
   const hasCenteredSightingRef = useRef(false);
   const hasAutoFocusedRef = useRef(false);
+  /** Precise center from auth detail — applied when map becomes ready after fetch. */
+  const pendingDeepLinkCenterRef = useRef<{ lat: number; lng: number } | null>(
+    null
+  );
   const isAuthenticated = Boolean(accessToken);
 
   // 맵 인스턴스와 마커를 ref로 관리하여 리렌더링 시에도 유지
@@ -94,6 +104,18 @@ export function NaverMap({
   const userMovedMapRef = useRef(false);
   const autoLocateAttemptedRef = useRef(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const panMapToDeepLinkCenter = useCallback(
+    (center: { lat: number; lng: number }) => {
+      pendingDeepLinkCenterRef.current = center;
+      if (!mapInstanceRef.current || !window.naver?.maps) return;
+      const latLng = new window.naver.maps.LatLng(center.lat, center.lng);
+      mapInstanceRef.current.panTo(latLng);
+      mapInstanceRef.current.setZoom(DEEP_LINK_FOCUS_ZOOM);
+      hasCenteredSightingRef.current = true;
+    },
+    []
+  );
 
   // 선택된 제보 정보 (팝업용)
   const [selectedSighting, setSelectedSighting] = useState<MapItem | null>(
@@ -359,7 +381,14 @@ export function NaverMap({
     void warmUserMapCenter().then((center) => {
       if (!center || !mapInstanceRef.current || !window.naver?.maps) return;
       if (userMovedMapRef.current) return;
-      if (initialCenter || initialCenterSightingId) return;
+      if (
+        initialCenter ||
+        initialCenterSightingId ||
+        initialFocusSightingId ||
+        pendingDeepLinkCenterRef.current
+      ) {
+        return;
+      }
 
       const latLng = new window.naver.maps.LatLng(center.lat, center.lng);
       if (typeof mapInstanceRef.current.morph === "function") {
@@ -370,7 +399,12 @@ export function NaverMap({
       }
       placeMyLocationMarker(center.lat, center.lng);
     });
-  }, [initialCenter, initialCenterSightingId, placeMyLocationMarker]);
+  }, [
+    initialCenter,
+    initialCenterSightingId,
+    initialFocusSightingId,
+    placeMyLocationMarker,
+  ]);
 
   /**
    * 마커 및 클러스터 렌더링 함수
@@ -490,10 +524,16 @@ export function NaverMap({
 
     try {
       const warmedCenter = getCachedUserMapCenter();
-      const center = initialCenter ?? warmedCenter ?? DEFAULT_MAP_CENTER;
+      const deepLinkCenter =
+        pendingDeepLinkCenterRef.current ?? initialCenter ?? null;
+      const center = deepLinkCenter ?? warmedCenter ?? DEFAULT_MAP_CENTER;
       const mapOptions = {
         center: new window.naver.maps.LatLng(center.lat, center.lng),
-        zoom: initialCenter ? 16 : warmedCenter ? 15 : DEFAULT_MAP_WARM_ZOOM,
+        zoom: deepLinkCenter
+          ? DEEP_LINK_FOCUS_ZOOM
+          : warmedCenter
+            ? 15
+            : DEFAULT_MAP_WARM_ZOOM,
         zoomControl: false,
       };
 
@@ -524,7 +564,9 @@ export function NaverMap({
 
       setIsLoaded(true);
 
-      if (warmedCenter && !initialCenter) {
+      if (pendingDeepLinkCenterRef.current) {
+        panMapToDeepLinkCenter(pendingDeepLinkCenterRef.current);
+      } else if (warmedCenter && !initialCenter) {
         placeMyLocationMarker(warmedCenter.lat, warmedCenter.lng);
       } else if (!initialCenter && !initialCenterSightingId) {
         // Cache miss: keep Seoul (or default) until a quiet one-shot fix arrives.
@@ -538,6 +580,7 @@ export function NaverMap({
     handleMapIdle,
     silentFollowUserLocation,
     placeMyLocationMarker,
+    panMapToDeepLinkCenter,
     initialCenter,
     initialCenterSightingId,
   ]);
@@ -586,6 +629,7 @@ export function NaverMap({
   // initialFocusSightingId 변경 시 자동 포커스 리셋
   useEffect(() => {
     hasAutoFocusedRef.current = false;
+    pendingDeepLinkCenterRef.current = null;
   }, [initialFocusSightingId]);
 
   // 7-5: 지도에서 제보 링크로 진입 시 "본 적 있음" 기록
@@ -602,96 +646,105 @@ export function NaverMap({
     }).catch(() => {});
   }, [initialFocusSightingId, accessToken]);
 
-  // 추천 "지도에서 보기" 진입 시(initialCenter+initialFocusSightingId): 클러스터 대기 없이 상세 조회로 카드 바로 열기
+  // 추천 「지도에서 보기」: auth 상세로 시트 오픈 + 정밀 좌표 중앙 정렬.
+  // URL lat/lng는 추천 approximate grid일 수 있으므로 detail.lat/lng를 우선한다.
+  // hasAutoFocusedRef는 성공 후에만 잠가서 fetch 실패 시 viewport 폴백이 가능하다.
   useEffect(() => {
     if (
       !initialFocusSightingId ||
-      !initialCenter ||
-      hasAutoFocusedRef.current ||
-      !accessToken
-    )
+      isAuthLoading ||
+      !accessToken ||
+      hasAutoFocusedRef.current
+    ) {
       return;
-    hasAutoFocusedRef.current = true;
-    fetch(
-      `/api/v1/auth/sightings/${encodeURIComponent(initialFocusSightingId)}`,
-      {
-        credentials: "include",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      }
-    )
+    }
+
+    let cancelled = false;
+    const focusId = initialFocusSightingId;
+    const urlCenter = initialCenter ?? null;
+
+    fetch(`/api/v1/auth/sightings/${encodeURIComponent(focusId)}`, {
+      credentials: "include",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    })
       .then((res) => (res.ok ? res.json() : null))
       .then((json) => {
-        if (json?.success && json?.data) {
-          const d = json.data as Record<string, unknown>;
-          setSelectedSighting({
-            id: d.id as string,
-            lat: initialCenter.lat,
-            lng: initialCenter.lng,
-            type: "point",
-            source_type: normalizeMapSourceType(d.source_type),
-            photo_keys: d.photo_keys as string[] | undefined,
-            occurred_at: d.occurred_at as string | undefined,
-            author_type: d.author_type as "anon" | "user" | undefined,
-            trait_color: d.trait_color as string | undefined,
-            trait_size: d.trait_size as string | undefined,
-            trait_species: d.trait_species as string | undefined,
-            note: d.note as string | undefined,
-          });
-        }
+        if (cancelled || !json?.success || !json?.data) return;
+        const detail = json.data as SightingDetailPayload;
+        const center = resolveDeepLinkCenter(detail, urlCenter);
+        if (!center) return;
+        const focused = buildFocusedSightingFromDetail(detail, center);
+        if (!focused) return;
+        hasAutoFocusedRef.current = true;
+        setSelectedSighting(focused);
+        panMapToDeepLinkCenter(center);
       })
       .catch(() => {});
-  }, [initialFocusSightingId, initialCenter, accessToken]);
 
-  // 마커 로드 후 해당 제보 상세 카드를 기본으로 열기 (lat/lng 없이 sightingId만 있을 때)
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    initialFocusSightingId,
+    initialCenter,
+    accessToken,
+    isAuthLoading,
+    panMapToDeepLinkCenter,
+  ]);
+
+  // 상세 fetch 실패/지연 시: 뷰포트에 핀이 보이면 시트를 연다 (URL center 유무와 무관).
   useEffect(() => {
     if (
       !initialFocusSightingId ||
       hasAutoFocusedRef.current ||
-      itemsInView.length === 0 ||
-      initialCenter
-    )
+      itemsInView.length === 0
+    ) {
       return;
-    const wantId = normalizeSightingId(initialFocusSightingId);
-    const point = itemsInView.find(
-      (item): item is MapItem & { type: "point"; id: string } =>
-        item.type === "point" &&
-        "id" in item &&
-        typeof item.id === "string" &&
-        normalizeSightingId(item.id) === wantId
-    );
-    if (point) {
-      const frameId = requestAnimationFrame(() => {
-        setSelectedSighting(point);
-        hasAutoFocusedRef.current = true;
-      });
-      return () => cancelAnimationFrame(frameId);
     }
-  }, [initialFocusSightingId, initialCenter, itemsInView]);
+    const point = findFocusedPointInItems(itemsInView, initialFocusSightingId);
+    if (!point) return;
+    const frameId = requestAnimationFrame(() => {
+      if (hasAutoFocusedRef.current) return;
+      hasAutoFocusedRef.current = true;
+      setSelectedSighting(point);
+      panMapToDeepLinkCenter({ lat: point.lat, lng: point.lng });
+    });
+    return () => cancelAnimationFrame(frameId);
+  }, [initialFocusSightingId, itemsInView, panMapToDeepLinkCenter]);
 
-  // initialCenter가 URL 등으로 바뀌면 기존 맵 인스턴스만 pan (추가 API 없음)
+  // URL lat/lng만으로 먼저 들어온 경우 맵이 준비되면 provisional pan (정밀 좌표로 덮어쓸 수 있음)
   useEffect(() => {
-    if (!initialCenter || !mapInstanceRef.current || !window.naver?.maps)
+    if (
+      !initialCenter ||
+      !mapInstanceRef.current ||
+      !window.naver?.maps ||
+      pendingDeepLinkCenterRef.current ||
+      hasCenteredSightingRef.current
+    ) {
       return;
+    }
     const center = new window.naver.maps.LatLng(
       initialCenter.lat,
       initialCenter.lng
     );
     mapInstanceRef.current.panTo(center);
-    mapInstanceRef.current.setZoom(16);
-  }, [initialCenter]);
+    mapInstanceRef.current.setZoom(DEEP_LINK_FOCUS_ZOOM);
+  }, [initialCenter, isLoaded]);
 
-  // 폴백: lat/lng 없이 제보 ID만 있을 때 단건 조회 후 중심 이동
+  // 폴백: lat/lng 없이 제보 ID만 있을 때 — 소유 제보면 me API로 중심 이동
+  // (추천 딥링크는 위 auth detail effect가 담당)
   useEffect(() => {
     if (
       !isLoaded ||
       !initialCenterSightingId ||
+      initialFocusSightingId ||
       !mapInstanceRef.current ||
       !window.naver?.maps ||
       hasCenteredSightingRef.current
     )
       return;
 
-    const mapRef = mapInstanceRef.current;
+    const mapRefCurrent = mapInstanceRef.current;
     const headers: HeadersInit = {};
     if (accessToken) headers["Authorization"] = `Bearer ${accessToken}`;
 
@@ -705,7 +758,7 @@ export function NaverMap({
           json?.success &&
           json?.data?.lat != null &&
           json?.data?.lng != null &&
-          mapRef
+          mapRefCurrent
         ) {
           const { lat, lng } = json.data;
           const center = new window.naver.maps.LatLng(lat, lng);
@@ -713,14 +766,14 @@ export function NaverMap({
           requestAnimationFrame(() => {
             if (mapInstanceRef.current) {
               mapInstanceRef.current.panTo(center);
-              mapInstanceRef.current.setZoom(16);
+              mapInstanceRef.current.setZoom(DEEP_LINK_FOCUS_ZOOM);
               hasCenteredSightingRef.current = true;
             }
           });
         }
       })
       .catch(() => {});
-  }, [isLoaded, initialCenterSightingId, accessToken]);
+  }, [isLoaded, initialCenterSightingId, initialFocusSightingId, accessToken]);
 
   useEffect(() => {
     return () => {

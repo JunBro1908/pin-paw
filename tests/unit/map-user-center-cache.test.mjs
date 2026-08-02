@@ -32,7 +32,11 @@ test("NaverMap opens on warmed center and silent-follows once on miss", async ()
   assert.match(source, /warmUserMapCenter/);
   assert.match(source, /silentFollowUserLocation/);
   assert.match(source, /userMovedMapRef/);
-  assert.match(source, /warmedCenter \? 15 : DEFAULT_MAP_WARM_ZOOM/);
+  assert.match(
+    source,
+    /warmedCenter\s*\?\s*15\s*:\s*DEFAULT_MAP_WARM_ZOOM/
+  );
+  assert.match(source, /DEEP_LINK_FOCUS_ZOOM/);
   assert.doesNotMatch(
     source,
     /if \(!initialCenter && !initialCenterSightingId\) \{\s*handleCurrentLocation\(\);/
