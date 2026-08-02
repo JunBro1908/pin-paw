@@ -34,7 +34,7 @@ export function LostCaseCarousel({
   refreshing = false,
   selectedId = null,
   onSelect,
-  primaryAction = "recommend",
+  primaryAction = "detail",
   heading = "유실글",
   headingAction,
   className,
@@ -105,28 +105,16 @@ export function LostCaseCarousel({
       className={cn("mb-6", className)}
     >
       <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="flex min-w-0 flex-1 items-center gap-2 sm:gap-3">
-          <Text
-            as="h2"
-            id={headingId}
-            variant="body"
-            className="shrink-0 font-medium"
-          >
-            {heading}
-          </Text>
-          {headingAction ? (
-            <div className="shrink-0">{headingAction}</div>
-          ) : null}
-        </div>
-        {items.length > 1 ? (
-          <Text
-            variant="caption"
-            color="caption"
-            className="shrink-0 tabular-nums"
-            aria-live="polite"
-          >
-            {pageIndex + 1}/{items.length}
-          </Text>
+        <Text
+          as="h2"
+          id={headingId}
+          variant="body"
+          className="min-w-0 shrink font-medium"
+        >
+          {heading}
+        </Text>
+        {headingAction ? (
+          <div className="shrink-0">{headingAction}</div>
         ) : null}
       </div>
 
@@ -157,7 +145,7 @@ export function LostCaseCarousel({
                 className={cn(
                   "w-full max-w-none transition-[box-shadow,ring] duration-200",
                   selected
-                    ? "ring-action-primary/40 ring-2 ring-offset-2"
+                    ? "ring-action-primary/40 ring-2 ring-offset-2 ring-offset-white"
                     : "opacity-95"
                 )}
               />

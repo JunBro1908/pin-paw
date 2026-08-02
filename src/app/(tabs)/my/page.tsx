@@ -10,7 +10,6 @@ import { Button } from "@/shared/ui/Button";
 import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { LostCaseCarousel } from "@/features/lost-posts/components/LostCaseCarousel";
-import { LostCaseNextActions } from "@/features/lost-posts/components/LostCaseNextActions";
 import { selectActiveLostCase } from "@/features/lost-posts/lib/active-lost-case";
 import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
 import type { LostPostItem } from "@/features/lost-posts/model/types";
@@ -27,6 +26,21 @@ function sortLostCasesForCarousel(items: LostPostItem[]): LostPostItem[] {
     if (byStatus !== 0) return byStatus;
     return Date.parse(b.updated_at) - Date.parse(a.updated_at);
   });
+}
+
+function NewLostPostButton({ className }: { className?: string }) {
+  return (
+    <Link
+      href="/my/lost-posts/new"
+      aria-label="유실글 올리기"
+      className={cn(
+        "border-border-subtle bg-action-primary text-action-on-primary hover:bg-action-primary/90 focus-visible:outline-action-primary inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-2xl font-light leading-none shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
+        className
+      )}
+    >
+      <span aria-hidden="true">+</span>
+    </Link>
+  );
 }
 
 function MyPageContent() {
@@ -87,41 +101,31 @@ function MyPageContent() {
       ) : null}
 
       {!loading && !error && carouselItems.length === 0 ? (
-        <div className="border-border-subtle bg-surface mb-6 rounded-2xl border border-dashed p-6 text-center shadow-sm">
-          <Text variant="body" className="mb-2 font-medium">
-            찾는 중인 유실글이 없어요
-          </Text>
-          <Text variant="caption" color="caption" className="mb-4 block">
-            유실글을 올리면 비슷한 제보와 지도 흔적을 여기서 이어서 볼 수 있어요.
-          </Text>
-          <Link href="/my/lost-posts/new">
-            <Button variant="primary">유실글 올리기</Button>
-          </Link>
+        <div className="mb-6 py-2">
+          <header className="mb-6 text-center sm:text-left">
+            <Text as="h2" variant="title" className="text-xl">
+              아직 올린 유실글이 없어요
+            </Text>
+            <Text variant="body" color="sub" className="mt-1">
+              가족을 찾고 있다면, 유실글 하나로 PinPaw 찾기를 시작해 보세요.
+            </Text>
+          </header>
+          <div className="flex justify-center sm:justify-start">
+            <NewLostPostButton />
+          </div>
         </div>
       ) : null}
 
       {carouselItems.length > 0 ? (
-        <>
-          <LostCaseCarousel
-            items={carouselItems}
-            refreshing={refreshing}
-            selectedId={selectedCase?.id ?? null}
-            onSelect={(item) => setSelectedId(item.id)}
-            primaryAction="recommend"
-            heading="내 유실 사건"
-            headingAction={
-              <Link
-                href="/my/lost-posts/new"
-                className="text-action-primary shrink-0 text-sm font-semibold underline decoration-action-primary/50 underline-offset-4"
-              >
-                유실글 올리기
-              </Link>
-            }
-          />
-          {selectedCase ? (
-            <LostCaseNextActions lostPostId={selectedCase.id} />
-          ) : null}
-        </>
+        <LostCaseCarousel
+          items={carouselItems}
+          refreshing={refreshing}
+          selectedId={selectedCase?.id ?? null}
+          onSelect={(item) => setSelectedId(item.id)}
+          primaryAction="detail"
+          heading="내 유실글"
+          headingAction={<NewLostPostButton />}
+        />
       ) : null}
 
       <section className="border-border-subtle bg-surface mb-4 overflow-hidden rounded-2xl border shadow-sm">

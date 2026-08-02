@@ -18,27 +18,8 @@ interface ActiveLostCaseCardProps {
   /** @deprecated Full-width page-snap carousel only — ignored. */
   compact?: boolean;
   className?: string;
-  /** Prefer detail over recommend for primary CTA (default: recommend) */
+  /** Prefer detail over recommend for primary CTA (default: detail) */
   primaryAction?: "recommend" | "detail";
-}
-
-function EditIcon() {
-  return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden
-    >
-      <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-      <path d="m15 5 4 4" />
-    </svg>
-  );
 }
 
 export function ActiveLostCaseCard({
@@ -46,33 +27,32 @@ export function ActiveLostCaseCard({
   refreshing = false,
   compact: _compact = false,
   className,
-  primaryAction = "recommend",
+  primaryAction = "detail",
 }: ActiveLostCaseCardProps) {
   void _compact;
   const coverUrl = getLostPostCoverUrl(item.cover_photo_key);
   const lostAt = formatLostCaseDateTime(item.lost_at);
   const lastChecked = formatLostCaseDateTime(item.updated_at);
   const detailHref = `/my/lost-posts/${item.id}`;
-  const editHref = `${detailHref}?edit=1`;
   const recommendHref = `/recommend?lostPostId=${item.id}`;
   const primaryHref =
     primaryAction === "detail" ? detailHref : recommendHref;
   const primaryLabel =
-    primaryAction === "detail" ? "사건 보기" : "추천 제보 보기";
+    primaryAction === "detail" ? "유실글 보기" : "추천 제보 보기";
 
   return (
     <article
       className={cn(
-        "border-border-subtle bg-surface relative overflow-hidden rounded-2xl border shadow-sm w-full max-w-none",
+        "border-border-subtle relative overflow-hidden rounded-2xl border bg-white shadow-sm w-full max-w-none",
         className
       )}
     >
       <Link
         href={detailHref}
         className="focus-visible:outline-action-primary block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-        aria-label={`${item.pet_name?.trim() || "유실 사건"} 상세 보기`}
+        aria-label={`${item.pet_name?.trim() || "유실글"} 상세 보기`}
       >
-        <div className="bg-surface-soft relative aspect-[2/1] overflow-hidden sm:aspect-[21/9]">
+        <div className="relative aspect-[2/1] overflow-hidden bg-gray-100 sm:aspect-[21/9]">
           {coverUrl ? (
             <Image
               src={coverUrl}
@@ -91,43 +71,35 @@ export function ActiveLostCaseCard({
         </div>
       </Link>
 
-      <div className="absolute top-3 right-3 z-10 flex items-center gap-2">
-        {refreshing ? (
+      {refreshing ? (
+        <div className="absolute top-3 right-3 z-10">
           <Text
             variant="caption"
-            className="bg-surface/90 rounded-full px-2 py-0.5 text-xs shadow-sm"
+            className="rounded-full bg-white/95 px-2 py-0.5 text-xs shadow-sm"
           >
             업데이트 중
           </Text>
-        ) : null}
-        <Link
-          href={editHref}
-          className="border-border-subtle bg-surface/95 text-text-main hover:bg-surface-soft focus-visible:outline-action-primary inline-flex h-9 w-9 items-center justify-center rounded-full border shadow-sm backdrop-blur-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-          aria-label="유실글 수정"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <EditIcon />
-        </Link>
-      </div>
+        </div>
+      ) : null}
 
-      <div className="space-y-3 p-4">
+      <div className="space-y-3 bg-white p-4">
         <div className="flex flex-wrap items-center gap-2">
           <StatusBadge status={item.status} size="sm" />
         </div>
         <div>
-          <Text as="h2" variant="title" className="font-semibold">
+          <Text as="h2" variant="title" className="font-semibold text-gray-900">
             {item.pet_name?.trim() || "이름 미입력"}
           </Text>
           {lostAt ? (
             <Text
               variant="body"
-              className="text-text-sub mt-1 block text-sm"
+              className="mt-1 block text-sm text-gray-600"
             >
               유실 시각 {lostAt}
             </Text>
           ) : null}
           {lastChecked ? (
-            <Text variant="caption" color="caption" className="mt-0.5 block">
+            <Text variant="caption" className="mt-0.5 block text-gray-500">
               마지막 확인 {lastChecked}
             </Text>
           ) : null}
