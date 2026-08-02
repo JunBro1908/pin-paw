@@ -86,17 +86,19 @@ test("bottom navigation uses product labels and outline icons", async () => {
 test("home has a real h1 and secondary lost-registration link", async () => {
   const page = await read("src/app/(tabs)/page.tsx");
   assert.match(page, /<Text[^>]+as="h1"/);
-  assert.match(page, /쉽고 빠른 제보들이 모여, 유실견을 따듯한 가족의 품으로 안내해줍니다/);
+  assert.match(page, /소중한 제보들이 모여, 유실견을 따듯한 가족의 품으로 안내해줍니다/);
   assert.match(page, /href="\/my\/lost-posts\/new"/);
   assert.match(page, /flex-col items-center/);
   assert.match(page, /반려동물을 잃어버렸나요\?/);
-  assert.match(page, /유실 등록하기/);
+  assert.match(page, /유실글 올리기/);
   assert.match(page, /<Text variant="body" color="sub" className="mt-1">/);
   assert.doesNotMatch(page, /opacity-70/);
   assert.doesNotMatch(
     page,
     /짧은 제보 하나가 PinPaw에서 가족을 찾는 따뜻한 실마리가 됩니다/
   );
+  assert.doesNotMatch(page, /쉽고 빠른 제보들이 모여/);
+  assert.doesNotMatch(page, /유실 등록하기/);
 });
 
 test("global typography uses the approved Korean system font stack", async () => {

@@ -16,7 +16,7 @@ export default function HomePage() {
           길 잃은 반려동물을 보셨나요?
         </Text>
         <Text variant="body" color="sub" className="mt-1">
-          쉽고 빠른 제보들이 모여, 유실견을 따듯한 가족의 품으로 안내해줍니다.
+          소중한 제보들이 모여, 유실견을 따듯한 가족의 품으로 안내해줍니다.
         </Text>
       </header>
 
@@ -32,7 +32,7 @@ export default function HomePage() {
           className="text-action-primary focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 flex-col items-center justify-center text-center text-sm font-medium underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <span>반려동물을 잃어버렸나요?</span>
-          <span>유실 등록하기</span>
+          <span>유실글 올리기</span>
         </Link>
       </div>
 
