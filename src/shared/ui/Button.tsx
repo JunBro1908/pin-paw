@@ -21,8 +21,9 @@ export function Button({
 
   const variants = {
     primary:
-      "bg-action-primary text-action-on-primary hover:bg-action-primary-hover",
-    secondary: "bg-primary-soft text-primary",
+      "bg-action-primary text-action-on-primary hover:bg-action-primary-hover active:bg-action-primary-hover",
+    secondary:
+      "border border-border-subtle bg-surface-soft text-text-main hover:bg-border-subtle",
   };
 
   const variantStyles = variant ? variants[variant] : "";
