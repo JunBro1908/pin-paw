@@ -1,27 +1,20 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Image from "next/image";
-import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { SightingFormData } from "../model/types";
 import { validateSightingForm } from "../lib/validators";
 import { cn } from "@/shared/lib/cn";
-import { toLocalDatetimeLocalString } from "@/shared/lib/date";
 import { Toast } from "@/shared/ui/Toast";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { supabase } from "@/shared/supabase/client";
+import { SPECIES_UNKNOWN } from "../constants/breeds";
 import {
-  DOG_BREEDS,
-  getBreedLabel,
-  SPECIES_UNKNOWN,
-} from "../constants/breeds";
-import {
-  SIZE_LABELS,
-  SIZE_VALUES,
-  type SizeValue,
-} from "@/shared/constants/traitSizes";
-import { TRAIT_TAGS } from "@/shared/constants/traitTags";
+  toLocalDateTimeInputValue,
+  type SightingLocationStatus,
+} from "../lib/sighting-form-presentation";
+import { SightingEssentials } from "./SightingEssentials";
+import { SightingOptionalDetails } from "./SightingOptionalDetails";
 import {
   completeSubmission,
   fingerprintUploadFile,
@@ -31,19 +24,13 @@ import {
   type FormSubmissionAttempt,
 } from "@/shared/lib/form-submission-lifecycle";
 
-const MAX_TAG_SELECT_SIGHTING = 5;
-const inputBase =
-  "w-full rounded-xl border bg-white px-4 py-3 text-[15px] shadow-sm transition-all outline-none focus:ring-2 focus:ring-primary/20 border-gray-200 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100";
-const selectBase =
-  "w-full rounded-xl border bg-white px-4 py-3 pr-10 text-[15px] shadow-sm transition-all outline-none focus:ring-2 focus:ring-primary/20 border-gray-200 appearance-none cursor-pointer dark:border-gray-600 dark:bg-gray-800 dark:text-gray-100 bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat";
-
 export function SightingForm() {
   const [formData, setFormData] = useState<SightingFormData>({
     photo: null,
     photoUrl: null,
     lat: 37.5665,
     lng: 126.978,
-    time: toLocalDatetimeLocalString(),
+    time: toLocalDateTimeInputValue(new Date()),
     traitColor: "",
     traitSize: "unknown",
     traitSpecies: SPECIES_UNKNOWN,
@@ -54,22 +41,29 @@ export function SightingForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
-  const [isLocating, setIsLocating] = useState(false);
   const [isLocationSet, setIsLocationSet] = useState(false);
+  const [geolocationErrorKind, setGeolocationErrorKind] =
+    useState<Exclude<SightingLocationStatus, "ready">>("locating");
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
   } | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const submissionAttemptRef = useRef<FormSubmissionAttempt | null>(null);
   const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
+  const lat = isLocationSet ? formData.lat : null;
+  const lng = isLocationSet ? formData.lng : null;
+  const locationStatus: SightingLocationStatus =
+    lat !== null && lng !== null ? "ready" : geolocationErrorKind;
 
   // 초기 렌더링 시 현재 위치 가져오기
   useEffect(() => {
-    if (!("geolocation" in navigator)) return;
+    if (!("geolocation" in navigator)) {
+      setGeolocationErrorKind("error");
+      return;
+    }
 
-    setIsLocating(true);
+    setGeolocationErrorKind("locating");
     const onSuccess = (position: GeolocationPosition) => {
       setFormData((prev) => ({
         ...prev,
@@ -77,7 +71,6 @@ export function SightingForm() {
         lng: position.coords.longitude,
       }));
       setIsLocationSet(true);
-      setIsLocating(false);
     };
     const onError = (error: GeolocationPositionError, retried: boolean) => {
       if (error.code === error.TIMEOUT && !retried) {
@@ -89,14 +82,18 @@ export function SightingForm() {
         return;
       }
       console.error("Geolocation error:", error);
-      setIsLocating(false);
       let msg = "위치 정보를 가져오지 못했습니다.";
       if (error.code === error.PERMISSION_DENIED) {
+        setGeolocationErrorKind("denied");
         msg = "위치 권한을 허용해주세요.";
       } else if (error.code === error.TIMEOUT) {
+        setGeolocationErrorKind("error");
         msg = "측정 시간이 초과되었습니다. 다시 시도해주세요.";
       } else if (error.code === error.POSITION_UNAVAILABLE) {
+        setGeolocationErrorKind("error");
         msg = "현재 위치 정보를 사용할 수 없습니다.";
+      } else {
+        setGeolocationErrorKind("error");
       }
       setToast({ message: msg, type: "error" });
     };
@@ -108,21 +105,16 @@ export function SightingForm() {
     );
   }, []);
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      const url = URL.createObjectURL(file);
-      setFormData((prev) => ({ ...prev, photo: file, photoUrl: url }));
-    }
-  };
+  useEffect(() => {
+    const photoUrl = formData.photoUrl;
+    return () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+    };
+  }, [formData.photoUrl]);
 
-  const handleRemovePhoto = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (formData.photoUrl) URL.revokeObjectURL(formData.photoUrl);
-    setFormData((prev) => ({ ...prev, photo: null, photoUrl: null }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+  const handlePhotoChange = (file: File | null) => {
+    const photoUrl = file ? URL.createObjectURL(file) : null;
+    setFormData((prev) => ({ ...prev, photo: file, photoUrl }));
   };
 
   const handleChange = (
@@ -132,6 +124,15 @@ export function SightingForm() {
   ) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleToggleTag = (tagId: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      traitTags: prev.traitTags.includes(tagId)
+        ? prev.traitTags.filter((id) => id !== tagId)
+        : [...prev.traitTags, tagId],
+    }));
   };
 
   const errors = validateSightingForm(formData);
@@ -190,9 +191,8 @@ export function SightingForm() {
         message: "제보가 성공적으로 등록되었습니다!",
         type: "success",
       });
-      const { invalidateMySightingsCache } = await import(
-        "@/features/sightings/hooks/useMySightings"
-      );
+      const { invalidateMySightingsCache } =
+        await import("@/features/sightings/hooks/useMySightings");
       invalidateMySightingsCache();
 
       // 폼 초기화
@@ -369,7 +369,7 @@ export function SightingForm() {
       photoUrl: null,
       lat: 37.5665,
       lng: 126.978,
-      time: new Date().toISOString().slice(0, 16),
+      time: toLocalDateTimeInputValue(new Date()),
       traitColor: "",
       traitSize: "unknown",
       traitSpecies: SPECIES_UNKNOWN,
@@ -377,8 +377,8 @@ export function SightingForm() {
       description: "",
     });
     setIsLocationSet(false);
+    setGeolocationErrorKind("error");
     setShowErrors(false);
-    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   return (
@@ -391,113 +391,33 @@ export function SightingForm() {
         />
       )}
       <form onSubmit={handleSubmit} className="space-y-8">
-        <section className="space-y-3">
-          <div className="flex items-center justify-between">
-            <Text variant="body" className="text-text-main font-bold">
-              목격 사진 <span className="text-primary">*</span>
-            </Text>
-            {showErrors && !formData.photo && (
-              <span className="animate-pulse text-[11px] font-medium text-red-500">
-                사진을 등록해주세요
-              </span>
-            )}
-          </div>
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            className="group border-border-subtle bg-surface hover:border-primary/50 hover:bg-primary-soft/30 relative flex aspect-square w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-all"
-          >
-            {formData.photoUrl ? (
-              <>
-                <Image
-                  src={formData.photoUrl}
-                  alt="Preview"
-                  fill
-                  sizes="(max-width: 768px) 100vw, 768px"
-                  unoptimized
-                  className="object-contain p-2"
-                />
-                <button
-                  type="button"
-                  onClick={handleRemovePhoto}
-                  className="absolute top-4 right-4 flex h-9 w-9 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-110"
-                >
-                  ✕
-                </button>
-              </>
-            ) : (
-              <div className="flex flex-col items-center gap-3">
-                <div className="bg-primary-soft text-primary flex h-16 w-16 items-center justify-center rounded-full shadow-sm">
-                  <span className="text-3xl">➕</span>
-                </div>
-                <Text variant="body" className="text-text-sub font-medium">
-                  촬영 및 앨범 선택
-                </Text>
-              </div>
-            )}
-            <input
-              type="file"
-              accept="image/*"
-              hidden
-              ref={fileInputRef}
-              onChange={handlePhotoChange}
-            />
-          </div>
-        </section>
+        <SightingEssentials
+          photoUrl={formData.photoUrl}
+          occurredAt={formData.time}
+          locationStatus={locationStatus}
+          disabled={isSubmitting}
+          onPhotoChange={handlePhotoChange}
+          onOccurredAtChange={(time) =>
+            setFormData((prev) => ({ ...prev, time }))
+          }
+          onOpenLocationPicker={() => {
+            if (!naverMapsClientId) {
+              setToast({
+                message:
+                  "지도 설정(NEXT_PUBLIC_NAVER_MAP_CLIENT_ID)이 없어 위치를 변경할 수 없습니다.",
+                type: "error",
+              });
+              return;
+            }
+            setIsMapOpen(true);
+          }}
+        />
 
-        <section className="space-y-3">
-          <div className="space-y-1">
-            <Text variant="body" className="text-text-main font-bold">
-              목격 위치 <span className="text-primary">*</span>
-            </Text>
-            <Text
-              variant="caption"
-              color="caption"
-              className="block text-[11px] leading-relaxed opacity-80"
-            >
-              현재 위치가 자동 입력되며, 변경 버튼으로 지도 상에서 변경
-              가능합니다.
-            </Text>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              if (!naverMapsClientId) {
-                setToast({
-                  message:
-                    "지도 설정(NEXT_PUBLIC_NAVER_MAP_CLIENT_ID)이 없어 위치를 변경할 수 없습니다.",
-                  type: "error",
-                });
-                return;
-              }
-              setIsMapOpen(true);
-            }}
-            className="border-border-subtle hover:border-primary/50 focus:ring-primary/10 flex w-full items-center justify-between rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2 active:scale-[0.99]"
-          >
-            <div className="flex items-center gap-2">
-              <Text
-                variant="body"
-                className={cn(
-                  "font-medium",
-                  !isLocationSet && !isLocating
-                    ? "text-error"
-                    : "text-text-main",
-                  isLocating && "text-text-caption"
-                )}
-              >
-                {isLocating
-                  ? "현재 위치 확인 중..."
-                  : isLocationSet
-                    ? `${formData.lat.toFixed(6)}, ${formData.lng.toFixed(6)}`
-                    : "위치 정보 접근 실패"}
-              </Text>
-            </div>
-            <div className="bg-primary-soft flex items-center gap-1 rounded-lg px-3 py-1.5">
-              <Text variant="caption" className="text-primary font-bold">
-                <span className="text-lg">🐾</span> 변경
-              </Text>
-            </div>
-          </button>
-        </section>
+        {showErrors && !formData.photo ? (
+          <p role="alert" className="text-error text-sm font-medium">
+            사진을 등록해주세요
+          </p>
+        ) : null}
 
         {isMapOpen && naverMapsClientId ? (
           <LocationPicker
@@ -514,130 +434,16 @@ export function SightingForm() {
           />
         ) : null}
 
-        <section className="space-y-6">
-          <div className="space-y-3">
-            <Text variant="body" className="text-text-main font-bold">
-              목격 시간 <span className="text-primary">*</span>
-            </Text>
-            <input
-              type="datetime-local"
-              name="time"
-              value={formData.time}
-              max={toLocalDatetimeLocalString()}
-              onChange={handleChange}
-              className={cn(inputBase, "py-4")}
-            />
-          </div>
-
-          <div className="space-y-3">
-            <Text variant="body" className="text-text-main font-bold">
-              색상 · 크기 · 종 (선택)
-            </Text>
-            <input
-              type="text"
-              name="traitColor"
-              value={formData.traitColor}
-              onChange={handleChange}
-              placeholder="예: 갈색, 흰색 얼룩, 검정·흰색"
-              maxLength={100}
-              className={inputBase}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <div className="relative">
-                <select
-                  name="traitSize"
-                  value={formData.traitSize}
-                  onChange={handleChange}
-                  className={cn(
-                    selectBase,
-                    "bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]"
-                  )}
-                >
-                  {SIZE_VALUES.map((v) => (
-                    <option key={v} value={v}>
-                      {SIZE_LABELS[v as SizeValue]}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="relative">
-                <select
-                  name="traitSpecies"
-                  value={formData.traitSpecies}
-                  onChange={handleChange}
-                  className={cn(
-                    selectBase,
-                    "bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]"
-                  )}
-                >
-                  {DOG_BREEDS.map((breed) => (
-                    <option key={breed} value={breed}>
-                      {getBreedLabel(breed)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Text variant="caption" color="caption">
-                특이사항 (최대 {MAX_TAG_SELECT_SIGHTING}개)
-              </Text>
-              <div className="flex flex-wrap gap-2">
-                {TRAIT_TAGS.map((tag) => {
-                  const selected = formData.traitTags.includes(tag.id);
-                  const disabled =
-                    !selected &&
-                    formData.traitTags.length >= MAX_TAG_SELECT_SIGHTING;
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => {
-                        if (selected) {
-                          setFormData((prev) => ({
-                            ...prev,
-                            traitTags: prev.traitTags.filter(
-                              (id) => id !== tag.id
-                            ),
-                          }));
-                        } else if (!disabled) {
-                          setFormData((prev) => ({
-                            ...prev,
-                            traitTags: [...prev.traitTags, tag.id],
-                          }));
-                        }
-                      }}
-                      disabled={disabled}
-                      className={cn(
-                        "rounded-full px-3 py-1.5 text-sm transition-colors",
-                        selected
-                          ? "bg-primary text-white"
-                          : "bg-muted text-muted-foreground hover:bg-muted/80",
-                        disabled && "cursor-not-allowed opacity-50"
-                      )}
-                    >
-                      {tag.labelKo}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <Text variant="body" className="text-text-main font-bold">
-              추가 설명 (선택)
-            </Text>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleChange}
-              placeholder="상세 정보를 입력해주세요"
-              rows={4}
-              className={cn(inputBase, "resize-none py-4")}
-            />
-          </div>
-        </section>
+        <SightingOptionalDetails
+          traitColor={formData.traitColor}
+          traitSize={formData.traitSize}
+          traitSpecies={formData.traitSpecies}
+          traitTags={formData.traitTags}
+          description={formData.description}
+          disabled={isSubmitting}
+          onFieldChange={handleChange}
+          onTraitTagToggle={handleToggleTag}
+        />
 
         <div className="sticky bottom-6 pt-4">
           <Button

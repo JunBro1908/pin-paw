@@ -1,0 +1,159 @@
+"use client";
+
+import { useEffect, useRef } from "react";
+import Image from "next/image";
+import { cn } from "@/shared/lib/cn";
+import { Icon } from "@/shared/ui/Icon";
+import { Text } from "@/shared/ui/Text";
+import {
+  formatSightingLocationStatus,
+  toLocalDateTimeInputValue,
+  type SightingLocationStatus,
+} from "../lib/sighting-form-presentation";
+
+export interface SightingEssentialsProps {
+  photoUrl: string | null;
+  occurredAt: string;
+  locationStatus: SightingLocationStatus;
+  disabled: boolean;
+  onPhotoChange(file: File | null): void;
+  onOccurredAtChange(value: string): void;
+  onOpenLocationPicker(): void;
+}
+
+const inputBase =
+  "w-full rounded-xl border border-border-subtle bg-surface px-4 py-3 text-[15px] text-text-main shadow-sm outline-none transition-all focus:border-action-primary focus:ring-2 focus:ring-action-primary/20 disabled:cursor-not-allowed disabled:opacity-60";
+
+export function SightingEssentials({
+  photoUrl,
+  occurredAt,
+  locationStatus,
+  disabled,
+  onPhotoChange,
+  onOccurredAtChange,
+  onOpenLocationPicker,
+}: SightingEssentialsProps) {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!photoUrl && fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [photoUrl]);
+
+  return (
+    <section className="space-y-6" aria-label="필수 목격 정보">
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Icon name="camera" size={20} className="text-action-primary" />
+          <Text variant="body" className="text-text-main font-bold">
+            사진 추가 <span className="text-action-primary">*</span>
+          </Text>
+        </div>
+        <div className="relative">
+          <input
+            ref={fileInputRef}
+            id="sighting-photo"
+            type="file"
+            accept="image/*"
+            disabled={disabled}
+            className="peer sr-only"
+            onChange={(event) =>
+              onPhotoChange(event.currentTarget.files?.[0] ?? null)
+            }
+          />
+          <label
+            htmlFor="sighting-photo"
+            className={cn(
+              "group border-border-subtle bg-surface-soft hover:border-action-primary/50 hover:bg-accent-warm-soft/30 peer-focus-visible:outline-action-primary relative flex aspect-4/3 max-h-80 w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-all peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2",
+              disabled && "pointer-events-none opacity-60"
+            )}
+          >
+            {photoUrl ? (
+              <Image
+                src={photoUrl}
+                alt="선택한 목격 사진 미리보기"
+                fill
+                sizes="(max-width: 768px) 100vw, 768px"
+                unoptimized
+                className="object-contain p-2"
+              />
+            ) : (
+              <div className="flex flex-col items-center gap-3 text-center">
+                <span className="bg-accent-warm-soft text-action-primary flex h-16 w-16 items-center justify-center rounded-full shadow-sm">
+                  <Icon name="camera" size={30} />
+                </span>
+                <Text variant="body" className="text-text-sub font-medium">
+                  촬영 및 앨범 선택
+                </Text>
+              </div>
+            )}
+          </label>
+          {photoUrl ? (
+            <button
+              type="button"
+              onClick={() => onPhotoChange(null)}
+              disabled={disabled}
+              aria-label="선택한 사진 제거"
+              className="focus-visible:outline-action-primary absolute top-4 right-4 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <span aria-hidden="true">×</span>
+            </button>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Icon name="location" size={20} className="text-action-primary" />
+          <Text variant="body" className="text-text-main font-bold">
+            목격 위치 <span className="text-action-primary">*</span>
+          </Text>
+        </div>
+        <div
+          aria-live="polite"
+          className="border-border-subtle bg-surface flex items-center justify-between gap-3 rounded-xl border px-4 py-4 shadow-sm"
+        >
+          <Text
+            variant="body"
+            className={cn(
+              "font-medium",
+              locationStatus === "ready" ? "text-text-main" : "text-text-sub"
+            )}
+          >
+            {formatSightingLocationStatus(locationStatus)}
+          </Text>
+          <button
+            type="button"
+            onClick={onOpenLocationPicker}
+            disabled={disabled}
+            className="bg-accent-warm-soft text-action-primary hover:bg-accent-warm/25 focus-visible:outline-action-primary flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-3 py-2 font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            <Icon name="map" size={18} />
+            위치 수정
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        <label
+          htmlFor="sighting-occurred-at"
+          className="text-text-main flex items-center gap-2 font-bold"
+        >
+          <Icon name="clock" size={20} className="text-action-primary" />
+          목격 시각 <span className="text-action-primary">*</span>
+        </label>
+        <input
+          id="sighting-occurred-at"
+          type="datetime-local"
+          name="time"
+          value={occurredAt}
+          max={toLocalDateTimeInputValue(new Date())}
+          disabled={disabled}
+          onChange={(event) => onOccurredAtChange(event.target.value)}
+          className={cn(inputBase, "py-4")}
+        />
+      </div>
+    </section>
+  );
+}

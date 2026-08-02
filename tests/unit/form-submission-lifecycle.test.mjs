@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import {
@@ -22,6 +23,15 @@ function uuidFactory() {
   let index = 0;
   return () => uuids[index++];
 }
+
+test("sighting reset keeps datetime-local values in local time", async () => {
+  const form = await readFile(
+    "src/features/sightings/components/SightingForm.tsx",
+    "utf8"
+  );
+
+  assert.doesNotMatch(form, /new Date\(\)\.toISOString\(\)\.slice\(0, 16\)/);
+});
 
 test("reuses both keys and the upload intent after an ambiguous failure", () => {
   const createUuid = uuidFactory();
@@ -86,7 +96,10 @@ test("fingerprints file bytes so same metadata cannot reuse another upload", asy
     name: "same-name.jpg",
     lastModified: 1_753_449_600_000,
   };
-  const first = Object.assign(new Blob(["first"], { type: "image/jpeg" }), metadata);
+  const first = Object.assign(
+    new Blob(["first"], { type: "image/jpeg" }),
+    metadata
+  );
   const second = Object.assign(
     new Blob(["other"], { type: "image/jpeg" }),
     metadata
