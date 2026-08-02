@@ -65,13 +65,13 @@ test("detail and report dialogs share one focus lifecycle with a single active m
   assert.match(report, /aria-modal="true"/);
 });
 
-test("evidence list is outside every button and the discrete detail action remains", async () => {
+test("distance-time chips stay outside every button and the discrete detail action remains", async () => {
   const card = await readFile(
     "src/features/recommendations/components/RecommendationCard.tsx",
     "utf8"
   );
-  const listMatch = card.match(/<ul[\s\n]+aria-label="확인 근거"/);
-  assert.ok(listMatch?.index != null, "evidence list must exist");
+  const listMatch = card.match(/<ul[\s\n]+aria-label="거리·시간"/);
+  assert.ok(listMatch?.index != null, "context chip list must exist");
   const listIndex = listMatch.index;
 
   const tokens = card.slice(0, listIndex).matchAll(/<button\b|<\/button>/g);
@@ -79,7 +79,7 @@ test("evidence list is outside every button and the discrete detail action remai
   for (const token of tokens) {
     buttonDepth += token[0] === "</button>" ? -1 : 1;
   }
-  assert.equal(buttonDepth, 0, "evidence list cannot descend from a button");
+  assert.equal(buttonDepth, 0, "context chips cannot descend from a button");
   assert.match(
     card,
     /<button[\s\S]*?onClick=\{openModal\}[\s\S]*?min-h-11[\s\S]*?>[\s\S]*?상세 보기[\s\S]*?<\/button>/

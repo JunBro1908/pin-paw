@@ -1,9 +1,10 @@
 export type RecommendationPriority = "high" | "medium" | "within-range";
 
+/** Soft band labels — matchPercent is the primary signal on the card. */
 export const RECOMMENDATION_PRIORITY_LABELS = {
-  high: "먼저 확인",
-  medium: "함께 확인",
-  "within-range": "범위 안 제보",
+  high: "유력",
+  medium: "후보",
+  "within-range": "참고",
 } as const satisfies Record<RecommendationPriority, string>;
 
 export interface RecommendationItem {
@@ -16,9 +17,14 @@ export interface RecommendationItem {
   /** 7-5: 내 강아지로 인정한 제보 여부 (추천 최상단 고정) */
   claimedAsMyDog?: boolean;
   priority: RecommendationPriority;
+  /** Rounded 0–100 from internal similarity; raw score key stays private. */
+  matchPercent: number;
+  /** One-line trait match summary (종·색·크기 등). */
+  matchSummary: string;
   distanceKm: number;
   timeDeltaHours: number;
-  evidence: string[];
+  /** Distance + time chips only (traits live in matchSummary). */
+  contextChips: string[];
 }
 
 export interface RecommendationsData {

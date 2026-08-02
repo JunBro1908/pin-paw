@@ -260,25 +260,38 @@ export function RecommendationCard({
               )}
             </div>
             <div className="min-w-0 flex-1">
-              <Text
-                variant="caption"
-                className="text-action-primary inline-flex rounded-full bg-green-50 px-2 py-1 font-bold dark:bg-green-950/40"
-              >
-                {RECOMMENDATION_PRIORITY_LABELS[item.priority]}
+              <div className="flex flex-wrap items-baseline gap-2">
+                <Text
+                  as="p"
+                  variant="title"
+                  className="text-action-primary text-2xl font-bold tracking-tight"
+                  aria-label={`유사도 ${item.matchPercent}퍼센트`}
+                >
+                  {item.matchPercent}%
+                </Text>
+                <Text
+                  variant="caption"
+                  className="text-text-sub inline-flex rounded-full bg-surface-soft px-2 py-0.5 text-xs font-medium"
+                >
+                  {RECOMMENDATION_PRIORITY_LABELS[item.priority]}
+                </Text>
+              </div>
+              <Text variant="body" className="mt-1 block text-sm font-medium">
+                {item.matchSummary}
               </Text>
-              <Text variant="body" className="mt-2 block font-semibold">
+              <Text variant="body" className="text-text-sub mt-2 block font-semibold">
                 {occurredAt}
               </Text>
               <ul
-                aria-label="확인 근거"
+                aria-label="거리·시간"
                 className="mt-2 flex flex-wrap gap-1.5"
               >
-                {item.evidence.map((evidence) => (
+                {item.contextChips.map((chip) => (
                   <li
-                    key={evidence}
+                    key={chip}
                     className="bg-surface-soft text-text-sub rounded-lg px-2 py-1 text-xs"
                   >
-                    {evidence}
+                    {chip}
                   </li>
                 ))}
               </ul>
@@ -288,7 +301,7 @@ export function RecommendationCard({
                 className="mt-2 block leading-relaxed"
               >
                 {
-                  "근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을 보장하지 않습니다."
+                  "유사도와 근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을 보장하지 않습니다."
                 }
               </Text>
               <button

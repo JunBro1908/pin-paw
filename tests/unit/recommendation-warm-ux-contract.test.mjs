@@ -18,27 +18,26 @@ test("confirmation page presents a review workflow without model or result-count
   assert.match(page, /<summary[^>]*>[\s\S]*?탐색 범위[\s\S]*?<\/summary>/);
   assert.match(page, /반경[\s\S]*?기간[\s\S]*?적용/);
   assert.match(page, /새로고침/);
-  assert.doesNotMatch(
-    page,
-    /topK|TOP_K|추천 조건:|개수|유사한|유사도|similarity/i
-  );
+  assert.doesNotMatch(page, /topK|TOP_K|추천 조건:|개수|toFixed\(1\)/i);
 });
 
-test("confirmation card renders priority, time, evidence, uncertainty, and rescue actions", async () => {
+test("confirmation card leads with match percent, summary, and distance-time chips", async () => {
   const card = await readFile(cardPath, "utf8");
 
+  assert.match(card, /\{item\.matchPercent\}%/);
+  assert.match(card, /item\.matchSummary/);
   assert.match(card, /RECOMMENDATION_PRIORITY_LABELS\[item\.priority\]/);
-  assert.match(card, /occurredAt/);
-  assert.match(card, /<ul\s[\s\S]*?aria-label="확인 근거"[\s\S]*?>/);
-  assert.match(card, /item\.evidence\.map/);
+  assert.match(card, /<ul\s[\s\S]*?aria-label="거리·시간"[\s\S]*?>/);
+  assert.match(card, /item\.contextChips\.map/);
   assert.match(
     card,
-    /근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을\s*보장하지 않습니다\./
+    /유사도와 근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을\s*보장하지 않습니다\./
   );
   assert.match(card, /북마크 등록/);
   assert.match(card, /신고 \/ 차단/);
   assert.match(card, /지도에서 보기/);
-  assert.doesNotMatch(card, /similarity|유사도|toFixed\(1\)|AI confidence/i);
+  assert.doesNotMatch(card, /item\.similarity|toFixed\(1\)|AI confidence|범위 안 제보|먼저 확인|함께 확인/);
+  assert.doesNotMatch(card, /item\.evidence/);
 });
 
 test("recommendation hook keeps a private result limit of ten without a public topK parameter", async () => {

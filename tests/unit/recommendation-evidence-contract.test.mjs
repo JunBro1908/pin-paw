@@ -128,12 +128,15 @@ test("public recommendation mapping omits raw evidence fields after masking loca
     locationPrecision: "approximate",
     claimedAsMyDog: true,
     priority: "high",
+    matchPercent: 80,
+    matchSummary: "색상 일치",
     distanceKm: 1.4,
     timeDeltaHours: 0.4,
-    evidence: ["1.4km 거리", "1시간 이내 목격", "색상 일치"],
+    contextChips: ["1.4km 거리", "1시간 이내 목격"],
   });
   assert.equal("similarity" in result, false);
   assert.equal("matchedTraits" in result, false);
+  assert.equal("evidence" in result, false);
   assert.equal("internalModelScore" in result, false);
   assert.equal("preciseAddress" in result, false);
 });

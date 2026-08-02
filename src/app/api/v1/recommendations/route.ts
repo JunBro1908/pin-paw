@@ -7,7 +7,10 @@ import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 import { parseRecommendationQuery } from "@/shared/lib/api-input";
 import { createRequestLogger } from "@/shared/lib/structured-log";
 import { protectRecommendationLocations } from "@/shared/lib/privacy-location";
-import { toPublicRecommendationItem } from "@/features/recommendations/lib/recommendation-presentation";
+import {
+  sortRecommendationsForReview,
+  toPublicRecommendationItem,
+} from "@/features/recommendations/lib/recommendation-presentation";
 import {
   enrichRecommendationEvidence,
   needsRecommendationEvidenceEnrichment,
@@ -186,16 +189,16 @@ export async function GET(request: Request) {
     const claimedSet = new Set(
       (claimsRows ?? []).map((r) => r.sighting_id as string)
     );
-    const claimedFirst = [
-      ...visibleItems.filter((i) => claimedSet.has(i.sightingId)),
-      ...visibleItems.filter((i) => !claimedSet.has(i.sightingId)),
-    ];
-    const protectedItems: ProtectedRecoItem[] = protectRecommendationLocations(
-      claimedFirst.map((i) => ({
+    // App-layer review order: claim pin → distance band → similarity → time.
+    // RPC still ranks by similarity desc for candidate selection.
+    const reviewOrdered = sortRecommendationsForReview(
+      visibleItems.map((i) => ({
         ...i,
         claimedAsMyDog: claimedSet.has(i.sightingId),
       }))
     );
+    const protectedItems: ProtectedRecoItem[] =
+      protectRecommendationLocations(reviewOrdered);
     return protectedItems.map(toPublicRecommendationItem);
   };
 
