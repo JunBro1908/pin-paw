@@ -182,6 +182,10 @@ export async function PATCH(request: Request, context: RouteContext) {
     body.note !== undefined;
   if (embeddingFieldsChanged) {
     const supabaseAdmin = createServiceRoleSupabase();
+    await supabaseAdmin
+      .from("lost_posts")
+      .update({ embedding_status: "pending" })
+      .eq("id", lostPostId);
     await supabaseAdmin.from("embeddings").upsert(
       {
         entity_type: "lost_post",
@@ -192,6 +196,11 @@ export async function PATCH(request: Request, context: RouteContext) {
       },
       { onConflict: "entity_type,entity_id,modality" }
     );
+    // Stale recommendation cache must not serve pre-edit vectors/traits.
+    await supabaseAdmin
+      .from("recommendation_cache")
+      .delete()
+      .eq("lost_post_id", lostPostId);
     triggerEmbeddingsProcess(logger);
   }
 

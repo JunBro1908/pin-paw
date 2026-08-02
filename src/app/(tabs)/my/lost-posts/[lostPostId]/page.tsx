@@ -1,8 +1,9 @@
 "use client";
 
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
+import { Suspense, useEffect, useState } from "react";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
@@ -24,16 +25,17 @@ import {
 } from "@/shared/constants/traitSizes";
 import { TRAIT_TAGS } from "@/shared/constants/traitTags";
 import { cn } from "@/shared/lib/cn";
-import { useState } from "react";
 import { trackFunnelEvent } from "@/shared/lib/funnel-client";
 import { LostPostStatusHistory } from "@/features/lost-posts/components/LostPostStatusHistory";
 import { ReportBlockSheet } from "@/features/moderation/components/ReportBlockSheet";
+import { invalidateMyLostPostsCache } from "@/features/lost-posts/hooks/useMyLostPosts";
 
 const MAX_TAG_EDIT = 8;
 
 function LostPostDetailContent() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { session } = useAuth();
   const lostPostId = (params.lostPostId as string) ?? null;
   const { data: item, error, isLoading, mutate } = useLostPost(lostPostId);
@@ -44,6 +46,7 @@ function LostPostDetailContent() {
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [editSubmitting, setEditSubmitting] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     petName: "",
@@ -54,6 +57,33 @@ function LostPostDetailContent() {
     note: "",
     status: "searching" as "searching" | "found" | "closed",
   });
+  const openEditRequested = searchParams.get("edit") === "1";
+
+  useEffect(() => {
+    if (!openEditRequested || !item || showEditModal) return;
+    setEditForm({
+      petName: item.pet_name ?? "",
+      traitColor: item.trait_color ?? "",
+      traitSize:
+        item.trait_size &&
+        ["small", "medium", "large", "unknown"].includes(item.trait_size)
+          ? item.trait_size
+          : item.trait_size === "소"
+            ? "small"
+            : item.trait_size === "중"
+              ? "medium"
+              : item.trait_size === "대"
+                ? "large"
+                : "unknown",
+      traitSpecies: item.trait_species ?? SPECIES_UNKNOWN,
+      traitTags: Array.isArray((item as { trait_tags?: string[] }).trait_tags)
+        ? (item as { trait_tags: string[] }).trait_tags
+        : [],
+      note: item.note ?? "",
+      status: item.status,
+    });
+    setShowEditModal(true);
+  }, [openEditRequested, item, showEditModal]);
 
   const updateStatus = async (newStatus: "found" | "closed") => {
     if (!lostPostId || !session?.access_token) return;
@@ -145,6 +175,7 @@ function LostPostDetailContent() {
   }
 
   const openEditModal = () => {
+    if (!item) return;
     setEditForm({
       petName: item.pet_name ?? "",
       traitColor: item.trait_color ?? "",
@@ -171,7 +202,8 @@ function LostPostDetailContent() {
 
   const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!lostPostId || !session?.access_token) return;
+    if (!lostPostId || !session?.access_token || editSubmitting) return;
+    setEditSubmitting(true);
     try {
       const res = await fetch(`/api/v1/lost-posts/${lostPostId}`, {
         method: "PATCH",
@@ -190,18 +222,26 @@ function LostPostDetailContent() {
           status: editForm.status,
         }),
       });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error?.message ?? "수정에 실패했습니다.");
+      const payload = await res.json().catch(() => null);
+      if (!res.ok || !payload?.success) {
+        throw new Error(
+          payload?.error?.message ?? "수정에 실패했습니다."
+        );
       }
       setToast({ message: "수정되었습니다.", type: "success" });
       setShowEditModal(false);
+      invalidateMyLostPostsCache();
       await mutate();
+      if (openEditRequested) {
+        router.replace(`/my/lost-posts/${lostPostId}`);
+      }
     } catch (e) {
       setToast({
         message: e instanceof Error ? e.message : "오류가 발생했습니다.",
         type: "error",
       });
+    } finally {
+      setEditSubmitting(false);
     }
   };
 
@@ -619,7 +659,13 @@ function LostPostDetailContent() {
                 >
                   취소
                 </Button>
-                <Button type="submit" variant="primary" className="flex-1">
+                <Button
+                  type="submit"
+                  variant="primary"
+                  className="flex-1"
+                  isLoading={editSubmitting}
+                  disabled={editSubmitting}
+                >
                   저장
                 </Button>
               </div>
@@ -668,7 +714,15 @@ function LostPostDetailContent() {
 export default function LostPostDetailPage() {
   return (
     <AuthGuard>
-      <LostPostDetailContent />
+      <Suspense
+        fallback={
+          <Container className="py-8">
+            <Text variant="body">로딩 중...</Text>
+          </Container>
+        }
+      >
+        <LostPostDetailContent />
+      </Suspense>
     </AuthGuard>
   );
 }
