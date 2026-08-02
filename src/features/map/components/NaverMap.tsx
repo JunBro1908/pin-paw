@@ -808,11 +808,11 @@ export function NaverMap({
     if (mapLayer !== "bookmark" && prev === "bookmark") fetchClusters();
   }, [mapLayer, isLoaded, fetchClusters]);
 
-  // Own lost posts load for "전체" and bookmark; trail animation is bookmark-only.
+  // Own lost posts load on bookmark only; trail animation is bookmark-only.
   // Lost-post pins stay outside sighting clusters (separate marker group + zIndex).
   useEffect(() => {
     if (!isAuthenticated || !accessToken) return;
-    if (mapLayer !== "bookmark" && mapLayer !== "default") return;
+    if (mapLayer !== "bookmark") return;
     fetchBookmarkLayerData();
   }, [mapLayer, isAuthenticated, accessToken, fetchBookmarkLayerData]);
 
@@ -860,7 +860,7 @@ export function NaverMap({
     setSelectedLostPostForCard,
   ]);
 
-  // 전체·북마크 레이어에서 내 유실글 마커 표시 (클러스터 그룹과 분리)
+  // 북마크 레이어에서만 내 유실글 마커 표시 (클러스터 그룹과 분리; ALL에는 없음)
   useEffect(() => {
     if (!mapInstanceRef.current || !mapLayerRendererRef.current) return;
 
@@ -869,10 +869,7 @@ export function NaverMap({
 
     renderer.renderLostPosts({
       map: activeMap,
-      lostPosts:
-        mapLayer === "bookmark" || mapLayer === "default"
-          ? lostPostsForMap
-          : [],
+      lostPosts: mapLayer === "bookmark" ? lostPostsForMap : [],
       getImageUrl: getLostPostImageUrl,
       onLostPostClick(lostPost, marker) {
         activeMap.panTo(marker.getPosition());
@@ -882,8 +879,12 @@ export function NaverMap({
     });
   }, [mapLayer, lostPostsForMap, getLostPostImageUrl]);
 
-  const mapDetailSelection = selectedLostPostForCard
-    ? ({ kind: "lost", item: selectedLostPostForCard } as const)
+  // ALL/New에서는 유실글 핀이 없으므로 시트 선택도 숨긴다.
+  const activeLostPostForCard =
+    mapLayer === "bookmark" ? selectedLostPostForCard : null;
+
+  const mapDetailSelection = activeLostPostForCard
+    ? ({ kind: "lost", item: activeLostPostForCard } as const)
     : selectedSighting?.type === "point"
       ? ({ kind: "sighting", item: selectedSighting } as const)
       : null;
@@ -909,7 +910,7 @@ export function NaverMap({
         <MapLegend />
 
         {/* 상세 카드 열렸을 때 지도 영역 음영 (클릭 시 카드 닫기) */}
-        {(selectedSighting?.type === "point" || selectedLostPostForCard) && (
+        {(selectedSighting?.type === "point" || activeLostPostForCard) && (
           <button
             type="button"
             aria-hidden="true"

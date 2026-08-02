@@ -20,36 +20,42 @@ test("paw icon is a filled symmetric mark and confirm tab uses it", async () => 
   assert.match(icon, /Symmetric filled paw/);
 });
 
-test("default map layer renders own lost posts with sightings", async () => {
+test("default map layer hides own lost posts; bookmark keeps pins and trails", async () => {
   const [map, data, renderer] = await Promise.all([
     readFile("src/features/map/components/NaverMap.tsx", "utf8"),
     readFile("src/features/map/hooks/use-map-data.ts", "utf8"),
     readFile("src/features/map/lib/map-layer-renderer.ts", "utf8"),
   ]);
 
-  assert.match(
+  assert.match(data, /lostPosts: layer === "bookmark" \? view\.lostPosts/);
+  assert.match(data, /paths: layer === "bookmark" \? view\.paths/);
+  assert.doesNotMatch(
     data,
     /layer === "bookmark" \|\| layer === "default" \? view\.lostPosts/
   );
-  assert.match(data, /paths: layer === "bookmark" \? view\.paths/);
   assert.doesNotMatch(
     data,
     /layer === "bookmark" \|\| layer === "default" \? view\.paths/
   );
-  assert.match(
+  assert.match(map, /if \(mapLayer !== "bookmark"\) return;/);
+  assert.match(map, /lostPosts: mapLayer === "bookmark" \? lostPostsForMap/);
+  assert.match(map, /enabled: mapLayer === "bookmark"/);
+  assert.doesNotMatch(
     map,
     /mapLayer === "bookmark" \|\| mapLayer === "default"/
   );
-  assert.match(map, /enabled: mapLayer === "bookmark"/);
   assert.doesNotMatch(
     map,
     /enabled: mapLayer === "bookmark" \|\| mapLayer === "default"/
   );
-  assert.match(map, /mapLayer !== "bookmark" && mapLayer !== "default"/);
   assert.match(renderer, /zIndex: 200/);
   assert.match(
     renderer,
-    /Above ordinary sighting clusters so ALL keeps owner lost pins visible/
+    /Above ordinary sighting clusters so bookmark keeps owner lost pins visible/
+  );
+  assert.doesNotMatch(
+    renderer,
+    /ALL keeps owner lost pins visible/
   );
 });
 

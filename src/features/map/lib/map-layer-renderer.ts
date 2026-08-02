@@ -340,7 +340,7 @@ export function createMapLayerRenderer({
         const marker = adapter.createMarker({
           position: toLatLng(lostPost),
           map,
-          // Above ordinary sighting clusters so ALL keeps owner lost pins visible.
+          // Above ordinary sighting clusters so bookmark keeps owner lost pins visible.
           zIndex: 200,
           icon: {
             content: createLostPostContent(thumbnailUrl),

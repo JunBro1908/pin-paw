@@ -118,8 +118,8 @@ export function getFilteredItems(
  * Cluster grid policy (auth ALL layer):
  * - zoom ≥15: near-individual pins (tiny grid); clusters rare.
  * - mid zoom: only ordinary sightings cluster; owner + claimed/bookmark
- *   endpoints stay as points (RPC), lost-post pins + trails render separately.
- * - low zoom: same privilege split; keep lost-post/trail overlays visible.
+ *   endpoints stay as points (RPC). Owner lost-post pins/trails are bookmark-only.
+ * - low zoom: same privilege split for sighting markers.
  * Guests stay on a coarser public grid (zoom capped at 14).
  */
 export function getGridSize(zoom: number, authenticated: boolean): number {
