@@ -45,27 +45,19 @@ test("dialog tab resolution wraps at both edges and recovers escaped focus", asy
   );
 });
 
-test("detail and report dialogs share one focus lifecycle with a single active modal", async () => {
-  const [card, report] = await Promise.all([
-    readFile(
-      "src/features/recommendations/components/RecommendationCard.tsx",
-      "utf8"
-    ),
-    readFile("src/features/moderation/components/ReportBlockSheet.tsx", "utf8"),
-  ]);
+test("report dialog keeps a single active modal focus lifecycle", async () => {
+  const report = await readFile(
+    "src/features/moderation/components/ReportBlockSheet.tsx",
+    "utf8"
+  );
 
-  assert.match(card, /useDialogFocus/);
-  assert.match(card, /active:\s*!reportOpen/);
-  assert.match(card, /aria-modal=\{reportOpen \? undefined : "true"\}/);
-  assert.match(card, /aria-hidden=\{reportOpen \? true : undefined\}/);
-  assert.match(card, /inert=\{reportOpen \? true : undefined\}/);
   assert.match(report, /useDialogFocus/);
   assert.match(report, /ref=\{closeButtonRef\}/);
   assert.match(report, /min-h-11/);
   assert.match(report, /aria-modal="true"/);
 });
 
-test("distance-time chips stay outside every button and the discrete detail action remains", async () => {
+test("recommendation card keeps chips outside controls and routes body taps to the map", async () => {
   const card = await readFile(
     "src/features/recommendations/components/RecommendationCard.tsx",
     "utf8"
@@ -80,12 +72,10 @@ test("distance-time chips stay outside every button and the discrete detail acti
     buttonDepth += token[0] === "</button>" ? -1 : 1;
   }
   assert.equal(buttonDepth, 0, "context chips cannot descend from a button");
-  assert.match(
-    card,
-    /<button[\s\S]*?onClick=\{openModal\}[\s\S]*?min-h-11[\s\S]*?>[\s\S]*?상세 보기[\s\S]*?<\/button>/
-  );
+  assert.match(card, /mapHref/);
+  assert.match(card, /goToMap|router\.push\(mapHref\)/);
+  assert.match(card, /지도에서 보기/);
+  assert.doesNotMatch(card, /상세 보기|openModal/);
   assert.match(card, /handleClaimToggle/);
-  assert.match(card, /setReportOpen\(true\)/);
-  assert.match(card, /handleMapClick/);
   assert.match(card, /onFeedbackChange\?\.\(\)/);
 });
