@@ -18,6 +18,10 @@ test("confirmation page presents a review workflow without model or result-count
   assert.match(page, /<summary[^>]*>[\s\S]*?탐색 범위[\s\S]*?<\/summary>/);
   assert.match(page, /반경[\s\S]*?기간[\s\S]*?적용/);
   assert.match(page, /ScrollablePanel/);
+  assert.match(
+    page,
+    /ScrollablePanel variant="results"[\s\S]*?RecommendationCard/
+  );
   assert.match(page, /variant="secondary"[\s\S]*?>\s*적용\s*</);
   assert.match(page, /h-11 min-h-11 min-w-\[5\.5rem\]/);
   assert.match(page, /items-end/);
@@ -51,8 +55,9 @@ test("confirmation card leads with distance-time chips, date, match percent tip,
     card,
     /variant="caption"[\s\S]*text-sm[\s\S]*\{item\.matchPercent\}%/
   );
-  assert.match(card, /gap-0\.5/);
+  assert.match(card, /items-center gap-1\.5/);
   assert.match(card, /rounded-full border border-current/);
+  assert.match(card, /h-3\.5 w-3\.5/);
   assert.doesNotMatch(card, /variant="title"[\s\S]*\{item\.matchPercent\}%/);
   assert.doesNotMatch(
     card,

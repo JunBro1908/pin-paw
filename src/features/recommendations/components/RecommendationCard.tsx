@@ -59,9 +59,9 @@ function SimilarityInfoTip() {
           e.stopPropagation();
           setOpen((value) => !value);
         }}
-        className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary inline-flex h-5 w-5 items-center justify-center rounded-full border border-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary inline-flex h-3.5 w-3.5 items-center justify-center rounded-full border border-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
-        <Icon name="info" size={12} />
+        <Icon name="info" size={10} />
       </button>
       {open ? (
         <span
@@ -290,7 +290,7 @@ export function RecommendationCard({
               >
                 {occurredAt}
               </Text>
-              <div className="mt-1 flex items-center gap-0.5">
+              <div className="mt-1 flex items-center gap-1.5">
                 <Text
                   as="p"
                   variant="caption"
