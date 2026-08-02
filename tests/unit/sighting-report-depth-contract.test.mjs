@@ -22,9 +22,11 @@ test("sighting form stays one essential screen with optional details collapsed",
   assert.match(form, /<SightingEssentials/);
   assert.match(form, /<SightingOptionalDetails/);
   assert.match(optional, /<details/);
-  assert.match(form, /이어서 제보하기/);
-  assert.match(form, /setTimeout/);
+  assert.match(form, /소중한 제보가 전송되었습니다/);
+  assert.match(form, /확인했어요/);
+  assert.match(form, /h-\[80vh\]/);
   assert.match(form, /optimisticSent/);
+  assert.doesNotMatch(form, /이어서 제보하기|지도로 보러가기|setTimeout/);
 });
 
 test("lost post create entry skips list hop and collapses optional traits", async () => {

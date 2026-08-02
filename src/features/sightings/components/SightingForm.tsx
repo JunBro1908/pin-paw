@@ -6,6 +6,8 @@ import { SightingFormData } from "../model/types";
 import { validateSightingForm } from "../lib/validators";
 import { Toast } from "@/shared/ui/Toast";
 import { Text } from "@/shared/ui/Text";
+import { Icon } from "@/shared/ui/Icon";
+import { useDialogFocus } from "@/shared/ui/dialog-focus";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { supabase } from "@/shared/supabase/client";
 import { SPECIES_UNKNOWN } from "../constants/breeds";
@@ -52,6 +54,11 @@ export function SightingForm() {
   } | null>(null);
 
   const submissionAttemptRef = useRef<FormSubmissionAttempt | null>(null);
+  const closeConfirmation = () => setOptimisticSent(false);
+  const { dialogRef, closeButtonRef } = useDialogFocus({
+    active: optimisticSent,
+    onClose: closeConfirmation,
+  });
   const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
   const lat = isLocationSet ? formData.lat : null;
   const lng = isLocationSet ? formData.lng : null;
@@ -183,16 +190,10 @@ export function SightingForm() {
       note: formData.description?.trim() || null,
     };
 
-    // Optimistic confirmation: show success sheet immediately, finish network later.
-    // Auto-dismiss keeps the authenticated report path to one essential screen.
+    // Optimistic confirmation: show success panel immediately, finish network later.
     setIsSubmitting(true);
     setOptimisticSent(true);
     resetForm();
-    if (typeof window !== "undefined") {
-      window.setTimeout(() => {
-        setOptimisticSent((open) => (open ? false : open));
-      }, 2200);
-    }
 
     try {
       const payloadFingerprint = JSON.stringify({
@@ -415,32 +416,38 @@ export function SightingForm() {
       )}
       {optimisticSent ? (
         <div
+          ref={dialogRef as React.RefObject<HTMLDivElement>}
           role="dialog"
           aria-modal="true"
           aria-labelledby="sighting-sent-title"
-          className="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 px-4 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1rem)] sm:items-center sm:pb-0"
+          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 px-4"
         >
-          <div className="border-border-subtle bg-surface w-full max-w-sm rounded-2xl border p-6 shadow-sm">
-            <Text
-              as="h2"
-              id="sighting-sent-title"
-              variant="title"
-              color="main"
-              className="block"
-            >
-              제보가 전송되었습니다
-            </Text>
-            <Text variant="body" color="sub" className="mt-2 block">
-              등록 결과는 잠시 후 알려드릴게요. 그동안 다른 제보를 이어서 할 수
-              있어요.
-            </Text>
+          <div className="border-border-subtle bg-surface flex h-[80vh] max-h-[80vh] w-full max-w-md flex-col rounded-3xl border px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-8 shadow-sm">
+            <div className="flex flex-1 flex-col items-center justify-center text-center">
+              <div
+                className="bg-action-primary text-action-on-primary flex h-24 w-24 items-center justify-center rounded-full"
+                aria-hidden="true"
+              >
+                <Icon name="check" size={48} className="stroke-[2.4]" />
+              </div>
+              <Text
+                as="h2"
+                id="sighting-sent-title"
+                variant="title"
+                color="main"
+                className="mt-8 block text-2xl leading-snug tracking-tight"
+              >
+                소중한 제보가 전송되었습니다
+              </Text>
+            </div>
             <Button
+              ref={closeButtonRef}
               type="button"
               variant="primary"
-              className="mt-5 min-h-11 w-full"
-              onClick={() => setOptimisticSent(false)}
+              className="min-h-12 w-full rounded-2xl text-base font-semibold"
+              onClick={closeConfirmation}
             >
-              이어서 제보하기
+              확인했어요
             </Button>
           </div>
         </div>

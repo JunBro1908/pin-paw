@@ -150,14 +150,24 @@ test("submit shows optimistic confirmation and defers result to toast", async ()
   );
 
   assert.match(form, /optimisticSent/);
-  assert.match(form, /제보가 전송되었습니다/);
+  assert.match(form, /소중한 제보가 전송되었습니다/);
+  assert.match(form, /확인했어요/);
+  assert.match(form, /useDialogFocus/);
+  assert.match(form, /role="dialog"/);
+  assert.match(form, /aria-modal="true"/);
+  assert.match(form, /h-\[80vh\]/);
+  assert.match(form, /max-h-\[80vh\]/);
+  assert.match(form, /name="check"/);
+  assert.match(form, /bg-action-primary/);
   assert.match(form, /setOptimisticSent\(true\)/);
   assert.ok(
     form.indexOf("setOptimisticSent(true)") <
       form.indexOf("await uploadPhoto("),
     "optimistic confirmation should appear before network upload"
   );
-  assert.doesNotMatch(form, /지도에서 확인/);
+  assert.doesNotMatch(form, /지도에서 확인|지도로 보러가기/);
+  assert.doesNotMatch(form, /이어서 제보하기/);
+  assert.doesNotMatch(form, /setTimeout/);
   assert.doesNotMatch(form, /제보가 지도에 등록되었습니다/);
   assert.match(form, /사진을 등록해주세요/);
   assert.match(form, /photoError=\{photoError\}/);
