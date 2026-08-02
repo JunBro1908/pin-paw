@@ -28,7 +28,14 @@ test("photo control is semantic and optional section stays in-page", async () =>
   assert.match(essentials, /id="sighting-photo"/);
   assert.match(essentials, /aria-live="polite"/);
   assert.match(optional, /<details/);
-  assert.match(optional, /특징을 더 알려주기 \(선택\)/);
+  assert.match(optional, /추가 정보 입력하기 \(선택\)/);
+  assert.match(optional, /htmlFor="sighting-trait-size"/);
+  assert.match(optional, /htmlFor="sighting-trait-species"/);
+  assert.match(optional, />\s*크기\s*</);
+  assert.match(optional, />\s*종\s*</);
+  assert.match(optional, /space-y-5/);
+  assert.doesNotMatch(optional, /특징을 더 알려주기/);
+  assert.doesNotMatch(optional, /색상 · 크기 · 종/);
   assert.match(
     essentials,
     /border-border-subtle bg-surface flex items-center justify-between gap-3 rounded-xl border px-4 py-3/

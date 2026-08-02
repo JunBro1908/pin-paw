@@ -69,4 +69,7 @@ test("lost post detail uses share icon and omits status history UI", async () =>
   assert.doesNotMatch(page, /LostPostStatusHistory/);
   assert.doesNotMatch(page, /상태 이력/);
   assert.doesNotMatch(page, />\s*공유\s*</);
+  assert.match(page, /<option value="searching">찾는 중<\/option>/);
+  assert.match(page, /<option value="found">찾았어요<\/option>/);
+  assert.doesNotMatch(page, /<option value="closed">마감<\/option>/);
 });

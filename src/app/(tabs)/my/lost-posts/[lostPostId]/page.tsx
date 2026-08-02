@@ -517,21 +517,21 @@ function LostPostDetailContent() {
                     상태
                   </label>
                   <select
-                    value={editForm.status}
+                    value={
+                      editForm.status === "closed"
+                        ? "searching"
+                        : editForm.status
+                    }
                     onChange={(e) =>
                       setEditForm((prev) => ({
                         ...prev,
-                        status: e.target.value as
-                          | "searching"
-                          | "found"
-                          | "closed",
+                        status: e.target.value as "searching" | "found",
                       }))
                     }
                     className={fieldSelectClass}
                   >
                     <option value="searching">찾는 중</option>
                     <option value="found">찾았어요</option>
-                    <option value="closed">마감</option>
                   </select>
                 </div>
                 <div className="space-y-1.5">

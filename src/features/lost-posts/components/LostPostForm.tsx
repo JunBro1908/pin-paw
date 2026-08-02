@@ -421,108 +421,134 @@ export function LostPostForm() {
 
         <details className="border-border-subtle bg-surface group rounded-2xl border shadow-sm">
           <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-bold [&::-webkit-details-marker]:hidden">
-            특징을 더 알려주기 (선택)
+            추가 정보 입력하기 (선택)
             <span aria-hidden className="transition-transform group-open:rotate-180">
               ⌄
             </span>
           </summary>
-          <div className="border-border-subtle space-y-4 border-t px-4 py-5">
-            <ScrollablePanel variant="panel">
-            <Text variant="body" className="font-bold">
-              색상 · 크기 · 종
-            </Text>
-            <input
-              type="text"
-              name="traitColor"
-              value={formData.traitColor}
-              onChange={handleChange}
-              placeholder="예: 갈색, 흰색 얼룩, 검정·흰색"
-              maxLength={100}
-              className={inputBase}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <select
-                name="traitSize"
-                value={formData.traitSize}
-                onChange={handleChange}
-                className={selectBase}
-              >
-                {SIZE_VALUES.map((v) => (
-                  <option key={v} value={v}>
-                    {SIZE_LABELS[v as SizeValue]}
-                  </option>
-                ))}
-              </select>
-              <select
-                name="traitSpecies"
-                value={formData.traitSpecies}
-                onChange={handleChange}
-                className={selectBase}
-              >
-                {DOG_BREEDS.map((b) => (
-                  <option key={b} value={b}>
-                    {getBreedLabel(b)}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Text variant="caption" color="caption">
-                특이사항 (최대 {MAX_TAG_SELECT_LOST_POST}개)
-              </Text>
-              <div className="flex flex-wrap gap-2">
-                {TRAIT_TAGS.map((tag) => {
-                  const selected = formData.traitTags.includes(tag.id);
-                  const disabled =
-                    !selected &&
-                    formData.traitTags.length >= MAX_TAG_SELECT_LOST_POST;
-                  return (
-                    <button
-                      key={tag.id}
-                      type="button"
-                      onClick={() => {
-                        if (selected) {
-                          setFormData((prev) => ({
-                            ...prev,
-                            traitTags: prev.traitTags.filter(
-                              (id) => id !== tag.id
-                            ),
-                          }));
-                        } else if (!disabled) {
-                          setFormData((prev) => ({
-                            ...prev,
-                            traitTags: [...prev.traitTags, tag.id],
-                          }));
-                        }
-                      }}
-                      disabled={disabled}
-                      className={cn(
-                        "rounded-full px-3 py-1.5 text-sm transition-colors",
-                        selected
-                          ? "bg-primary text-white"
-                          : "bg-muted text-muted-foreground hover:bg-muted/80",
-                        disabled && "cursor-not-allowed opacity-50"
-                      )}
+          <div className="border-border-subtle border-t px-4 py-5">
+            <ScrollablePanel variant="panel" className="space-y-5">
+              <div className="space-y-3">
+                <div>
+                  <label
+                    htmlFor="lost-trait-color"
+                    className="text-text-main mb-1.5 block text-sm font-semibold"
+                  >
+                    색상
+                  </label>
+                  <input
+                    id="lost-trait-color"
+                    type="text"
+                    name="traitColor"
+                    value={formData.traitColor}
+                    onChange={handleChange}
+                    placeholder="예: 갈색, 흰색 얼룩, 검정·흰색"
+                    maxLength={100}
+                    className={inputBase}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label
+                      htmlFor="lost-trait-size"
+                      className="text-text-main mb-1.5 block text-sm font-semibold"
                     >
-                      {tag.labelKo}
-                    </button>
-                  );
-                })}
+                      크기
+                    </label>
+                    <select
+                      id="lost-trait-size"
+                      name="traitSize"
+                      value={formData.traitSize}
+                      onChange={handleChange}
+                      className={selectBase}
+                    >
+                      {SIZE_VALUES.map((v) => (
+                        <option key={v} value={v}>
+                          {SIZE_LABELS[v as SizeValue]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="lost-trait-species"
+                      className="text-text-main mb-1.5 block text-sm font-semibold"
+                    >
+                      종
+                    </label>
+                    <select
+                      id="lost-trait-species"
+                      name="traitSpecies"
+                      value={formData.traitSpecies}
+                      onChange={handleChange}
+                      className={selectBase}
+                    >
+                      {DOG_BREEDS.map((b) => (
+                        <option key={b} value={b}>
+                          {getBreedLabel(b)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Text variant="caption" color="caption">
+                    특이사항 (최대 {MAX_TAG_SELECT_LOST_POST}개)
+                  </Text>
+                  <div className="flex flex-wrap gap-2">
+                    {TRAIT_TAGS.map((tag) => {
+                      const selected = formData.traitTags.includes(tag.id);
+                      const disabled =
+                        !selected &&
+                        formData.traitTags.length >= MAX_TAG_SELECT_LOST_POST;
+                      return (
+                        <button
+                          key={tag.id}
+                          type="button"
+                          onClick={() => {
+                            if (selected) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                traitTags: prev.traitTags.filter(
+                                  (id) => id !== tag.id
+                                ),
+                              }));
+                            } else if (!disabled) {
+                              setFormData((prev) => ({
+                                ...prev,
+                                traitTags: [...prev.traitTags, tag.id],
+                              }));
+                            }
+                          }}
+                          disabled={disabled}
+                          className={cn(
+                            "rounded-full px-3 py-1.5 text-sm transition-colors",
+                            selected
+                              ? "bg-primary text-white"
+                              : "bg-muted text-muted-foreground hover:bg-muted/80",
+                            disabled && "cursor-not-allowed opacity-50"
+                          )}
+                        >
+                          {tag.labelKo}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Text variant="body" className="font-bold">
-                추가 설명
-              </Text>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                placeholder="상세 정보를 입력해주세요"
-                rows={4}
-                className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full resize-none rounded-xl border bg-white px-4 py-4 outline-none focus:ring-2"
-              />
-            </div>
+              <div className="space-y-2 pt-1">
+                <Text variant="body" className="font-bold">
+                  추가 설명
+                </Text>
+                <textarea
+                  name="description"
+                  value={formData.description}
+                  onChange={handleChange}
+                  placeholder="상세 정보를 입력해주세요"
+                  rows={4}
+                  className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full resize-none rounded-xl border bg-white px-4 py-4 outline-none focus:ring-2"
+                />
+              </div>
             </ScrollablePanel>
           </div>
         </details>

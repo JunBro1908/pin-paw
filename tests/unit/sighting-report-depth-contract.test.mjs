@@ -34,6 +34,7 @@ test("lost post create entry skips list hop and collapses optional traits", asyn
   assert.match(page, /href="\/my"/);
   assert.doesNotMatch(page, /href="\/my\/lost-posts"/);
   assert.match(form, /<details/);
-  assert.match(form, /특징을 더 알려주기 \(선택\)/);
+  assert.match(form, /추가 정보 입력하기 \(선택\)/);
+  assert.doesNotMatch(form, /특징을 더 알려주기/);
   assert.doesNotMatch(form, /toFixed\(6\)/);
 });
