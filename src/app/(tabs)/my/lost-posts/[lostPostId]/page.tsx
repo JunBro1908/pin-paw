@@ -28,9 +28,9 @@ import {
 import { TRAIT_TAGS } from "@/shared/constants/traitTags";
 import { cn } from "@/shared/lib/cn";
 import { trackFunnelEvent } from "@/shared/lib/funnel-client";
-import { LostPostStatusHistory } from "@/features/lost-posts/components/LostPostStatusHistory";
 import { ReportBlockSheet } from "@/features/moderation/components/ReportBlockSheet";
 import { invalidateMyLostPostsCache } from "@/features/lost-posts/hooks/useMyLostPosts";
+import { Icon } from "@/shared/ui/Icon";
 
 const MAX_TAG_EDIT = 8;
 
@@ -365,6 +365,7 @@ function LostPostDetailContent() {
                 type="button"
                 variant="quiet"
                 className="shrink-0"
+                aria-label="공유하기"
                 onClick={async () => {
                   const shareUrl = `${window.location.origin}/share/lost-posts/${item.id}`;
                   try {
@@ -389,7 +390,7 @@ function LostPostDetailContent() {
                   }
                 }}
               >
-                공유
+                <Icon name="send" size={20} />
               </Button>
             ) : null}
           </div>
@@ -461,13 +462,6 @@ function LostPostDetailContent() {
                 추천 제보 보기
               </Button>
             </Link>
-          </div>
-
-          <div className="border-border-subtle space-y-2 border-t pt-4">
-            <Text variant="body" color="main" className="font-semibold">
-              상태 이력
-            </Text>
-            <LostPostStatusHistory lostPostId={item.id} />
           </div>
 
           <div className="border-border-subtle border-t pt-4">

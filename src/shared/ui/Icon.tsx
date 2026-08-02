@@ -12,7 +12,9 @@ export type IconName =
   | "star"
   | "user"
   | "layers"
-  | "sparkle";
+  | "sparkle"
+  | "send"
+  | "info";
 
 interface IconProps {
   name: IconName;
@@ -68,6 +70,15 @@ export function Icon({ name, size = 24, className }: IconProps) {
       case "sparkle":
         return (
           <path d="M12 3.5 13.4 9 19 10.5 13.4 12 12 17.5 10.6 12 5 10.5 10.6 9z" />
+        );
+      case "send":
+        return <path d="M22 2 11 13M22 2l-7 20-4-9-9-4z" />;
+      case "info":
+        return (
+          <>
+            <circle cx="12" cy="12" r="9" />
+            <path d="M12 10v6M12 7.5h.01" />
+          </>
         );
       case "paw":
         // Symmetric filled paw: twin-peak main pad + 4 toe pads

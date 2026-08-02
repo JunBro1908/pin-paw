@@ -45,6 +45,9 @@ test("shared BackLink keeps 44px targets across my chrome", async () => {
   assert.match(backLink, /min-h-11/);
   assert.match(backLink, /text-action-primary/);
   assert.match(backLink, /text-sm/);
+  assert.match(backLink, /no-underline/);
+  assert.match(backLink, /hover:no-underline/);
+  assert.doesNotMatch(backLink, /hover:underline/);
   for (const path of [
     "src/app/(tabs)/my/settings/page.tsx",
     "src/app/(tabs)/my/notifications/page.tsx",
@@ -54,4 +57,16 @@ test("shared BackLink keeps 44px targets across my chrome", async () => {
     const source = await readFile(path, "utf8");
     assert.match(source, /<BackLink href="\/my">내 정보<\/BackLink>/);
   }
+});
+
+test("lost post detail uses share icon and omits status history UI", async () => {
+  const page = await readFile(
+    "src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx",
+    "utf8"
+  );
+  assert.match(page, /aria-label="공유하기"/);
+  assert.match(page, /name="send"/);
+  assert.doesNotMatch(page, /LostPostStatusHistory/);
+  assert.doesNotMatch(page, /상태 이력/);
+  assert.doesNotMatch(page, />\s*공유\s*</);
 });
