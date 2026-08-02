@@ -500,7 +500,7 @@ git commit -m "feat: explain recommendation priority"
 - Consumes: client-safe `RecommendationItem` from Task 5; API keeps `topK=10` internally.
 - Produces: `확인할 제보` screen with priority labels and evidence chips; advanced range disclosure controls only radius and days.
 
-- [ ] **Step 1: Write the failing UI contract**
+- [x] **Step 1: Write the failing UI contract**
 
 ```js
 // tests/unit/recommendation-warm-ux-contract.test.mjs
@@ -525,13 +525,13 @@ test("confirmation UI shows evidence and hides model controls", async () => {
 });
 ```
 
-- [ ] **Step 2: Run and confirm old similarity UI fails**
+- [x] **Step 2: Run and confirm old similarity UI fails**
 
 Run: `node --test tests/unit/recommendation-warm-ux-contract.test.mjs`
 
 Expected: FAIL because the current page exposes topK and decimal similarity.
 
-- [ ] **Step 3: Replace score UI with evidence hierarchy**
+- [x] **Step 3: Replace score UI with evidence hierarchy**
 
 Render priority labels with this exact mapping:
 
@@ -545,11 +545,15 @@ const PRIORITY_LABEL = {
 
 Under each photo render occurred time, `item.evidence` as a `<ul aria-label="확인 근거">`, and the sentence `근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을 보장하지 않습니다.` Keep claim, report, block, and map actions. On the page remove `topK` state/input/copy; pass the hook's default 10 implicitly. Put radius and days inside `<details><summary>탐색 범위</summary>` and rename heading to real `h1` text `확인할 제보`.
 
-- [ ] **Step 4: Run recommendation and type gates**
+Also: draft/applied range interaction, request-owner abort guard, and shared dialog focus lifecycle for detail/report modals (`recommendation-interaction-behavior` + `dialog-focus-behavior` contracts).
+
+- [x] **Step 4: Run recommendation and type gates**
 
 Run: `node --test tests/unit/recommendation-warm-ux-contract.test.mjs tests/unit/privacy-location.test.mjs tests/unit/sighting-claim-map-contract.test.mjs && npm run typecheck`
 
 Expected: tests and typecheck PASS; no unused `session` warning remains in the page.
+
+Verified locally (2026-08-02): interaction/dialog RED 8/8, related recommendation/map UX 40/40, full `npm test` 320/320, `tsc --noEmit` pass. Commit still pending.
 
 - [ ] **Step 5: Commit confirmation UX**
 

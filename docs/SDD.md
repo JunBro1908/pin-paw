@@ -12,13 +12,13 @@
 
 #### 7-5.2 요구사항 요약
 
-| 구분 | 요구사항 |
-|------|----------|
-| 지도 | 안 본 제보: 빨간 테두리(현행 유지). 본 제보: 회색 테두리. |
+| 구분 | 요구사항                                                          |
+| ---- | ----------------------------------------------------------------- |
+| 지도 | 안 본 제보: 빨간 테두리(현행 유지). 본 제보: 회색 테두리.         |
 | 지도 | “내 강아지로 인정”한 제보: 초록 테두리 (유실글 컨텍스트 있을 때). |
-| 추천 | “내 강아지로 인정”한 제보는 **최상단 고정**, 그 아래 유사도 순. |
-| 추천 | “내 강아지로 인정”한 제보에 “내가 인정한 제보” 배지 표시. |
-| 상세 | “내 강아지로 인정” 체크/해제 가능 (인스타 좋아요처럼 토글). |
+| 추천 | “내 강아지로 인정”한 제보는 **최상단 고정**, 그 아래 유사도 순.   |
+| 추천 | “내 강아지로 인정”한 제보에 “내가 인정한 제보” 배지 표시.         |
+| 상세 | “내 강아지로 인정” 체크/해제 가능 (인스타 좋아요처럼 토글).       |
 
 #### 7-5.3 데이터 설계
 
@@ -56,16 +56,16 @@
 **인증 (서버 검증)**  
 `/api/v1/me/*` 및 인증이 필요한 API에서는 쿠키 세션에서 **access_token만 읽은 뒤** Supabase Auth 서버로 검증하는 **`getAuthenticatedUser()`**를 사용한다. `getSession()`의 user 객체는 저장소(쿠키) 기반이라 서버에서 신뢰하지 않고, **`getUser(access_token)`**으로 검증된 user만 사용한다. 공용 헬퍼: `@/shared/supabase/server`의 `getAuthenticatedUser(supabase)`.
 
-| 메서드 | 경로 | 설명 |
-|--------|------|------|
-| GET | `/api/v1/me/sighting-views?sightingIds=id1,id2,...` | 현재 유저의 제보별 seen 상태 반환. 지도 마커 색상(회색)용. |
-| POST | `/api/v1/me/sighting-views` | body: `{ sightingId }` — “본 적 있음” 기록 (seen_at 설정). |
-| GET | `/api/v1/me/lost-posts/map?limit=50` | 지도 “내 유실글+북마크” 레이어용. 본인 유실글 목록 + 위도·경도·표시용 필드. RPC `get_my_lost_posts_with_location` 호출. |
-| GET | `/api/v1/me/lost-posts/map/paths` | 지도 "내 유실글+북마크" 레이어용. 유실 위치→제보(occurred_at 순) 경로 데이터. RPC `get_my_lost_post_paths` 호출. 반환: `[{ lost_post_id, lost_lat, lost_lng, lost_at, points: [{ sighting_id, lat, lng, occurred_at, photo_keys?, note? }, ...] }, ...]`. |
-| GET | `/api/v1/me/lost-posts/[lostPostId]/sighting-claims` | 해당 유실글에서 “내 강아지로 인정”한 sighting_id 목록. |
-| POST | `/api/v1/me/lost-posts/[lostPostId]/sighting-claims` | body: `{ sightingId }` — 인정 추가. 성공 시 해당 `lost_post_id`의 `recommendation_cache` 삭제(다음 추천 조회 시 반영). |
-| DELETE | `/api/v1/me/lost-posts/[lostPostId]/sighting-claims/[sightingId]` | 인정 해제. 성공 시 해당 `lost_post_id`의 `recommendation_cache` 삭제. |
-| GET | `/api/v1/auth/sightings/[sightingId]` | 인증 유저용 제보 단건 상세. 지도 상세 카드/추천 모달과 동일한 형식(id, photo_keys, occurred_at, author_type, trait_*, note) 반환. Service role로 sightings 테이블 직접 조회. |
+| 메서드 | 경로                                                              | 설명                                                                                                                                                                                                                                                      |
+| ------ | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GET    | `/api/v1/me/sighting-views?sightingIds=id1,id2,...`               | 현재 유저의 제보별 seen 상태 반환. 지도 마커 색상(회색)용.                                                                                                                                                                                                |
+| POST   | `/api/v1/me/sighting-views`                                       | body: `{ sightingId }` — “본 적 있음” 기록 (seen_at 설정).                                                                                                                                                                                                |
+| GET    | `/api/v1/me/lost-posts/map?limit=50`                              | 지도 “내 유실글+북마크” 레이어용. 본인 유실글 목록 + 위도·경도·표시용 필드. RPC `get_my_lost_posts_with_location` 호출.                                                                                                                                   |
+| GET    | `/api/v1/me/lost-posts/map/paths`                                 | 지도 "내 유실글+북마크" 레이어용. 유실 위치→제보(occurred_at 순) 경로 데이터. RPC `get_my_lost_post_paths` 호출. 반환: `[{ lost_post_id, lost_lat, lost_lng, lost_at, points: [{ sighting_id, lat, lng, occurred_at, photo_keys?, note? }, ...] }, ...]`. |
+| GET    | `/api/v1/me/lost-posts/[lostPostId]/sighting-claims`              | 해당 유실글에서 “내 강아지로 인정”한 sighting_id 목록.                                                                                                                                                                                                    |
+| POST   | `/api/v1/me/lost-posts/[lostPostId]/sighting-claims`              | body: `{ sightingId }` — 인정 추가. 성공 시 해당 `lost_post_id`의 `recommendation_cache` 삭제(다음 추천 조회 시 반영).                                                                                                                                    |
+| DELETE | `/api/v1/me/lost-posts/[lostPostId]/sighting-claims/[sightingId]` | 인정 해제. 성공 시 해당 `lost_post_id`의 `recommendation_cache` 삭제.                                                                                                                                                                                     |
+| GET    | `/api/v1/auth/sightings/[sightingId]`                             | 인증 유저용 제보 단건 상세. 지도 상세 카드/추천 모달과 동일한 형식(id, photo*keys, occurred_at, author_type, trait*\*, note) 반환. Service role로 sightings 테이블 직접 조회.                                                                             |
 
 #### 7-5.5 프론트 연동
 
@@ -99,7 +99,7 @@
   - [x] `user_sighting_views` 테이블 생성 (PK, FK, 인덱스). `dismissed_at` 제거 반영(마이그레이션 20250218160000).
   - [x] `lost_post_sighting_claims` 테이블 생성 (PK, FK, 인덱스)
   - [x] 두 테이블 RLS 활성화 및 정책 적용
-  - [x] RPC `get_my_lost_posts_with_location(limit_count)` — 지도용 유실글 목록(id, pet_name, lost_at, cover_photo_key, trait_*, note, lat, lng). 마이그레이션 20250219100000, 20250219110000.
+  - [x] RPC `get_my_lost_posts_with_location(limit_count)` — 지도용 유실글 목록(id, pet*name, lost_at, cover_photo_key, trait*\*, note, lat, lng). 마이그레이션 20250219100000, 20250219110000.
   - [x] RPC `get_my_lost_post_paths` — 북마크 레이어용 경로 데이터(유실 위치→제보 occurred_at 순). 반환: lost_post_id, lost_lat, lost_lng, lost_at, points(sighting_id, lat, lng, occurred_at, photo_keys?, note?). 마이그레이션 20250222100000.
 - [x] **API**
   - [x] GET/POST `/api/v1/me/sighting-views` 구현
@@ -132,32 +132,35 @@
 
 #### 7-5.6.1 알려진 동작·제한 (해결됨)
 
-| 구분 | 내용 |
-|------|------|
+| 구분           | 내용                                                                                                                                                                                                        |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 지도 북마크 별 | **해결:** 추천 → "지도에서 보기" 진입 시(`lostPostId` 있음)에도 상세 패널에 북마크 별이 보이도록, 해당 유실글 1건을 `GET /api/v1/lost-posts/[lostPostId]`로 로드해 `myLostPosts`에 넣는 로딩 정책을 추가함. |
 
 #### 7-5.7 검증 시나리오
 
-**시나리오 1: 본/안 본 구분 (지도)**  
-1. 유저 A 로그인 → 지도 열기.  
-2. 제보 X가 빨간 테두리로 보임.  
-3. 제보 X 클릭 → 상세 진입 → “본 적 있음” 기록.  
-4. 지도로 돌아와서 같은 영역 다시 로드.  
-5. **검증**: 제보 X가 회색 테두리로 보인다.  
-6. 유저 B로 로그인 후 같은 영역 확인.  
+**시나리오 1: 본/안 본 구분 (지도)**
+
+1. 유저 A 로그인 → 지도 열기.
+2. 제보 X가 빨간 테두리로 보임.
+3. 제보 X 클릭 → 상세 진입 → “본 적 있음” 기록.
+4. 지도로 돌아와서 같은 영역 다시 로드.
+5. **검증**: 제보 X가 회색 테두리로 보인다.
+6. 유저 B로 로그인 후 같은 영역 확인.
 7. **검증**: 제보 X는 유저 B에게 빨간 테두리(안 본 상태)로 보인다.
 
-**시나리오 2: 내 강아지 인정 (추천 최상단 + 지도 초록)**  
-1. 유저 A가 유실글 L 선택 → 추천 목록에서 제보 Z에 “내 강아지로 인정” 클릭.  
-2. **검증**: 제보 Z가 목록 최상단으로 이동하고 “내가 인정한 제보” 배지가 보인다.  
-3. 지도에서 `lostPostId=L` 컨텍스트로 제보 Z 위치 확인.  
-4. **검증**: 제보 Z 마커가 초록 테두리로 보인다.  
-5. “내 강아지로 인정” 다시 클릭(해제).  
+**시나리오 2: 내 강아지 인정 (추천 최상단 + 지도 초록)**
+
+1. 유저 A가 유실글 L 선택 → 추천 목록에서 제보 Z에 “내 강아지로 인정” 클릭.
+2. **검증**: 제보 Z가 목록 최상단으로 이동하고 “내가 인정한 제보” 배지가 보인다.
+3. 지도에서 `lostPostId=L` 컨텍스트로 제보 Z 위치 확인.
+4. **검증**: 제보 Z 마커가 초록 테두리로 보인다.
+5. “내 강아지로 인정” 다시 클릭(해제).
 6. **검증**: 배지 사라지고, 목록에서 유사도 순으로 재정렬되며, 지도에서 해당 마커는 회색/빨강으로 보인다.
 
-**시나리오 3: 인정 해제**  
-1. 위 상태에서 제보 Z의 “내 강아지로 인정” 버튼을 다시 눌러 해제.  
-2. **검증**: 목록에서 최상단 고정이 해제되고, “내가 인정한 제보” 배지가 사라진다.  
+**시나리오 3: 인정 해제**
+
+1. 위 상태에서 제보 Z의 “내 강아지로 인정” 버튼을 다시 눌러 해제.
+2. **검증**: 목록에서 최상단 고정이 해제되고, “내가 인정한 제보” 배지가 사라진다.
 3. **검증**: 지도에서 제보 Z는 회색(본 제보) 또는 빨강(상태에 따라)으로만 보인다.
 
 ---
@@ -185,32 +188,32 @@
 **텍스트 유사도 (필드별 코사인 유사도 가중 합)**
 
 - `sim(종)`, `sim(색)`, `sim(크기)`, `sim(메모)`: 유실글 4벡터 vs 목격 4벡터 각각 코사인 유사도 (1 − 코사인거리).
-- \( S_{\text{text}} = w_s \cdot \text{sim}(\text{종}) + w_c \cdot \text{sim}(\text{색}) + w_z \cdot \text{sim}(\text{크기}) + w_n \cdot \text{sim}(\text{메모}) \)
+- \( S\_{\text{text}} = w_s \cdot \text{sim}(\text{종}) + w_c \cdot \text{sim}(\text{색}) + w_z \cdot \text{sim}(\text{크기}) + w_n \cdot \text{sim}(\text{메모}) \)
 - 제약: \( w_s + w_c + w_z + w_n = 1 \).
 
 **위치·시간 보정**
 
 - `distance_km = st_distance(유실 위치, 제보 위치) / 1000`
 - `time_diff_days = extract(epoch from (제보 시각 - 유실 시각)) / 86400` (pre-filter로 이미 \( \in [0, p_{\text{days}}] \))
-- \( f_{\text{loc}} = \exp(-\lambda_{\text{dist}} \cdot \frac{\text{distance\_km}}{p_{\text{radius\_km}}}) \)
-- \( f_{\text{time}} = \exp(-\lambda_{\text{time}} \cdot \frac{\text{time\_diff\_days}}{p_{\text{days}}}) \)
-- \( f_{\text{loc,time}} = f_{\text{loc}} \times f_{\text{time}} \)
+- \( f*{\text{loc}} = \exp(-\lambda*{\text{dist}} \cdot \frac{\text{distance_km}}{p\_{\text{radius_km}}}) \)
+- \( f*{\text{time}} = \exp(-\lambda*{\text{time}} \cdot \frac{\text{time_diff_days}}{p\_{\text{days}}}) \)
+- \( f*{\text{loc,time}} = f*{\text{loc}} \times f\_{\text{time}} \)
 
 **최종 스코어**
 
-- \( \text{score} = S_{\text{text}} \times f_{\text{loc,time}} \)
+- \( \text{score} = S*{\text{text}} \times f*{\text{loc,time}} \)
 - 정렬: `score` 내림차순, 상위 `p_top_k`개.
 
 ### 7-6.4 고정 파라미터 (유저 변경 불가)
 
-| 구분 | 파라미터 | 값 | 비고 |
-|------|----------|-----|------|
-| 텍스트 가중치 | w_species (w_s) | 0.2 | 종 |
-| | w_color (w_c) | 0.45 | 색 |
-| | w_size (w_z) | 0.1 | 크기 |
-| | w_note (w_n) | 0.25 | 메모(특이사항) |
-| 위치·시간 감쇠 | λ_dist | 실험 완료 값 (문서/코드 상수) | 거리 감쇠 |
-| | λ_time | 실험 완료 값 (문서/코드 상수) | 시간 차이 감쇠 |
+| 구분           | 파라미터        | 값                            | 비고           |
+| -------------- | --------------- | ----------------------------- | -------------- |
+| 텍스트 가중치  | w_species (w_s) | 0.2                           | 종             |
+|                | w_color (w_c)   | 0.45                          | 색             |
+|                | w_size (w_z)    | 0.1                           | 크기           |
+|                | w_note (w_n)    | 0.25                          | 메모(특이사항) |
+| 위치·시간 감쇠 | λ_dist          | 실험 완료 값 (문서/코드 상수) | 거리 감쇠      |
+|                | λ_time          | 실험 완료 값 (문서/코드 상수) | 시간 차이 감쇠 |
 
 - 기존 쿼리 파라미터 `p_radius_km`, `p_days`, `p_top_k`는 **API 쿼리로 유저 전달 가능** (현행 유지). 위 가중치·λ는 **서버/RPC 상수**로만 사용.
 
@@ -270,7 +273,7 @@
 
 - [ ] **supabase/migrations/YYYYMMDDHHMMSS_get_recommendations_field_weights.sql** (또는 schema.sql 반영)
   - 유실글 4개 임베딩(종·색·크기·메모) 조회.
-  - 후보 sighting마다 4개 임베딩 조회 → 코사인 유사도 4개 → \( S_{\text{text}} = w_s \cdot \text{sim}_s + w_c \cdot \text{sim}_c + w_z \cdot \text{sim}_z + w_n \cdot \text{sim}_n \).
+  - 후보 sighting마다 4개 임베딩 조회 → 코사인 유사도 4개 → \( S\_{\text{text}} = w_s \cdot \text{sim}\_s + w_c \cdot \text{sim}\_c + w_z \cdot \text{sim}\_z + w_n \cdot \text{sim}\_n \).
   - `distance_km`, `time_diff_days` 계산 → `f_loc`, `f_time` → `score = S_text * f_loc * f_time`.
   - `order by score desc limit least(p_top_k, 100)`.
   - RPC 인자: 기존 `p_lost_post_id`, `p_radius_km`, `p_days`, `p_top_k` 유지. `w_s`, `w_c`, `w_z`, `w_n`, `λ_dist`, `λ_time`는 **함수 내 상수**로 고정(유저 변경 불가).
@@ -283,22 +286,22 @@
 
 ### 7-6.7 터치포인트 요약
 
-| 위치 | 변경 요약 |
-|------|-----------|
-| docs/SDD.md | 7-6 섹션 추가 (본 문서). |
-| supabase/migrations | embeddings `trait` 컬럼·unique 변경, 기존 embeddings 삭제, embedding_status pending, recommendation_cache 비우기, entity당 4행 백필. |
-| supabase (RPC) | get_recommendations_for_lost_post: 4벡터 조회, S_text·f_loc·f_time·score 계산, 고정 w_*·λ 상수. |
-| src/shared/lib/embedding.ts | 필드별 텍스트 생성, createEmbeddings(texts[]) 배치 호출. |
-| src/app/api/v1/internal/embeddings/process/route.ts | entity 단위 그룹, 4문장 → 1회 API → 4행 update. |
-| src/app/api/v1/lost-posts/route.ts | embeddings 4행 upsert (trait별). |
-| src/app/api/v1/lost-posts/[lostPostId]/route.ts | embeddings 4행 upsert (trait별). |
-| src/app/api/v1/sightings/route.ts | embeddings 4행 upsert (trait별). |
-| src/app/api/v1/recommendations/route.ts | 변경 없음(또는 RPC 시그니처만 유지). |
+| 위치                                                | 변경 요약                                                                                                                            |
+| --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| docs/SDD.md                                         | 7-6 섹션 추가 (본 문서).                                                                                                             |
+| supabase/migrations                                 | embeddings `trait` 컬럼·unique 변경, 기존 embeddings 삭제, embedding_status pending, recommendation_cache 비우기, entity당 4행 백필. |
+| supabase (RPC)                                      | get*recommendations_for_lost_post: 4벡터 조회, S_text·f_loc·f_time·score 계산, 고정 w*\*·λ 상수.                                     |
+| src/shared/lib/embedding.ts                         | 필드별 텍스트 생성, createEmbeddings(texts[]) 배치 호출.                                                                             |
+| src/app/api/v1/internal/embeddings/process/route.ts | entity 단위 그룹, 4문장 → 1회 API → 4행 update.                                                                                      |
+| src/app/api/v1/lost-posts/route.ts                  | embeddings 4행 upsert (trait별).                                                                                                     |
+| src/app/api/v1/lost-posts/[lostPostId]/route.ts     | embeddings 4행 upsert (trait별).                                                                                                     |
+| src/app/api/v1/sightings/route.ts                   | embeddings 4행 upsert (trait별).                                                                                                     |
+| src/app/api/v1/recommendations/route.ts             | 변경 없음(또는 RPC 시그니처만 유지).                                                                                                 |
 
 ### 7-6.8 알려진 제한·추후 개선
 
-| 구분 | 내용 |
-|------|------|
-| 이미지 유사도 | 추천 스코어에 미포함. 추후 이미지 임베딩·하이브리드 스코어(텍스트+이미지) 별도 개선. |
-| 하이퍼파라미터 | 유저 노출·변경 불가. 실험 완료 값으로 서버/RPC 상수 고정. |
-| λ_dist, λ_time 초기값 | SDD 또는 코드 주석에 “실험 완료 값”으로 명시. 구체 수치는 구현 시 상수로 넣음. |
+| 구분                  | 내용                                                                                 |
+| --------------------- | ------------------------------------------------------------------------------------ |
+| 이미지 유사도         | 추천 스코어에 미포함. 추후 이미지 임베딩·하이브리드 스코어(텍스트+이미지) 별도 개선. |
+| 하이퍼파라미터        | 유저 노출·변경 불가. 실험 완료 값으로 서버/RPC 상수 고정.                            |
+| λ_dist, λ_time 초기값 | SDD 또는 코드 주석에 “실험 완료 값”으로 명시. 구체 수치는 구현 시 상수로 넣음.       |

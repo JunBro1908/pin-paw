@@ -34,20 +34,20 @@ Goal은 다음 조건을 동시에 만족할 때만 완료한다.
 
 ## 3. 필수 검증 기준선
 
-| 검증                               | 현재 증거                | 상태          | 남은 조건                                  |
-| ---------------------------------- | ------------------------ | ------------- | ------------------------------------------ |
-| `npm test`                         | 2026-07-26, 198/198 통과 | `IN_PROGRESS` | 핵심 E2E·axe 브라우저 검증 확장            |
-| HTTP route integration             | Sentry 전 로컬 8/8 통과  | `IN_PROGRESS` | Sentry 포함 재실행·정상 DB/Storage·staging |
-| `npx tsc --noEmit`                 | Next 16.2.11에서 통과    | `IN_PROGRESS` | 각 기능 및 최종 기준 재실행                |
-| `npm run lint`                     | 0 errors, 0 warnings     | `IN_PROGRESS` | CI와 깨끗한 설치 환경에서 재현             |
-| `npm run build`                    | 외부 폰트 없이 Webpack 27/27 통과 | `IN_PROGRESS` | CI와 깨끗한 `npm ci` 환경에서 재현    |
-| `npm audit --omit=dev`             | 취약점 0                 | `IN_PROGRESS` | 깨끗한 CI 설치·staging smoke               |
+| 검증                               | 현재 증거                                                               | 상태          | 남은 조건                                        |
+| ---------------------------------- | ----------------------------------------------------------------------- | ------------- | ------------------------------------------------ |
+| `npm test`                         | 2026-07-26, 198/198 통과                                                | `IN_PROGRESS` | 핵심 E2E·axe 브라우저 검증 확장                  |
+| HTTP route integration             | Sentry 전 로컬 8/8 통과                                                 | `IN_PROGRESS` | Sentry 포함 재실행·정상 DB/Storage·staging       |
+| `npx tsc --noEmit`                 | Next 16.2.11에서 통과                                                   | `IN_PROGRESS` | 각 기능 및 최종 기준 재실행                      |
+| `npm run lint`                     | 0 errors, 0 warnings                                                    | `IN_PROGRESS` | CI와 깨끗한 설치 환경에서 재현                   |
+| `npm run build`                    | 외부 폰트 없이 Webpack 27/27 통과                                       | `IN_PROGRESS` | CI와 깨끗한 `npm ci` 환경에서 재현               |
+| `npm audit --omit=dev`             | 취약점 0                                                                | `IN_PROGRESS` | 깨끗한 CI 설치·staging smoke                     |
 | 빈 DB migration replay/schema diff | 격리 프로젝트 `pin-paw-ops-verify`(`lxqygnjgtehvynohjgtx`)에 35/35 적용 | `IN_PROGRESS` | 프로덕션 drift 해소·schema diff·로컬 Docker 재현 |
-| RLS·RPC·Storage 역할 행렬          | 동일 격리 DB에서 permission matrix + share privacy smoke 통과 | `IN_PROGRESS` | owner/admin 시나리오·동시성·staging 재실행 |
-| 핵심 E2E                           | 실행 증거 없음           | `NOT_STARTED` | 인증·업로드·추천·지도·claim·수정·삭제·알림 |
-| 접근성 axe                         | UI primitive 계약 테스트만 | `IN_PROGRESS` | axe critical/serious 0·키보드 E2E          |
-| backup/restore·계정 삭제 rehearsal | 실행 증거 없음           | `NOT_STARTED` | RPO/RTO 및 삭제 기한 검증                  |
-| 7일 staging soak                   | 실행 증거 없음           | `NOT_STARTED` | 운영 지표와 알림 기준 충족                 |
+| RLS·RPC·Storage 역할 행렬          | 동일 격리 DB에서 permission matrix + share privacy smoke 통과           | `IN_PROGRESS` | owner/admin 시나리오·동시성·staging 재실행       |
+| 핵심 E2E                           | 실행 증거 없음                                                          | `NOT_STARTED` | 인증·업로드·추천·지도·claim·수정·삭제·알림       |
+| 접근성 axe                         | UI primitive 계약 테스트만                                              | `IN_PROGRESS` | axe critical/serious 0·키보드 E2E                |
+| backup/restore·계정 삭제 rehearsal | 실행 증거 없음                                                          | `NOT_STARTED` | RPO/RTO 및 삭제 기한 검증                        |
+| 7일 staging soak                   | 실행 증거 없음                                                          | `NOT_STARTED` | 운영 지표와 알림 기준 충족                       |
 
 ## 4. 과제 원장
 
@@ -55,52 +55,52 @@ Goal은 다음 조건을 동시에 만족할 때만 완료한다.
 
 ### Gate 0
 
-| ID    | 과제                          | 연결 finding | 상태          | 현재 근거와 남은 조건                                           |
-| ----- | ----------------------------- | ------------ | ------------- | --------------------------------------------------------------- |
-| G0-01 | 내부 Worker 인증·권한         | SEC-001      | `IN_PROGRESS` | fail-closed·Cron GET·claim lease; DB replay·staging 호출 필요   |
-| G0-02 | production 의존성 취약점 제거 | SEC-002      | `IN_PROGRESS` | Babel 7.29.7 override·production audit 0; CI·staging 남음      |
-| G0-03 | public table RLS·grant        | SEC-003      | `IN_PROGRESS` | 비공개 table revoke·RLS 구현; 실제 역할 CRUD matrix 필요        |
+| ID    | 과제                          | 연결 finding | 상태          | 현재 근거와 남은 조건                                              |
+| ----- | ----------------------------- | ------------ | ------------- | ------------------------------------------------------------------ |
+| G0-01 | 내부 Worker 인증·권한         | SEC-001      | `IN_PROGRESS` | fail-closed·Cron GET·claim lease; DB replay·staging 호출 필요      |
+| G0-02 | production 의존성 취약점 제거 | SEC-002      | `IN_PROGRESS` | Babel 7.29.7 override·production audit 0; CI·staging 남음          |
+| G0-03 | public table RLS·grant        | SEC-003      | `IN_PROGRESS` | 비공개 table revoke·RLS 구현; 실제 역할 CRUD matrix 필요           |
 | G0-04 | RPC EXECUTE 최소 권한         | SEC-004      | `IN_PROGRESS` | auth.uid privacy RPC·claim 직접 쓰기 revoke; 실제 역할 matrix 필요 |
-| G0-05 | 업로드 intent·소유권·정리     | SEC-005      | `IN_PROGRESS` | intent·실파일·원자 생성/소비·정리; DB/Storage 경쟁 검증 필요    |
-| G0-06 | OAuth same-origin redirect    | SEC-006      | `IN_PROGRESS` | 우회 테스트 통과; staging OAuth 정상 복귀·변조 검증 필요        |
-| G0-07 | atomic IP/user rate limit     | SEC-007      | `IN_PROGRESS` | 원자 RPC·IP/user 이중 제한 구현; 실제 50 동시 요청 검증 필요    |
-| G0-08 | 공용 입력 schema              | SEC-008      | `IN_PROGRESS` | 입력 전수·64 KiB·HTTP 400/413 검증; DB/Storage E2E 필요         |
-| G0-09 | CSP·보안 헤더                 | SEC-009      | `IN_PROGRESS` | env-bound origin·헤더 검증; inline 축소·staging E2E 필요        |
-| G0-10 | Storage 정책 migration        | SEC-010      | `IN_PROGRESS` | public bucket·browser object 차단; 실제 역할 matrix 필요        |
-| G0-11 | 테스트 계층 확장              | QUAL-001     | `IN_PROGRESS` | unit/계약·HTTP 실패경계·CI 구현; RLS·핵심 E2E 필요              |
-| G0-12 | CI 출시 Gate                  | QUAL-002     | `IN_PROGRESS` | release workflow·lint 0/0; 실제 GitHub run·branch 보호 필요     |
-| G0-13 | migration 단일 진실 공급원    | DB-003       | `IN_PROGRESS` | 초기 schema·순서 preflight 2/2; 실제 replay·schema diff 필요    |
-| G0-14 | sightings 직접 INSERT 차단    | SEC-011      | `IN_PROGRESS` | browser role INSERT revoke 구현; REST/API 통합 검증 필요        |
-| G0-15 | 검색·지도 비용/bbox 제한      | SEC-012      | `IN_PROGRESS` | 검색·지도 상한 구현; DB burst·quota·EXPLAIN·staging 검증 필요   |
-| G0-16 | Worker 장애·재시도·원자 완료  | QUAL-005     | `IN_PROGRESS` | provider/finalize/lease fault 4/4; DB replay·실경쟁 필요        |
-| G0-17 | canonical origin 설정         | SEC-013      | `IN_PROGRESS` | APP/Supabase origin 검증·Host 입력 제거; staging 검증 필요      |
-| G0-18 | Webpack 표준화·재현           | QUAL-006     | `IN_PROGRESS` | Google font 의존 제거·로컬 27/27; CI·깨끗한 `npm ci` 필요       |
+| G0-05 | 업로드 intent·소유권·정리     | SEC-005      | `IN_PROGRESS` | intent·실파일·원자 생성/소비·정리; DB/Storage 경쟁 검증 필요       |
+| G0-06 | OAuth same-origin redirect    | SEC-006      | `IN_PROGRESS` | 우회 테스트 통과; staging OAuth 정상 복귀·변조 검증 필요           |
+| G0-07 | atomic IP/user rate limit     | SEC-007      | `IN_PROGRESS` | 원자 RPC·IP/user 이중 제한 구현; 실제 50 동시 요청 검증 필요       |
+| G0-08 | 공용 입력 schema              | SEC-008      | `IN_PROGRESS` | 입력 전수·64 KiB·HTTP 400/413 검증; DB/Storage E2E 필요            |
+| G0-09 | CSP·보안 헤더                 | SEC-009      | `IN_PROGRESS` | env-bound origin·헤더 검증; inline 축소·staging E2E 필요           |
+| G0-10 | Storage 정책 migration        | SEC-010      | `IN_PROGRESS` | public bucket·browser object 차단; 실제 역할 matrix 필요           |
+| G0-11 | 테스트 계층 확장              | QUAL-001     | `IN_PROGRESS` | unit/계약·HTTP 실패경계·CI 구현; RLS·핵심 E2E 필요                 |
+| G0-12 | CI 출시 Gate                  | QUAL-002     | `IN_PROGRESS` | release workflow·lint 0/0; 실제 GitHub run·branch 보호 필요        |
+| G0-13 | migration 단일 진실 공급원    | DB-003       | `IN_PROGRESS` | 초기 schema·순서 preflight 2/2; 실제 replay·schema diff 필요       |
+| G0-14 | sightings 직접 INSERT 차단    | SEC-011      | `IN_PROGRESS` | browser role INSERT revoke 구현; REST/API 통합 검증 필요           |
+| G0-15 | 검색·지도 비용/bbox 제한      | SEC-012      | `IN_PROGRESS` | 검색·지도 상한 구현; DB burst·quota·EXPLAIN·staging 검증 필요      |
+| G0-16 | Worker 장애·재시도·원자 완료  | QUAL-005     | `IN_PROGRESS` | provider/finalize/lease fault 4/4; DB replay·실경쟁 필요           |
+| G0-17 | canonical origin 설정         | SEC-013      | `IN_PROGRESS` | APP/Supabase origin 검증·Host 입력 제거; staging 검증 필요         |
+| G0-18 | Webpack 표준화·재현           | QUAL-006     | `IN_PROGRESS` | Google font 의존 제거·로컬 27/27; CI·깨끗한 `npm ci` 필요          |
 
 ### Milestone 1
 
 | ID    | 과제                             | 연결 finding | 상태          | 완료 핵심                                                  |
 | ----- | -------------------------------- | ------------ | ------------- | ---------------------------------------------------------- |
-| M1-01 | request ID·redaction·구조화 로그 | OPS-001      | `IN_PROGRESS` | Sentry·redaction 구현; DSN/source map·staging trace 필요  |
-| M1-02 | health/readiness                 | OPS-001      | `IN_PROGRESS` | liveness/config/DB 분리; staging 장애·alert 검증 필요     |
-| M1-03 | 백업·복구 runbook                | OPS-002      | `IN_PROGRESS` | runbook 작성; RPO ≤24h, RTO ≤4h 실제 rehearsal 필요       |
+| M1-01 | request ID·redaction·구조화 로그 | OPS-001      | `IN_PROGRESS` | Sentry·redaction 구현; DSN/source map·staging trace 필요   |
+| M1-02 | health/readiness                 | OPS-001      | `IN_PROGRESS` | liveness/config/DB 분리; staging 장애·alert 검증 필요      |
+| M1-03 | 백업·복구 runbook                | OPS-002      | `IN_PROGRESS` | runbook 작성; RPO ≤24h, RTO ≤4h 실제 rehearsal 필요        |
 | M1-04 | app_metadata 관리자·audit log    | OPS-003      | `IN_PROGRESS` | app_metadata·원자 hide·append-only audit; DB/E2E 필요      |
-| M1-05 | 신고·차단·숨김·SLA               | OPS-003      | `IN_PROGRESS` | 중복 신고·차단 필터·24/72h SLA; DB/E2E·alert 필요         |
-| M1-06 | 정밀 위치 권한 분리              | PRIV-001     | `IN_PROGRESS` | 마스킹·owner/후보 RPC 구현; DB 역할 matrix·match E2E 필요 |
+| M1-05 | 신고·차단·숨김·SLA               | OPS-003      | `IN_PROGRESS` | 중복 신고·차단 필터·24/72h SLA; DB/E2E·alert 필요          |
+| M1-06 | 정밀 위치 권한 분리              | PRIV-001     | `IN_PROGRESS` | 마스킹·owner/후보 RPC 구현; DB 역할 matrix·match E2E 필요  |
 | M1-07 | NaverMap 분리                    | QUAL-004     | `IN_PROGRESS` | domain/data/adapter/renderer 분리; 브라우저 누수 검증 필요 |
 | M1-08 | SLO dashboard·alert              | OPS-004      | `IN_PROGRESS` | snapshot·RED·SLO evaluator 구현; live dashboard/alert 필요 |
-| M1-09 | 계정 차단·삭제·보존              | PRIV-002     | `IN_PROGRESS` | ban·lease 삭제 worker·tombstone; DB/backup E2E 필요       |
+| M1-09 | 계정 차단·삭제·보존              | PRIV-002     | `IN_PROGRESS` | ban·lease 삭제 worker·tombstone; DB/backup E2E 필요        |
 
 ### Milestone 2
 
-| ID    | 과제                             | 연결 finding/선행 | 상태          | 완료 핵심                                |
-| ----- | -------------------------------- | ----------------- | ------------- | ---------------------------------------- |
+| ID    | 과제                             | 연결 finding/선행 | 상태          | 완료 핵심                                                   |
+| ----- | -------------------------------- | ----------------- | ------------- | ----------------------------------------------------------- |
 | M2-01 | 인앱 알림                        | M1-01, M1-06      | `IN_PROGRESS` | `/my/notifications` UI·API·계약; staging delivery ≥95% 필요 |
-| M2-02 | 제보 수정·사진 교체/삭제         | G0-05/08, M1-04   | `IN_PROGRESS` | EditForm traits/지도/idempotency; Storage orphan E2E 필요 |
-| M2-03 | 상태 이력·허용 전이              | M1-01             | `IN_PROGRESS` | history API + 상세 UI; 금지 전이 E2E 필요 |
-| M2-04 | 안전한 공유 링크·Open Graph      | M1-06             | `IN_PROGRESS` | OG image·cover·DB privacy smoke; crawler snapshot 필요 |
-| M2-05 | 접근성·모바일 지도 UX            | G0-11             | `IN_PROGRESS` | lang/skip/focus/aria primitive; axe·키보드 E2E 필요 |
+| M2-02 | 제보 수정·사진 교체/삭제         | G0-05/08, M1-04   | `IN_PROGRESS` | EditForm traits/지도/idempotency; Storage orphan E2E 필요   |
+| M2-03 | 상태 이력·허용 전이              | M1-01             | `IN_PROGRESS` | history API + 상세 UI; 금지 전이 E2E 필요                   |
+| M2-04 | 안전한 공유 링크·Open Graph      | M1-06             | `IN_PROGRESS` | OG image·cover·DB privacy smoke; crawler snapshot 필요      |
+| M2-05 | 접근성·모바일 지도 UX            | G0-11             | `IN_PROGRESS` | lang/skip/focus/aria primitive; axe·키보드 E2E 필요         |
 | M2-06 | timeout/offline/중복 idempotency | G0-08             | `IN_PROGRESS` | client key/intent·EditForm lifecycle; 20-way fault E2E 필요 |
-| M2-07 | first-party 퍼널 이벤트          | M1-08, M1-09      | `IN_PROGRESS` | 5이벤트 배선·opt-out 설정 UI; staging opt-out E2E 필요 |
+| M2-07 | first-party 퍼널 이벤트          | M1-08, M1-09      | `IN_PROGRESS` | 5이벤트 배선·opt-out 설정 UI; staging opt-out E2E 필요      |
 
 ## 5. 실행 코드·SQL 라인 감사 원장
 
@@ -108,216 +108,216 @@ Goal은 다음 조건을 동시에 만족할 때만 완료한다.
 
 ### 5.1 애플리케이션 페이지·API
 
-| 파일                                                                              |  라인 | 역할               | 신뢰 경계                   | 주요 실패 모드         | finding/과제        | 상태          | 마지막 검토 기준                           |
-| --------------------------------------------------------------------------------- | ----: | ------------------ | --------------------------- | ---------------------- | ------------------- | ------------- | ------------------------------------------ |
-| `src/app/(tabs)/layout.tsx`                                                       |  1-52 | 탭 레이아웃        | 브라우저/UI                 | 잘못된 탐색·상태       | M2-05               | `NOT_STARTED` | 미검토                                     |
-| `src/app/(tabs)/loading.tsx`                                                      |  1-15 | 로딩 UI            | 브라우저/UI                 | 무한 로딩              | M2-05               | `NOT_STARTED` | 미검토                                     |
-| `src/app/(tabs)/map/page.tsx`                                                     |  1-63 | 지도 진입          | 브라우저→지도               | 오류 복구 실패         | M1-07, M2-05        | `NOT_STARTED` | 미검토                                     |
-| `src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx`                              | 1-610 | 유실글 상세/claim  | 브라우저→인증 API           | IDOR·중복 요청         | AUTHZ-001, M2-06    | `IN_PROGRESS` | Image 최적화 변경 검토 필요                |
-| `src/app/(tabs)/my/lost-posts/new/page.tsx`                                       |  1-32 | 유실글 작성 진입   | 브라우저→폼                 | 인증 누락              | G0-08               | `NOT_STARTED` | 미검토                                     |
-| `src/app/(tabs)/my/lost-posts/page.tsx`                                           |  1-16 | 내 유실글 목록     | 브라우저→인증 API           | 데이터 누락            | G0-10               | `NOT_STARTED` | 미검토                                     |
-| `src/app/(tabs)/my/page.tsx`                                                      | 1-154 | 마이 페이지        | 브라우저→인증               | 세션·삭제 불일치       | M1-09               | `NOT_STARTED` | 미검토                                     |
-| `src/app/(tabs)/my/sightings/page.tsx`                                            |  1-35 | 내 제보 목록       | 브라우저→인증 API           | IDOR·오류 은폐         | AUTHZ-001           | `NOT_STARTED` | 미검토                                     |
-| `src/app/(tabs)/page.tsx`                                                         |  1-31 | 홈 화면            | 브라우저/UI                 | 탐색 실패              | M2-05               | `NOT_STARTED` | 미검토                                     |
-| `src/app/(tabs)/recommend/page.tsx`                                               | 1-361 | 추천 화면          | 브라우저→추천 API           | 민감 정보 노출·중복    | PRIV-001, M2-06     | `IN_PROGRESS` | token snapshot·Image 변경 검토             |
-| `src/proxy.ts`                                                                    |  1-20 | API request ID     | 비신뢰 header→서버 요청     | ID 위조·trace 단절     | OPS-001, M1-01      | `IN_PROGRESS` | 서버 UUID 강제·HTTP 8/8, staging trace 필요 |
-| `src/app/api/v1/auth/map/markers/route.ts`                                        | 1-149 | 인증 지도 마커     | 사용자 JWT→권한 RPC         | 비회원 정밀 노출·차단 누락 | PRIV-001          | `IN_PROGRESS` | 회원 확대 시 precise pin·비회원 mask; DB E2E 필요 |
-| `src/app/api/v1/auth/sightings/[sightingId]/route.ts`                             |  1-59 | 인증 제보 상세     | 사용자 JWT→권한 RPC         | 비회원·차단 우회 IDOR   | PRIV-001, SEC-008 | `IN_PROGRESS` | 회원 정밀 상세·차단 필터; DB negative E2E 필요 |
-| `src/app/api/v1/health/route.ts`                                                  |  1-15 | liveness endpoint  | monitor→앱 process          | dependency와 생존 혼동 | OPS-001, M1-02      | `IN_PROGRESS` | no-store HTTP 200, staging monitor 필요    |
-| `src/app/api/v1/internal/embeddings/process/route.ts`                             | 1-287 | embedding Worker   | Cron→Service Role→DB/OpenAI | lease 상실·Cron 405    | SEC-001, QUAL-005   | `IN_PROGRESS` | 구조화 오류 로그·lease RPC, DB 검증 필요  |
-| `src/app/api/v1/internal/uploads/cleanup/route.ts`                                |  1-26 | orphan 정리 Cron   | Cron→Storage/DB             | 무인증 삭제·정리 누락  | SEC-001, SEC-005    | `IN_PROGRESS` | fail-closed GET·단위 검증, staging 필요    |
-| `src/app/api/v1/lost-posts/[lostPostId]/route.ts`                                 | 1-240 | 유실글 조회/수정   | 익명·사용자→DB              | IDOR·입력 위조         | AUTHZ-001, SEC-008  | `IN_PROGRESS` | 구조화 오류 로그·입력 경계, 권한 E2E 필요 |
-| `src/app/api/v1/lost-posts/route.ts`                                              | 1-261 | 유실글 생성/목록   | 사용자→Storage/DB           | 파일 도용·중복 생성    | SEC-005/008, M2-06  | `IN_PROGRESS` | cache replay·멱등 RPC 검토, DB E2E 필요    |
-| `src/app/api/v1/me/lost-posts/[lostPostId]/sighting-claims/[sightingId]/route.ts` |  1-69 | claim 상세 변경    | 사용자→권한 RPC             | IDOR·불법 상태 전이    | AUTHZ-001, SEC-008  | `IN_PROGRESS` | owner-scoped unclaim RPC; DB E2E 필요      |
-| `src/app/api/v1/me/lost-posts/[lostPostId]/sighting-claims/route.ts`              | 1-157 | claim 목록/생성    | 사용자→권한 RPC             | 임의 UUID claim·stale cache | AUTHZ-001, SEC-008, PRIV-001 | `IN_PROGRESS` | owner·활성 cache·미보관 후보 검증; DB E2E 필요 |
-| `src/app/api/v1/me/lost-posts/[lostPostId]/status-history/route.ts`               |  1-82 | 상태 이력 조회     | 사용자→RLS DB               | 타인 이력·actor 노출   | M2-03               | `IN_PROGRESS` | owner·pagination·actor 제외 계약; DB E2E 필요 |
-| `src/app/api/v1/me/lost-posts/map/paths/route.ts`                                 |  1-41 | 내 이동 경로       | 사용자→RPC                  | 위치·note 노출         | PRIV-001, OBS-001   | `IN_PROGRESS` | 구조화 오류 로그, 위치 권한 E2E 필요      |
-| `src/app/api/v1/me/lost-posts/map/route.ts`                                       |  1-50 | 내 유실글 지도     | 사용자→RPC                  | 정밀 위치 IDOR         | PRIV-001, SEC-008   | `IN_PROGRESS` | 구조화 오류 로그·pagination, 위치 E2E 필요 |
-| `src/app/api/v1/me/sighting-claims/[sightingId]/route.ts`                         |  1-71 | 제보자 claim 응답  | 사용자→DB                   | IDOR·불법 전이         | AUTHZ-001, SEC-008  | `IN_PROGRESS` | 구조화 오류 로그·UUID, 권한 E2E 필요      |
-| `src/app/api/v1/me/sighting-claims/route.ts`                                      | 1-100 | 전역 북마크 목록/해제 | 사용자→RLS/RPC            | 직접 DELETE 회귀·IDOR  | AUTHZ-001, SEC-008  | `IN_PROGRESS` | 조회 RLS·원자 전체 해제 RPC; DB E2E 필요 |
-| `src/app/api/v1/me/sighting-views/route.ts`                                       | 1-130 | 추천 열람 피드백   | 사용자→DB                   | 중복·타인 데이터 변경  | AUTHZ-001, SEC-008  | `IN_PROGRESS` | 구조화 오류 로그·500 UUID, DB E2E 필요    |
-| `src/app/api/v1/me/sightings/[sightingId]/route.ts`                               | 1-125 | 내 제보 상세/변경  | 사용자→DB                   | IDOR·orphan 파일       | AUTHZ-001, SEC-008  | `IN_PROGRESS` | 구조화 오류 로그·UUID, 권한 E2E 필요      |
-| `src/app/api/v1/me/sightings/route.ts`                                            |  1-59 | 내 제보 목록       | 사용자→DB                   | 타인 데이터 노출       | AUTHZ-001, SEC-008  | `IN_PROGRESS` | pagination 경계, 권한 E2E 필요             |
-| `src/app/api/v1/public/map/clusters/route.ts`                                     | 1-135 | 공개 지도 클러스터 | 익명→RPC                    | 위치 sweep·고비용 bbox | SEC-008, RATE-002   | `IN_PROGRESS` | 구조화 오류 로그·bbox/rate, DB 검증 필요  |
-| `src/app/api/v1/readiness/route.ts`                                               |  1-55 | readiness endpoint | monitor→설정/Supabase       | 설정 누락·DB hang 노출 | OPS-001, M1-02      | `IN_PROGRESS` | fail-closed·3초 probe, staging 장애 필요   |
-| `src/app/api/v1/recommendations/route.ts`                                         | 1-173 | 추천 API           | 사용자→Service Role RPC     | 매칭 전 정밀 위치 노출 | AUTHZ-003, SEC-008, PRIV-001 | `IN_PROGRESS` | owner 재검증·cache/fresh 좌표 grid 마스킹; DB E2E 필요 |
-| `src/app/api/v1/search/local/route.ts`                                            | 1-152 | 지역 검색 proxy    | 익명→외부 API               | 키 오용·비용 폭증      | RATE-001, SEC-012   | `IN_PROGRESS` | 구조화 오류 로그·timeout/rate, staging 필요 |
-| `src/app/api/v1/sightings/route.ts`                                               | 1-238 | 공개 제보 생성     | 익명·사용자→Storage/DB      | 파일 도용·중복 생성    | SEC-005/008/011/M2-06 | `IN_PROGRESS` | cache replay·멱등 RPC 검토, DB E2E 필요   |
-| `src/app/api/v1/uploads/presign/route.ts`                                         | 1-211 | 업로드 서명        | 익명·사용자→Storage         | MIME/크기/소유권 위조  | SEC-005, SEC-008    | `IN_PROGRESS` | 구조화 오류 로그·intent, Storage 검증 필요 |
-| `src/app/auth/callback/route.ts`                                                  |  1-27 | OAuth callback     | 외부 IdP→세션               | open redirect          | SEC-006, SEC-013    | `IN_PROGRESS` | `aa7c48a+dirty`, 우회 단위 테스트          |
-| `src/app/error.tsx`                                                               |  1-39 | 앱 오류 boundary   | 런타임→Sentry/브라우저      | 오류 누락·민감값 전송  | OPS-001, M1-01      | `IN_PROGRESS` | capture·sanitizer 연결, staging 필요       |
-| `src/app/global-error.tsx`                                                        |  1-27 | root 오류 boundary | root runtime→Sentry/UI      | root 오류 누락         | OPS-001, M1-01      | `IN_PROGRESS` | capture 계약, staging event 필요           |
-| `src/app/layout.tsx`                                                              |  1-22 | root layout        | 서버→브라우저               | 외부 font build 의존   | G0-18               | `IN_PROGRESS` | next/font/google 제거·offline Webpack 27/27 |
-| `src/app/loading.tsx`                                                             |  1-15 | root 로딩 UI       | 브라우저/UI                 | 무한 로딩              | M2-05               | `NOT_STARTED` | 미검토                                     |
-| `src/app/not-found.tsx`                                                           |  1-23 | 404 UI             | 브라우저/UI                 | 잘못된 복구 동선       | M2-05               | `NOT_STARTED` | 미검토                                     |
+| 파일                                                                              |  라인 | 역할                  | 신뢰 경계                   | 주요 실패 모드              | finding/과제                 | 상태          | 마지막 검토 기준                                       |
+| --------------------------------------------------------------------------------- | ----: | --------------------- | --------------------------- | --------------------------- | ---------------------------- | ------------- | ------------------------------------------------------ |
+| `src/app/(tabs)/layout.tsx`                                                       |  1-52 | 탭 레이아웃           | 브라우저/UI                 | 잘못된 탐색·상태            | M2-05                        | `NOT_STARTED` | 미검토                                                 |
+| `src/app/(tabs)/loading.tsx`                                                      |  1-15 | 로딩 UI               | 브라우저/UI                 | 무한 로딩                   | M2-05                        | `NOT_STARTED` | 미검토                                                 |
+| `src/app/(tabs)/map/page.tsx`                                                     |  1-63 | 지도 진입             | 브라우저→지도               | 오류 복구 실패              | M1-07, M2-05                 | `NOT_STARTED` | 미검토                                                 |
+| `src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx`                              | 1-610 | 유실글 상세/claim     | 브라우저→인증 API           | IDOR·중복 요청              | AUTHZ-001, M2-06             | `IN_PROGRESS` | Image 최적화 변경 검토 필요                            |
+| `src/app/(tabs)/my/lost-posts/new/page.tsx`                                       |  1-32 | 유실글 작성 진입      | 브라우저→폼                 | 인증 누락                   | G0-08                        | `NOT_STARTED` | 미검토                                                 |
+| `src/app/(tabs)/my/lost-posts/page.tsx`                                           |  1-16 | 내 유실글 목록        | 브라우저→인증 API           | 데이터 누락                 | G0-10                        | `NOT_STARTED` | 미검토                                                 |
+| `src/app/(tabs)/my/page.tsx`                                                      | 1-154 | 마이 페이지           | 브라우저→인증               | 세션·삭제 불일치            | M1-09                        | `NOT_STARTED` | 미검토                                                 |
+| `src/app/(tabs)/my/sightings/page.tsx`                                            |  1-35 | 내 제보 목록          | 브라우저→인증 API           | IDOR·오류 은폐              | AUTHZ-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/app/(tabs)/page.tsx`                                                         |  1-31 | 홈 화면               | 브라우저/UI                 | 탐색 실패                   | M2-05                        | `NOT_STARTED` | 미검토                                                 |
+| `src/app/(tabs)/recommend/page.tsx`                                               | 1-361 | 추천 화면             | 브라우저→추천 API           | 민감 정보 노출·중복         | PRIV-001, M2-06              | `IN_PROGRESS` | token snapshot·Image 변경 검토                         |
+| `src/proxy.ts`                                                                    |  1-20 | API request ID        | 비신뢰 header→서버 요청     | ID 위조·trace 단절          | OPS-001, M1-01               | `IN_PROGRESS` | 서버 UUID 강제·HTTP 8/8, staging trace 필요            |
+| `src/app/api/v1/auth/map/markers/route.ts`                                        | 1-149 | 인증 지도 마커        | 사용자 JWT→권한 RPC         | 비회원 정밀 노출·차단 누락  | PRIV-001                     | `IN_PROGRESS` | 회원 확대 시 precise pin·비회원 mask; DB E2E 필요      |
+| `src/app/api/v1/auth/sightings/[sightingId]/route.ts`                             |  1-59 | 인증 제보 상세        | 사용자 JWT→권한 RPC         | 비회원·차단 우회 IDOR       | PRIV-001, SEC-008            | `IN_PROGRESS` | 회원 정밀 상세·차단 필터; DB negative E2E 필요         |
+| `src/app/api/v1/health/route.ts`                                                  |  1-15 | liveness endpoint     | monitor→앱 process          | dependency와 생존 혼동      | OPS-001, M1-02               | `IN_PROGRESS` | no-store HTTP 200, staging monitor 필요                |
+| `src/app/api/v1/internal/embeddings/process/route.ts`                             | 1-287 | embedding Worker      | Cron→Service Role→DB/OpenAI | lease 상실·Cron 405         | SEC-001, QUAL-005            | `IN_PROGRESS` | 구조화 오류 로그·lease RPC, DB 검증 필요               |
+| `src/app/api/v1/internal/uploads/cleanup/route.ts`                                |  1-26 | orphan 정리 Cron      | Cron→Storage/DB             | 무인증 삭제·정리 누락       | SEC-001, SEC-005             | `IN_PROGRESS` | fail-closed GET·단위 검증, staging 필요                |
+| `src/app/api/v1/lost-posts/[lostPostId]/route.ts`                                 | 1-240 | 유실글 조회/수정      | 익명·사용자→DB              | IDOR·입력 위조              | AUTHZ-001, SEC-008           | `IN_PROGRESS` | 구조화 오류 로그·입력 경계, 권한 E2E 필요              |
+| `src/app/api/v1/lost-posts/route.ts`                                              | 1-261 | 유실글 생성/목록      | 사용자→Storage/DB           | 파일 도용·중복 생성         | SEC-005/008, M2-06           | `IN_PROGRESS` | cache replay·멱등 RPC 검토, DB E2E 필요                |
+| `src/app/api/v1/me/lost-posts/[lostPostId]/sighting-claims/[sightingId]/route.ts` |  1-69 | claim 상세 변경       | 사용자→권한 RPC             | IDOR·불법 상태 전이         | AUTHZ-001, SEC-008           | `IN_PROGRESS` | owner-scoped unclaim RPC; DB E2E 필요                  |
+| `src/app/api/v1/me/lost-posts/[lostPostId]/sighting-claims/route.ts`              | 1-157 | claim 목록/생성       | 사용자→권한 RPC             | 임의 UUID claim·stale cache | AUTHZ-001, SEC-008, PRIV-001 | `IN_PROGRESS` | owner·활성 cache·미보관 후보 검증; DB E2E 필요         |
+| `src/app/api/v1/me/lost-posts/[lostPostId]/status-history/route.ts`               |  1-82 | 상태 이력 조회        | 사용자→RLS DB               | 타인 이력·actor 노출        | M2-03                        | `IN_PROGRESS` | owner·pagination·actor 제외 계약; DB E2E 필요          |
+| `src/app/api/v1/me/lost-posts/map/paths/route.ts`                                 |  1-41 | 내 이동 경로          | 사용자→RPC                  | 위치·note 노출              | PRIV-001, OBS-001            | `IN_PROGRESS` | 구조화 오류 로그, 위치 권한 E2E 필요                   |
+| `src/app/api/v1/me/lost-posts/map/route.ts`                                       |  1-50 | 내 유실글 지도        | 사용자→RPC                  | 정밀 위치 IDOR              | PRIV-001, SEC-008            | `IN_PROGRESS` | 구조화 오류 로그·pagination, 위치 E2E 필요             |
+| `src/app/api/v1/me/sighting-claims/[sightingId]/route.ts`                         |  1-71 | 제보자 claim 응답     | 사용자→DB                   | IDOR·불법 전이              | AUTHZ-001, SEC-008           | `IN_PROGRESS` | 구조화 오류 로그·UUID, 권한 E2E 필요                   |
+| `src/app/api/v1/me/sighting-claims/route.ts`                                      | 1-100 | 전역 북마크 목록/해제 | 사용자→RLS/RPC              | 직접 DELETE 회귀·IDOR       | AUTHZ-001, SEC-008           | `IN_PROGRESS` | 조회 RLS·원자 전체 해제 RPC; DB E2E 필요               |
+| `src/app/api/v1/me/sighting-views/route.ts`                                       | 1-130 | 추천 열람 피드백      | 사용자→DB                   | 중복·타인 데이터 변경       | AUTHZ-001, SEC-008           | `IN_PROGRESS` | 구조화 오류 로그·500 UUID, DB E2E 필요                 |
+| `src/app/api/v1/me/sightings/[sightingId]/route.ts`                               | 1-125 | 내 제보 상세/변경     | 사용자→DB                   | IDOR·orphan 파일            | AUTHZ-001, SEC-008           | `IN_PROGRESS` | 구조화 오류 로그·UUID, 권한 E2E 필요                   |
+| `src/app/api/v1/me/sightings/route.ts`                                            |  1-59 | 내 제보 목록          | 사용자→DB                   | 타인 데이터 노출            | AUTHZ-001, SEC-008           | `IN_PROGRESS` | pagination 경계, 권한 E2E 필요                         |
+| `src/app/api/v1/public/map/clusters/route.ts`                                     | 1-135 | 공개 지도 클러스터    | 익명→RPC                    | 위치 sweep·고비용 bbox      | SEC-008, RATE-002            | `IN_PROGRESS` | 구조화 오류 로그·bbox/rate, DB 검증 필요               |
+| `src/app/api/v1/readiness/route.ts`                                               |  1-55 | readiness endpoint    | monitor→설정/Supabase       | 설정 누락·DB hang 노출      | OPS-001, M1-02               | `IN_PROGRESS` | fail-closed·3초 probe, staging 장애 필요               |
+| `src/app/api/v1/recommendations/route.ts`                                         | 1-173 | 추천 API              | 사용자→Service Role RPC     | 매칭 전 정밀 위치 노출      | AUTHZ-003, SEC-008, PRIV-001 | `IN_PROGRESS` | owner 재검증·cache/fresh 좌표 grid 마스킹; DB E2E 필요 |
+| `src/app/api/v1/search/local/route.ts`                                            | 1-152 | 지역 검색 proxy       | 익명→외부 API               | 키 오용·비용 폭증           | RATE-001, SEC-012            | `IN_PROGRESS` | 구조화 오류 로그·timeout/rate, staging 필요            |
+| `src/app/api/v1/sightings/route.ts`                                               | 1-238 | 공개 제보 생성        | 익명·사용자→Storage/DB      | 파일 도용·중복 생성         | SEC-005/008/011/M2-06        | `IN_PROGRESS` | cache replay·멱등 RPC 검토, DB E2E 필요                |
+| `src/app/api/v1/uploads/presign/route.ts`                                         | 1-211 | 업로드 서명           | 익명·사용자→Storage         | MIME/크기/소유권 위조       | SEC-005, SEC-008             | `IN_PROGRESS` | 구조화 오류 로그·intent, Storage 검증 필요             |
+| `src/app/auth/callback/route.ts`                                                  |  1-27 | OAuth callback        | 외부 IdP→세션               | open redirect               | SEC-006, SEC-013             | `IN_PROGRESS` | `aa7c48a+dirty`, 우회 단위 테스트                      |
+| `src/app/error.tsx`                                                               |  1-39 | 앱 오류 boundary      | 런타임→Sentry/브라우저      | 오류 누락·민감값 전송       | OPS-001, M1-01               | `IN_PROGRESS` | capture·sanitizer 연결, staging 필요                   |
+| `src/app/global-error.tsx`                                                        |  1-27 | root 오류 boundary    | root runtime→Sentry/UI      | root 오류 누락              | OPS-001, M1-01               | `IN_PROGRESS` | capture 계약, staging event 필요                       |
+| `src/app/layout.tsx`                                                              |  1-22 | root layout           | 서버→브라우저               | 외부 font build 의존        | G0-18                        | `IN_PROGRESS` | next/font/google 제거·offline Webpack 27/27            |
+| `src/app/loading.tsx`                                                             |  1-15 | root 로딩 UI          | 브라우저/UI                 | 무한 로딩                   | M2-05                        | `NOT_STARTED` | 미검토                                                 |
+| `src/app/not-found.tsx`                                                           |  1-23 | 404 UI                | 브라우저/UI                 | 잘못된 복구 동선            | M2-05                        | `NOT_STARTED` | 미검토                                                 |
 
 ### 5.2 기능·공유 라이브러리
 
-| 파일                                                             |   라인 | 역할                    | 신뢰 경계                  | 주요 실패 모드               | finding/과제          | 상태          | 마지막 검토 기준                        |
-| ---------------------------------------------------------------- | -----: | ----------------------- | -------------------------- | ---------------------------- | --------------------- | ------------- | --------------------------------------- |
-| `src/instrumentation.ts`                                         |   1-13 | server/edge 계측 hook   | Next runtime→Sentry        | runtime 초기화 누락          | OPS-001, M1-01        | `IN_PROGRESS` | request error capture 계약, staging 필요 |
-| `src/instrumentation-client.ts`                                  |   1-26 | client 계측 hook        | 브라우저 오류→Sentry       | PII·query 전송               | OPS-001, M1-01        | `IN_PROGRESS` | no PII·sanitizer·5% trace, 실제 DSN 필요 |
-| `src/features/auth/components/AuthGuard.tsx`                     |   1-39 | 인증 UI guard           | 브라우저 세션              | UI만 보호                    | AUTHZ-001             | `NOT_STARTED` | 미검토                                  |
-| `src/features/auth/components/LoginPrompt.tsx`                   |   1-48 | 로그인 유도             | 브라우저→OAuth             | redirect 오염                | AUTH-002              | `NOT_STARTED` | 미검토                                  |
-| `src/features/auth/context/AuthContext.tsx`                      |  1-113 | 세션 상태               | Supabase→브라우저          | stale session·구독 누수      | M1-09                 | `IN_PROGRESS` | 정적 정리 후 재검토 필요                |
-| `src/features/auth/hooks/useAuth.ts`                             |   1-29 | 인증 hook               | 브라우저 세션              | 권한 오판                    | AUTHZ-001             | `NOT_STARTED` | 미검토                                  |
-| `src/features/lost-posts/components/LostPostCard.tsx`            |   1-89 | 유실글 카드             | API 데이터→DOM             | 민감값 렌더링                | PRIV-002              | `IN_PROGRESS` | Image 최적화 변경 검토 필요             |
-| `src/features/lost-posts/components/LostPostForm.tsx`            |  1-446 | 유실글 폼               | 사용자 입력→API/Storage    | 검증·중복·orphan             | INPUT-001, UPLOAD-002 | `IN_PROGRESS` | Image/정적 정리 후 재검토 필요          |
-| `src/features/lost-posts/components/LostPostList.tsx`            |  1-108 | 유실글 목록             | API→DOM                    | paging·오류 누락             | QUAL-001              | `IN_PROGRESS` | token snapshot 검토                     |
-| `src/features/lost-posts/components/StatusBadge.tsx`             |   1-49 | 상태 표시               | 도메인 상태→DOM            | 잘못된 상태 표현             | M2-01                 | `NOT_STARTED` | 미검토                                  |
-| `src/features/lost-posts/hooks/useLostPost.ts`                   |   1-59 | 유실글 data hook        | 브라우저→API               | 경쟁·stale data              | M2-06                 | `NOT_STARTED` | 미검토                                  |
-| `src/features/lost-posts/model/types.ts`                         |   1-36 | 유실글 타입             | API↔UI                     | 런타임 불일치                | INPUT-001             | `NOT_STARTED` | 미검토                                  |
-| `src/features/map/components/LocationPicker.tsx`                 |  1-425 | 위치 선택기             | 사용자 위치→지도/API       | 과도한 정밀도·SDK 장애       | PRIV-001, M2-05       | `IN_PROGRESS` | `aa7c48a+dirty`, SDK 타입·mount 검토    |
-| `src/features/map/components/NaverMap.tsx`                       | 1-1477 | 지도 UI 조합            | API/SDK/브라우저 위치      | 브라우저 SDK 회귀            | QUAL-004              | `IN_PROGRESS` | fallback 제거, 브라우저 검증 남음       |
-| `src/features/map/hooks/use-map-data.ts`                         |  1-326 | 지도 data hook          | 인증·viewport→API          | stale 계정 응답·취소 누락    | QUAL-004, PRIV-001    | `IN_PROGRESS` | guard/reducer·49 tests·build 통과       |
-| `src/features/map/lib/map-data-state.ts`                         |  1-139 | 지도 data reducer       | 비동기 응답→UI snapshot    | 타 계정 snapshot 노출        | QUAL-004, PRIV-001    | `IN_PROGRESS` | owner/principal RED→GREEN               |
-| `src/features/map/lib/map-domain.ts`                             |  1-155 | 지도 순수 계산          | API DTO→지도 표현          | 필터·grid·경로 계산 회귀     | QUAL-004              | `VERIFIED`    | 4 characterization tests 통과           |
-| `src/features/map/lib/map-request-guard.ts`                      |   1-56 | 최신 요청 guard         | 요청 순서→state/cache      | 늦은 응답·unmount 갱신       | QUAL-004, PRIV-001    | `VERIFIED`    | 4 cancellation tests 통과               |
-| `src/features/map/lib/naver-map-adapter.ts`                      |  1-143 | SDK 자원 adapter        | 앱 lifecycle→Naver SDK     | listener·overlay 누수        | QUAL-004              | `VERIFIED`    | 그룹·listener cleanup 4/4, 앱 연결      |
-| `src/features/map/lib/map-layer-renderer.ts`                     |  1-397 | 지도 layer renderer     | 도메인 결과→Naver overlay  | marker·frame·timer 누수      | QUAL-004              | `VERIFIED`    | marker/path cleanup 5/5, 앱 연결        |
-| `src/features/map/types/naver.ts`                                |  1-138 | 지도 SDK 타입           | 외부 SDK↔앱                | 타입 드리프트                | QUAL-004              | `IN_PROGRESS` | 공식 listener 제거 계약 반영            |
-| `src/features/recommendations/components/RecommendationCard.tsx` |  1-282 | 추천 카드               | API→DOM/claim              | 위치 노출·중복 동작          | PRIV-001, M2-06       | `IN_PROGRESS` | Image 최적화 변경 검토 필요             |
-| `src/features/recommendations/hooks/useRecommendations.ts`       |   1-97 | 추천 data hook          | 브라우저→API               | race·재시도 폭주             | RATE-002, M2-06       | `IN_PROGRESS` | ref lifecycle 검토                      |
-| `src/features/recommendations/model/types.ts`                    |   1-16 | 추천 타입               | API↔UI                     | 런타임 불일치                | INPUT-001             | `NOT_STARTED` | 미검토                                  |
-| `src/features/sightings/components/MySightingCard.tsx`           |  1-156 | 내 제보 카드            | API→DOM                    | 민감값 노출                  | PRIV-002              | `IN_PROGRESS` | Image 최적화 변경 검토 필요             |
-| `src/features/sightings/components/MySightingList.tsx`           |  1-110 | 내 제보 목록            | API→DOM                    | 오류·paging 누락             | QUAL-001              | `IN_PROGRESS` | token snapshot·cleanup 검토             |
-| `src/features/sightings/components/SightingDetailCard.tsx`       |  1-150 | 제보 상세 카드          | API→DOM                    | 정밀 위치/note 노출          | PRIV-001              | `NOT_STARTED` | 미검토                                  |
-| `src/features/sightings/components/SightingDetailSheet.tsx`      |   1-39 | 제보 상세 sheet         | UI 상태                    | focus trap 실패              | M2-05                 | `IN_PROGRESS` | unused prop 제거; 접근성 미완료         |
-| `src/features/sightings/components/SightingForm.tsx`             |  1-573 | 제보 폼                 | 사용자 입력→API/Storage    | 위조·중복·orphan             | INPUT-001, UPLOAD-002, M2-06 | `IN_PROGRESS` | 생성 요청 key 추가; retry 수명 설계 필요 |
-| `src/features/sightings/constants/breeds.ts`                     |   1-33 | 품종 상수               | 입력↔도메인                | 허용값 불일치                | INPUT-001             | `NOT_STARTED` | 미검토                                  |
-| `src/features/sightings/lib/validators.ts`                       |   1-20 | 제보 검증               | 사용자 입력→도메인         | 서버 검증과 불일치           | INPUT-001             | `NOT_STARTED` | 미검토                                  |
-| `src/features/sightings/model/types.ts`                          |   1-37 | 제보 타입               | API↔UI                     | 런타임 불일치                | INPUT-001             | `NOT_STARTED` | 미검토                                  |
-| `src/shared/constants/traitColors.ts`                            |  1-119 | 색상 토큰               | 입력↔embedding             | schema drift                 | INPUT-001             | `NOT_STARTED` | 미검토                                  |
-| `src/shared/constants/traitSizes.ts`                             |   1-57 | 크기 토큰               | 입력↔embedding             | schema drift                 | INPUT-001             | `NOT_STARTED` | 미검토                                  |
-| `src/shared/constants/traitTags.ts`                              |   1-99 | 특징 토큰               | 입력↔embedding             | schema drift                 | INPUT-001             | `NOT_STARTED` | 미검토                                  |
-| `src/shared/lib/api-response.ts`                                 |  1-110 | API 응답 규격           | 서버→클라이언트            | 내부 오류·민감값 노출        | OBS-001               | `NOT_STARTED` | 미검토                                  |
-| `src/shared/lib/api-input.ts`                                    |  1-418 | 공용 API 입력 schema    | 비신뢰 body/query→route    | 타입·크기·좌표·ID 위조       | SEC-005, SEC-008      | `IN_PROGRESS` | 단위 9/9·HTTP 실패경계 5/5, DB E2E 필요 |
-| `src/shared/lib/api-request.ts`                                  |   1-70 | bounded JSON reader     | HTTP stream→validator      | 과대·위조 length·UTF-8 오류  | SEC-008               | `VERIFIED`    | RED 0/3 → GREEN 3/3, 64 KiB             |
-| `src/shared/lib/app-origin.ts`                                   |   1-75 | canonical origin 검증   | 환경 설정→내부 HTTP        | Host 변조·secret 외부 전송   | SEC-006, SEC-013      | `IN_PROGRESS` | `aa7c48a+dirty`, 단위 테스트 통과       |
-| `src/shared/lib/authenticated-list.ts`                           |   1-30 | token-bound 목록 상태   | 인증 session→UI            | 계정 전환 시 stale 노출      | QUAL-002, PRIV-001    | `IN_PROGRESS` | `aa7c48a+dirty`, 단위 테스트 통과       |
-| `src/shared/lib/assert.ts`                                       |   1-12 | invariant               | 런타임 내부                | 오류 처리 누락               | QUAL-001              | `NOT_STARTED` | 미검토                                  |
-| `src/shared/lib/cn.ts`                                           |   1-25 | class 병합              | UI 내부                    | 스타일 충돌                  | M2-05                 | `NOT_STARTED` | 미검토                                  |
-| `src/shared/lib/cron-auth.ts`                                    |   1-75 | Cron 인증·실행 guard    | 외부 요청→내부 Worker      | secret 누락 시 공개          | AUTH-001              | `VERIFIED`    | `aa7c48a+dirty`, 2026-07-25             |
-| `src/shared/lib/date.ts`                                         |   1-12 | 날짜 표시               | 서버 시간→UI               | timezone 오표시              | M2-01                 | `NOT_STARTED` | 미검토                                  |
-| `src/shared/lib/embedding.ts`                                    |  1-109 | embedding 생성/직렬화   | 앱→OpenAI                  | 비용·timeout·차원 오류       | QUAL-005              | `NOT_STARTED` | 미검토                                  |
-| `src/shared/lib/embedding-queue.ts`                              |   1-39 | Worker 조회 결과 분류   | DB 응답→Worker             | DB 오류를 빈 결과로 오인     | QUAL-005              | `IN_PROGRESS` | `aa7c48a+dirty`, 단위 테스트 통과       |
-| `src/shared/lib/embedding-job-processor.ts`                      |  1-121 | Worker job 처리 경계    | provider/DB RPC→상태       | raw 오류·lease 덮어쓰기      | QUAL-005, G0-16       | `VERIFIED`    | provider/finalize/lease fault 4/4       |
-| `src/shared/lib/form-submission-lifecycle.ts`                    |   1-83 | form 멱등 수명          | 파일/payload→key·intent    | timeout 중복·다른 파일 재사용 | M2-06                | `VERIFIED`    | 동일 payload 재사용·SHA-256 회전 4/4   |
-| `src/shared/lib/embeddings-worker.ts`                            |   1-50 | Worker 호출 client      | Vercel Cron→내부 API       | 잘못된 origin·인증 실패 은폐 | SEC-001, QUAL-005     | `IN_PROGRESS` | request logger 연계, staging 실패 검증 |
-| `src/shared/lib/hash.ts`                                         |    1-8 | hash                    | 입력→식별자                | 충돌·민감값 오용             | SEC-003               | `NOT_STARTED` | 미검토                                  |
-| `src/shared/lib/idempotency.ts`                                  |   1-47 | 멱등 응답 replay        | API→Service Role DB        | 타 신원 cache·rate limit 차단 | SEC-005, M2-06         | `IN_PROGRESS` | hit/conflict/miss/error 단위 2/2, DB 필요 |
-| `src/shared/lib/client-ip.ts`                                    |   1-19 | trusted IP 순수 경계    | Vercel header→식별자       | 위조·잘못된 IP               | RATE-001              | `VERIFIED`    | Vercel/non-Vercel·malformed 2/2         |
-| `src/shared/lib/ip.ts`                                           |   1-10 | Next client IP adapter  | request headers→순수 경계  | 비-Vercel header 신뢰        | RATE-001              | `IN_PROGRESS` | VERCEL=1에서만 신뢰, staging 필요       |
-| `src/shared/lib/monitoring-sanitizer.ts`                         |  1-165 | Sentry event/span 정제  | 오류/trace→외부 SaaS       | query·body·user·note 전송    | OPS-001, M1-01        | `IN_PROGRESS` | 민감 payload 제거 2/2, staging 확인 필요 |
-| `src/shared/lib/operational-health.ts`                           |   1-64 | readiness 판정          | 환경/DB probe→운영 상태    | 누락 설정 허용·오류 노출     | OPS-001, M1-02        | `IN_PROGRESS` | Sentry DSN 포함 RED→GREEN 3/3, staging 필요 |
-| `src/shared/lib/privacy-location.ts`                             |   1-50 | 추천 좌표 마스킹        | 정밀 좌표→API 응답         | claim으로 정밀도 해제        | PRIV-001, M1-06       | `VERIFIED`    | stable 0.05° grid·claim 비해제 3/3      |
-| `src/shared/lib/public-api-guard.ts`                             |  1-107 | 검색·bbox 입력 경계     | 공개 query→API             | sweep·숫자 prefix 입력       | SEC-008, SEC-012      | `VERIFIED`    | query/control/bbox 경계 3/3             |
-| `src/shared/lib/rate-limit.ts`                                   |  1-148 | atomic rate limit       | 요청→Service Role RPC      | 동시 승인 초과·회원 우회     | RATE-001, RATE-002    | `IN_PROGRESS` | IP/user 이중 RPC, 실제 동시성 필요      |
-| `src/shared/lib/structured-log.ts`                               |  1-227 | 구조화 로그·Sentry 연계 | 오류/컨텍스트→로그/Sentry  | secret·위치·note 노출        | OPS-001, M1-01        | `IN_PROGRESS` | 단위 7/7·API console 0, staging 필요     |
-| `src/shared/lib/upload-intents.ts`                               |  1-189 | 실파일 검증·orphan 정리 | Storage/intent→도메인 생성 | 신원·size·magic·late orphan  | SEC-005, SEC-010, M2-06 | `IN_PROGRESS` | 소비 후 replay 경계·단위 6/6, Storage 필요 |
-| `src/shared/supabase/client.ts`                                  |   1-43 | 브라우저 anon client    | 브라우저→Supabase          | env·세션 구성 오류           | SEC-003               | `IN_PROGRESS` | 전 라인 감사: 공개키만 사용, browser smoke 필요 |
-| `src/shared/supabase/server.ts`                                  |   1-84 | cookie/Service Role clients | 서버→Supabase 특권      | 특권 client 오용·env 누락    | SEC-003, PRIV-001     | `IN_PROGRESS` | server-only·명시적 이름·fail-fast 2/2, bundle E2E 필요 |
-| `src/shared/types/api.ts`                                        |   1-21 | 공용 API 타입           | 서버↔클라이언트            | 응답 계약 드리프트           | INPUT-001             | `NOT_STARTED` | 미검토                                  |
-| `src/shared/ui/Button.tsx`                                       |   1-42 | 버튼                    | 사용자→UI                  | keyboard/focus 실패          | M2-05                 | `NOT_STARTED` | 미검토                                  |
-| `src/shared/ui/Container.tsx`                                    |   1-17 | 레이아웃                | UI 내부                    | 반응형 실패                  | M2-05                 | `NOT_STARTED` | 미검토                                  |
-| `src/shared/ui/Divider.tsx`                                      |    1-8 | 구분선                  | UI 내부                    | 접근성 의미 오류             | M2-05                 | `NOT_STARTED` | 미검토                                  |
-| `src/shared/ui/Loading.tsx`                                      |   1-10 | 로딩 표시               | UI 내부                    | screen reader 상태 누락      | M2-05                 | `NOT_STARTED` | 미검토                                  |
-| `src/shared/ui/Text.tsx`                                         |   1-49 | 텍스트 primitive        | 데이터→DOM                 | 의미/대비 오류               | M2-05                 | `NOT_STARTED` | 미검토                                  |
-| `src/shared/ui/Toast.tsx`                                        |   1-51 | 알림 UI                 | 앱 상태→DOM                | focus/announcement 누락      | M2-05                 | `NOT_STARTED` | 미검토                                  |
+| 파일                                                             |   라인 | 역할                        | 신뢰 경계                  | 주요 실패 모드                | finding/과제                 | 상태          | 마지막 검토 기준                                       |
+| ---------------------------------------------------------------- | -----: | --------------------------- | -------------------------- | ----------------------------- | ---------------------------- | ------------- | ------------------------------------------------------ |
+| `src/instrumentation.ts`                                         |   1-13 | server/edge 계측 hook       | Next runtime→Sentry        | runtime 초기화 누락           | OPS-001, M1-01               | `IN_PROGRESS` | request error capture 계약, staging 필요               |
+| `src/instrumentation-client.ts`                                  |   1-26 | client 계측 hook            | 브라우저 오류→Sentry       | PII·query 전송                | OPS-001, M1-01               | `IN_PROGRESS` | no PII·sanitizer·5% trace, 실제 DSN 필요               |
+| `src/features/auth/components/AuthGuard.tsx`                     |   1-39 | 인증 UI guard               | 브라우저 세션              | UI만 보호                     | AUTHZ-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/features/auth/components/LoginPrompt.tsx`                   |   1-48 | 로그인 유도                 | 브라우저→OAuth             | redirect 오염                 | AUTH-002                     | `NOT_STARTED` | 미검토                                                 |
+| `src/features/auth/context/AuthContext.tsx`                      |  1-113 | 세션 상태                   | Supabase→브라우저          | stale session·구독 누수       | M1-09                        | `IN_PROGRESS` | 정적 정리 후 재검토 필요                               |
+| `src/features/auth/hooks/useAuth.ts`                             |   1-29 | 인증 hook                   | 브라우저 세션              | 권한 오판                     | AUTHZ-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/features/lost-posts/components/LostPostCard.tsx`            |   1-89 | 유실글 카드                 | API 데이터→DOM             | 민감값 렌더링                 | PRIV-002                     | `IN_PROGRESS` | Image 최적화 변경 검토 필요                            |
+| `src/features/lost-posts/components/LostPostForm.tsx`            |  1-446 | 유실글 폼                   | 사용자 입력→API/Storage    | 검증·중복·orphan              | INPUT-001, UPLOAD-002        | `IN_PROGRESS` | Image/정적 정리 후 재검토 필요                         |
+| `src/features/lost-posts/components/LostPostList.tsx`            |  1-108 | 유실글 목록                 | API→DOM                    | paging·오류 누락              | QUAL-001                     | `IN_PROGRESS` | token snapshot 검토                                    |
+| `src/features/lost-posts/components/StatusBadge.tsx`             |   1-49 | 상태 표시                   | 도메인 상태→DOM            | 잘못된 상태 표현              | M2-01                        | `NOT_STARTED` | 미검토                                                 |
+| `src/features/lost-posts/hooks/useLostPost.ts`                   |   1-59 | 유실글 data hook            | 브라우저→API               | 경쟁·stale data               | M2-06                        | `NOT_STARTED` | 미검토                                                 |
+| `src/features/lost-posts/model/types.ts`                         |   1-36 | 유실글 타입                 | API↔UI                     | 런타임 불일치                 | INPUT-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/features/map/components/LocationPicker.tsx`                 |  1-425 | 위치 선택기                 | 사용자 위치→지도/API       | 과도한 정밀도·SDK 장애        | PRIV-001, M2-05              | `IN_PROGRESS` | `aa7c48a+dirty`, SDK 타입·mount 검토                   |
+| `src/features/map/components/NaverMap.tsx`                       | 1-1477 | 지도 UI 조합                | API/SDK/브라우저 위치      | 브라우저 SDK 회귀             | QUAL-004                     | `IN_PROGRESS` | fallback 제거, 브라우저 검증 남음                      |
+| `src/features/map/hooks/use-map-data.ts`                         |  1-326 | 지도 data hook              | 인증·viewport→API          | stale 계정 응답·취소 누락     | QUAL-004, PRIV-001           | `IN_PROGRESS` | guard/reducer·49 tests·build 통과                      |
+| `src/features/map/lib/map-data-state.ts`                         |  1-139 | 지도 data reducer           | 비동기 응답→UI snapshot    | 타 계정 snapshot 노출         | QUAL-004, PRIV-001           | `IN_PROGRESS` | owner/principal RED→GREEN                              |
+| `src/features/map/lib/map-domain.ts`                             |  1-155 | 지도 순수 계산              | API DTO→지도 표현          | 필터·grid·경로 계산 회귀      | QUAL-004                     | `VERIFIED`    | 4 characterization tests 통과                          |
+| `src/features/map/lib/map-request-guard.ts`                      |   1-56 | 최신 요청 guard             | 요청 순서→state/cache      | 늦은 응답·unmount 갱신        | QUAL-004, PRIV-001           | `VERIFIED`    | 4 cancellation tests 통과                              |
+| `src/features/map/lib/naver-map-adapter.ts`                      |  1-143 | SDK 자원 adapter            | 앱 lifecycle→Naver SDK     | listener·overlay 누수         | QUAL-004                     | `VERIFIED`    | 그룹·listener cleanup 4/4, 앱 연결                     |
+| `src/features/map/lib/map-layer-renderer.ts`                     |  1-397 | 지도 layer renderer         | 도메인 결과→Naver overlay  | marker·frame·timer 누수       | QUAL-004                     | `VERIFIED`    | marker/path cleanup 5/5, 앱 연결                       |
+| `src/features/map/types/naver.ts`                                |  1-138 | 지도 SDK 타입               | 외부 SDK↔앱                | 타입 드리프트                 | QUAL-004                     | `IN_PROGRESS` | 공식 listener 제거 계약 반영                           |
+| `src/features/recommendations/components/RecommendationCard.tsx` |  1-282 | 추천 카드                   | API→DOM/claim              | 위치 노출·중복 동작           | PRIV-001, M2-06              | `IN_PROGRESS` | Image 최적화 변경 검토 필요                            |
+| `src/features/recommendations/hooks/useRecommendations.ts`       |   1-97 | 추천 data hook              | 브라우저→API               | race·재시도 폭주              | RATE-002, M2-06              | `IN_PROGRESS` | ref lifecycle 검토                                     |
+| `src/features/recommendations/model/types.ts`                    |   1-16 | 추천 타입                   | API↔UI                     | 런타임 불일치                 | INPUT-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/features/sightings/components/MySightingCard.tsx`           |  1-156 | 내 제보 카드                | API→DOM                    | 민감값 노출                   | PRIV-002                     | `IN_PROGRESS` | Image 최적화 변경 검토 필요                            |
+| `src/features/sightings/components/MySightingList.tsx`           |  1-110 | 내 제보 목록                | API→DOM                    | 오류·paging 누락              | QUAL-001                     | `IN_PROGRESS` | token snapshot·cleanup 검토                            |
+| `src/features/sightings/components/SightingDetailCard.tsx`       |  1-150 | 제보 상세 카드              | API→DOM                    | 정밀 위치/note 노출           | PRIV-001                     | `NOT_STARTED` | 미검토                                                 |
+| `src/features/sightings/components/SightingDetailSheet.tsx`      |   1-39 | 제보 상세 sheet             | UI 상태                    | focus trap 실패               | M2-05                        | `IN_PROGRESS` | unused prop 제거; 접근성 미완료                        |
+| `src/features/sightings/components/SightingForm.tsx`             |  1-573 | 제보 폼                     | 사용자 입력→API/Storage    | 위조·중복·orphan              | INPUT-001, UPLOAD-002, M2-06 | `IN_PROGRESS` | 생성 요청 key 추가; retry 수명 설계 필요               |
+| `src/features/sightings/constants/breeds.ts`                     |   1-33 | 품종 상수                   | 입력↔도메인                | 허용값 불일치                 | INPUT-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/features/sightings/lib/validators.ts`                       |   1-20 | 제보 검증                   | 사용자 입력→도메인         | 서버 검증과 불일치            | INPUT-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/features/sightings/model/types.ts`                          |   1-37 | 제보 타입                   | API↔UI                     | 런타임 불일치                 | INPUT-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/constants/traitColors.ts`                            |  1-119 | 색상 토큰                   | 입력↔embedding             | schema drift                  | INPUT-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/constants/traitSizes.ts`                             |   1-57 | 크기 토큰                   | 입력↔embedding             | schema drift                  | INPUT-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/constants/traitTags.ts`                              |   1-99 | 특징 토큰                   | 입력↔embedding             | schema drift                  | INPUT-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/lib/api-response.ts`                                 |  1-110 | API 응답 규격               | 서버→클라이언트            | 내부 오류·민감값 노출         | OBS-001                      | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/lib/api-input.ts`                                    |  1-418 | 공용 API 입력 schema        | 비신뢰 body/query→route    | 타입·크기·좌표·ID 위조        | SEC-005, SEC-008             | `IN_PROGRESS` | 단위 9/9·HTTP 실패경계 5/5, DB E2E 필요                |
+| `src/shared/lib/api-request.ts`                                  |   1-70 | bounded JSON reader         | HTTP stream→validator      | 과대·위조 length·UTF-8 오류   | SEC-008                      | `VERIFIED`    | RED 0/3 → GREEN 3/3, 64 KiB                            |
+| `src/shared/lib/app-origin.ts`                                   |   1-75 | canonical origin 검증       | 환경 설정→내부 HTTP        | Host 변조·secret 외부 전송    | SEC-006, SEC-013             | `IN_PROGRESS` | `aa7c48a+dirty`, 단위 테스트 통과                      |
+| `src/shared/lib/authenticated-list.ts`                           |   1-30 | token-bound 목록 상태       | 인증 session→UI            | 계정 전환 시 stale 노출       | QUAL-002, PRIV-001           | `IN_PROGRESS` | `aa7c48a+dirty`, 단위 테스트 통과                      |
+| `src/shared/lib/assert.ts`                                       |   1-12 | invariant                   | 런타임 내부                | 오류 처리 누락                | QUAL-001                     | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/lib/cn.ts`                                           |   1-25 | class 병합                  | UI 내부                    | 스타일 충돌                   | M2-05                        | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/lib/cron-auth.ts`                                    |   1-75 | Cron 인증·실행 guard        | 외부 요청→내부 Worker      | secret 누락 시 공개           | AUTH-001                     | `VERIFIED`    | `aa7c48a+dirty`, 2026-07-25                            |
+| `src/shared/lib/date.ts`                                         |   1-12 | 날짜 표시                   | 서버 시간→UI               | timezone 오표시               | M2-01                        | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/lib/embedding.ts`                                    |  1-109 | embedding 생성/직렬화       | 앱→OpenAI                  | 비용·timeout·차원 오류        | QUAL-005                     | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/lib/embedding-queue.ts`                              |   1-39 | Worker 조회 결과 분류       | DB 응답→Worker             | DB 오류를 빈 결과로 오인      | QUAL-005                     | `IN_PROGRESS` | `aa7c48a+dirty`, 단위 테스트 통과                      |
+| `src/shared/lib/embedding-job-processor.ts`                      |  1-121 | Worker job 처리 경계        | provider/DB RPC→상태       | raw 오류·lease 덮어쓰기       | QUAL-005, G0-16              | `VERIFIED`    | provider/finalize/lease fault 4/4                      |
+| `src/shared/lib/form-submission-lifecycle.ts`                    |   1-83 | form 멱등 수명              | 파일/payload→key·intent    | timeout 중복·다른 파일 재사용 | M2-06                        | `VERIFIED`    | 동일 payload 재사용·SHA-256 회전 4/4                   |
+| `src/shared/lib/embeddings-worker.ts`                            |   1-50 | Worker 호출 client          | Vercel Cron→내부 API       | 잘못된 origin·인증 실패 은폐  | SEC-001, QUAL-005            | `IN_PROGRESS` | request logger 연계, staging 실패 검증                 |
+| `src/shared/lib/hash.ts`                                         |    1-8 | hash                        | 입력→식별자                | 충돌·민감값 오용              | SEC-003                      | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/lib/idempotency.ts`                                  |   1-47 | 멱등 응답 replay            | API→Service Role DB        | 타 신원 cache·rate limit 차단 | SEC-005, M2-06               | `IN_PROGRESS` | hit/conflict/miss/error 단위 2/2, DB 필요              |
+| `src/shared/lib/client-ip.ts`                                    |   1-19 | trusted IP 순수 경계        | Vercel header→식별자       | 위조·잘못된 IP                | RATE-001                     | `VERIFIED`    | Vercel/non-Vercel·malformed 2/2                        |
+| `src/shared/lib/ip.ts`                                           |   1-10 | Next client IP adapter      | request headers→순수 경계  | 비-Vercel header 신뢰         | RATE-001                     | `IN_PROGRESS` | VERCEL=1에서만 신뢰, staging 필요                      |
+| `src/shared/lib/monitoring-sanitizer.ts`                         |  1-165 | Sentry event/span 정제      | 오류/trace→외부 SaaS       | query·body·user·note 전송     | OPS-001, M1-01               | `IN_PROGRESS` | 민감 payload 제거 2/2, staging 확인 필요               |
+| `src/shared/lib/operational-health.ts`                           |   1-64 | readiness 판정              | 환경/DB probe→운영 상태    | 누락 설정 허용·오류 노출      | OPS-001, M1-02               | `IN_PROGRESS` | Sentry DSN 포함 RED→GREEN 3/3, staging 필요            |
+| `src/shared/lib/privacy-location.ts`                             |   1-50 | 추천 좌표 마스킹            | 정밀 좌표→API 응답         | claim으로 정밀도 해제         | PRIV-001, M1-06              | `VERIFIED`    | stable 0.05° grid·claim 비해제 3/3                     |
+| `src/shared/lib/public-api-guard.ts`                             |  1-107 | 검색·bbox 입력 경계         | 공개 query→API             | sweep·숫자 prefix 입력        | SEC-008, SEC-012             | `VERIFIED`    | query/control/bbox 경계 3/3                            |
+| `src/shared/lib/rate-limit.ts`                                   |  1-148 | atomic rate limit           | 요청→Service Role RPC      | 동시 승인 초과·회원 우회      | RATE-001, RATE-002           | `IN_PROGRESS` | IP/user 이중 RPC, 실제 동시성 필요                     |
+| `src/shared/lib/structured-log.ts`                               |  1-227 | 구조화 로그·Sentry 연계     | 오류/컨텍스트→로그/Sentry  | secret·위치·note 노출         | OPS-001, M1-01               | `IN_PROGRESS` | 단위 7/7·API console 0, staging 필요                   |
+| `src/shared/lib/upload-intents.ts`                               |  1-189 | 실파일 검증·orphan 정리     | Storage/intent→도메인 생성 | 신원·size·magic·late orphan   | SEC-005, SEC-010, M2-06      | `IN_PROGRESS` | 소비 후 replay 경계·단위 6/6, Storage 필요             |
+| `src/shared/supabase/client.ts`                                  |   1-43 | 브라우저 anon client        | 브라우저→Supabase          | env·세션 구성 오류            | SEC-003                      | `IN_PROGRESS` | 전 라인 감사: 공개키만 사용, browser smoke 필요        |
+| `src/shared/supabase/server.ts`                                  |   1-84 | cookie/Service Role clients | 서버→Supabase 특권         | 특권 client 오용·env 누락     | SEC-003, PRIV-001            | `IN_PROGRESS` | server-only·명시적 이름·fail-fast 2/2, bundle E2E 필요 |
+| `src/shared/types/api.ts`                                        |   1-21 | 공용 API 타입               | 서버↔클라이언트            | 응답 계약 드리프트            | INPUT-001                    | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/ui/Button.tsx`                                       |   1-42 | 버튼                        | 사용자→UI                  | keyboard/focus 실패           | M2-05                        | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/ui/Container.tsx`                                    |   1-17 | 레이아웃                    | UI 내부                    | 반응형 실패                   | M2-05                        | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/ui/Divider.tsx`                                      |    1-8 | 구분선                      | UI 내부                    | 접근성 의미 오류              | M2-05                        | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/ui/Loading.tsx`                                      |   1-10 | 로딩 표시                   | UI 내부                    | screen reader 상태 누락       | M2-05                        | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/ui/Text.tsx`                                         |   1-49 | 텍스트 primitive            | 데이터→DOM                 | 의미/대비 오류                | M2-05                        | `NOT_STARTED` | 미검토                                                 |
+| `src/shared/ui/Toast.tsx`                                        |   1-51 | 알림 UI                     | 앱 상태→DOM                | focus/announcement 누락       | M2-05                        | `NOT_STARTED` | 미검토                                                 |
 
 ### 5.3 SQL·migration
 
-| 파일                                                                                   |    라인 | 역할                 | 신뢰 경계        | 주요 실패 모드              | finding/과제                  | 상태          | 마지막 검토 기준                   |
-| -------------------------------------------------------------------------------------- | ------: | -------------------- | ---------------- | --------------------------- | ----------------------------- | ------------- | ---------------------------------- |
-| `supabase/schema.sql`                                                                  |   1-641 | 통합 schema snapshot | 역할→DB/RLS/RPC  | migration drift·과권한      | DB-001~003, G0-03/04/10/13/14 | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250218000000_initial_schema.sql`                                |   1-256 | 빈 DB 초기 schema    | migration→DB     | 기본 객체·RLS 누락          | DB-003, G0-13                 | `IN_PROGRESS` | 순서 preflight 2/2, DB replay 필요 |
-| `supabase/migrations/20250218120000_add_archived_at_28d_archiving.sql`                 |   1-255 | 보관·추천 함수       | 역할→DB/RPC      | security definer·권한       | DB-001, PRIV-003              | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250218140000_add_user_sighting_feedback_7_5.sql`                |    1-68 | 피드백               | 사용자→DB        | 타인 row 변경               | AUTHZ-001                     | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250218160000_remove_dismissed_from_user_sighting_views.sql`     |     1-3 | 컬럼 제거            | migration→DB     | replay 순서 오류            | DB-003                        | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250218170000_add_pet_name_to_lost_posts.sql`                    |     1-5 | pet_name 추가        | migration→DB     | schema drift                | DB-003                        | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250218180000_add_organizations_tenant_support.sql`              |    1-54 | tenant 추가(폐기 전) | migration→DB     | 잔존 객체·RLS 오류          | DB-003                        | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250218190000_remove_organizations_tenant_support.sql`           |    1-14 | tenant 제거          | migration→DB     | 불완전 rollback             | DB-003                        | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250219100000_add_get_my_lost_posts_with_location.sql`           | 빈 파일 | 비어 있는 migration  | migration→DB     | 누락된 의도·replay 착시     | DB-003                        | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250219110000_lost_posts_map_add_display_fields.sql`             |    1-28 | 지도 RPC 수정        | 사용자→RPC       | 정밀 위치/권한              | PRIV-001, DB-001              | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250220100000_add_get_sighting_detail.sql`                       |    1-25 | 제보 상세 RPC        | 사용자→RPC       | IDOR·정밀 위치              | AUTHZ-003, PRIV-001           | `IN_PROGRESS` | 전 라인 감사: 소유권 없는 definer 상세 |
-| `supabase/migrations/20250220110000_add_get_my_lost_post_paths.sql`                    |    1-59 | 경로 RPC             | 사용자→RPC       | 위치/note 노출              | PRIV-001, DB-001              | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250222100000_extend_get_my_lost_post_paths_with_photo_note.sql` |    1-62 | 경로 RPC 확장        | 사용자→RPC       | note·사진 과노출            | PRIV-001                      | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250223100000_embeddings_trait_field.sql`                        |    1-39 | embedding 컬럼       | Worker→DB        | 상태 불일치                 | QUAL-005                      | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250223110000_get_recommendations_field_weights.sql`             |    1-98 | 추천 RPC             | 사용자→RPC       | EXECUTE 과권한·비용         | DB-001, AUTHZ-003             | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250223120000_embeddings_one_row_four_columns.sql`               |    1-68 | embedding 구조 변경  | Worker→DB        | 부분 업데이트               | QUAL-005                      | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250223140000_get_recommendations_null_sim_half.sql`             |    1-96 | 추천 점수 수정       | 사용자→RPC       | null 처리·권한              | DB-001                        | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250223150000_reset_embeddings_pending.sql`                      |    1-33 | embedding 상태 reset | migration→DB     | 작업 중복·유실              | QUAL-005                      | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250223160000_remove_loc_time_from_score.sql`                    |    1-90 | 추천 점수 수정       | 사용자→RPC       | 과권한·회귀                 | DB-001                        | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250224000000_trait_tags_and_color_tokens.sql`                   |    1-15 | trait token 컬럼     | 입력→DB          | schema drift                | INPUT-001                     | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20250224010000_recommendations_experiment2_tokens_tags.sql`       |   1-147 | 추천 RPC 실험2       | 사용자→RPC       | 권한·성능·null 회귀         | DB-001, RATE-002              | `NOT_STARTED` | 미검토                             |
-| `supabase/migrations/20260725000000_atomic_embedding_jobs.sql`                         |   1-211 | Worker 원자 job RPC  | Service Role→DB  | 중복 claim·부분 완료        | SEC-001, QUAL-005             | `IN_PROGRESS` | 정적 계약 5/5, DB replay 필요      |
-| `supabase/migrations/20260725010000_lock_down_data_plane.sql`                          |   1-125 | table/RPC 권한 행렬  | 브라우저 역할→DB | 직접 쓰기·RPC 우회          | SEC-003/004/011               | `IN_PROGRESS` | 정적 계약 5/5, DB role matrix 필요 |
-| `supabase/migrations/20260725020000_atomic_rate_limits.sql`                            |   1-110 | fixed-window counter | Service Role→DB  | count 경쟁·bucket 누적      | SEC-007/012                   | `IN_PROGRESS` | 정적 계약 3/3, DB 동시성 필요      |
-| `supabase/migrations/20260725030000_upload_intents.sql`                                |   1-347 | intent·Storage 정책  | Storage/API→DB   | key 재사용·직접 object 조작 | SEC-005/010/011               | `IN_PROGRESS` | 정적 계약 6/6, 실제 matrix 필요    |
-| `supabase/migrations/20260725040000_atomic_domain_idempotency.sql`                     |   1-407 | 원자 멱등 도메인 생성 | API→DB          | 동시 중복·부분 커밋         | SEC-005, M2-06                | `IN_PROGRESS` | 계약 3/3, DB 20-way 경쟁 검증 필요 |
-| `supabase/migrations/20260725050000_protect_precise_sighting_locations.sql`            |   1-423 | 정밀 위치·claim RPC  | 사용자 JWT→DB   | 위치/note IDOR·직접 mutation | PRIV-001, M1-06              | `IN_PROGRESS` | 정적 경계 5/5·마스킹 3/3, DB 역할 matrix 필요 |
-| `supabase/migrations/20260725070000_lost_post_status_history.sql`                      |    1-94 | 상태 전이·이력        | 사용자 update→trigger | 불법 전이·이력 유실       | M2-03                        | `IN_PROGRESS` | 상태/권한/API 계약 5/5, DB replay 필요 |
-| `supabase/migrations/20260725080000_admin_moderation_audit.sql`                        |   1-222 | 관리자 숨김·감사       | app_metadata→권한 RPC | 권한 남용·감사 변조        | OPS-003, M1-04               | `IN_PROGRESS` | 로컬 계약 4/4, DB role/admin E2E 필요 |
-| `supabase/migrations/20260725090000_reports_blocks_sla.sql`                            |   1-824 | 신고·차단·SLA          | 사용자/관리자→권한 RPC | 중복 신고·차단 우회·SLA 누락 | OPS-003, M1-05             | `IN_PROGRESS` | 로컬 계약 6/6, DB 동시성·역할 E2E 필요 |
-| `supabase/migrations/20260726000000_auth_map_precise_pins.sql`                         |   1-211 | 회원 지도 정밀 핀 복원 | 인증 JWT→RPC   | 비회원 정밀·줌 캡 회귀     | PRIV-001, M1-06              | `IN_PROGRESS` | contract + ops-verify 적용, 브라우저 E2E 필요 |
-| `supabase/migrations/20260725100000_account_deletion_jobs.sql`                         |   1-437 | 계정 삭제 lease queue   | 사용자/Worker→Auth/DB | 부분 삭제·접근 잔존          | PRIV-002, M1-09            | `IN_PROGRESS` | 로컬 계약/worker 10/10, DB·backup E2E 필요 |
-| `supabase/migrations/20260725110000_operational_slo_snapshot.sql`                      |   1-366 | 운영 지표 snapshot      | Service Role→집계 RPC | PII label·경보 누락           | OPS-004, M1-08             | `IN_PROGRESS` | evaluator/계약 7/7, live dashboard/alert 필요 |
+| 파일                                                                                   |    라인 | 역할                   | 신뢰 경계              | 주요 실패 모드               | finding/과제                  | 상태          | 마지막 검토 기준                              |
+| -------------------------------------------------------------------------------------- | ------: | ---------------------- | ---------------------- | ---------------------------- | ----------------------------- | ------------- | --------------------------------------------- |
+| `supabase/schema.sql`                                                                  |   1-641 | 통합 schema snapshot   | 역할→DB/RLS/RPC        | migration drift·과권한       | DB-001~003, G0-03/04/10/13/14 | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250218000000_initial_schema.sql`                                |   1-256 | 빈 DB 초기 schema      | migration→DB           | 기본 객체·RLS 누락           | DB-003, G0-13                 | `IN_PROGRESS` | 순서 preflight 2/2, DB replay 필요            |
+| `supabase/migrations/20250218120000_add_archived_at_28d_archiving.sql`                 |   1-255 | 보관·추천 함수         | 역할→DB/RPC            | security definer·권한        | DB-001, PRIV-003              | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250218140000_add_user_sighting_feedback_7_5.sql`                |    1-68 | 피드백                 | 사용자→DB              | 타인 row 변경                | AUTHZ-001                     | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250218160000_remove_dismissed_from_user_sighting_views.sql`     |     1-3 | 컬럼 제거              | migration→DB           | replay 순서 오류             | DB-003                        | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250218170000_add_pet_name_to_lost_posts.sql`                    |     1-5 | pet_name 추가          | migration→DB           | schema drift                 | DB-003                        | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250218180000_add_organizations_tenant_support.sql`              |    1-54 | tenant 추가(폐기 전)   | migration→DB           | 잔존 객체·RLS 오류           | DB-003                        | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250218190000_remove_organizations_tenant_support.sql`           |    1-14 | tenant 제거            | migration→DB           | 불완전 rollback              | DB-003                        | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250219100000_add_get_my_lost_posts_with_location.sql`           | 빈 파일 | 비어 있는 migration    | migration→DB           | 누락된 의도·replay 착시      | DB-003                        | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250219110000_lost_posts_map_add_display_fields.sql`             |    1-28 | 지도 RPC 수정          | 사용자→RPC             | 정밀 위치/권한               | PRIV-001, DB-001              | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250220100000_add_get_sighting_detail.sql`                       |    1-25 | 제보 상세 RPC          | 사용자→RPC             | IDOR·정밀 위치               | AUTHZ-003, PRIV-001           | `IN_PROGRESS` | 전 라인 감사: 소유권 없는 definer 상세        |
+| `supabase/migrations/20250220110000_add_get_my_lost_post_paths.sql`                    |    1-59 | 경로 RPC               | 사용자→RPC             | 위치/note 노출               | PRIV-001, DB-001              | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250222100000_extend_get_my_lost_post_paths_with_photo_note.sql` |    1-62 | 경로 RPC 확장          | 사용자→RPC             | note·사진 과노출             | PRIV-001                      | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250223100000_embeddings_trait_field.sql`                        |    1-39 | embedding 컬럼         | Worker→DB              | 상태 불일치                  | QUAL-005                      | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250223110000_get_recommendations_field_weights.sql`             |    1-98 | 추천 RPC               | 사용자→RPC             | EXECUTE 과권한·비용          | DB-001, AUTHZ-003             | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250223120000_embeddings_one_row_four_columns.sql`               |    1-68 | embedding 구조 변경    | Worker→DB              | 부분 업데이트                | QUAL-005                      | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250223140000_get_recommendations_null_sim_half.sql`             |    1-96 | 추천 점수 수정         | 사용자→RPC             | null 처리·권한               | DB-001                        | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250223150000_reset_embeddings_pending.sql`                      |    1-33 | embedding 상태 reset   | migration→DB           | 작업 중복·유실               | QUAL-005                      | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250223160000_remove_loc_time_from_score.sql`                    |    1-90 | 추천 점수 수정         | 사용자→RPC             | 과권한·회귀                  | DB-001                        | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250224000000_trait_tags_and_color_tokens.sql`                   |    1-15 | trait token 컬럼       | 입력→DB                | schema drift                 | INPUT-001                     | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20250224010000_recommendations_experiment2_tokens_tags.sql`       |   1-147 | 추천 RPC 실험2         | 사용자→RPC             | 권한·성능·null 회귀          | DB-001, RATE-002              | `NOT_STARTED` | 미검토                                        |
+| `supabase/migrations/20260725000000_atomic_embedding_jobs.sql`                         |   1-211 | Worker 원자 job RPC    | Service Role→DB        | 중복 claim·부분 완료         | SEC-001, QUAL-005             | `IN_PROGRESS` | 정적 계약 5/5, DB replay 필요                 |
+| `supabase/migrations/20260725010000_lock_down_data_plane.sql`                          |   1-125 | table/RPC 권한 행렬    | 브라우저 역할→DB       | 직접 쓰기·RPC 우회           | SEC-003/004/011               | `IN_PROGRESS` | 정적 계약 5/5, DB role matrix 필요            |
+| `supabase/migrations/20260725020000_atomic_rate_limits.sql`                            |   1-110 | fixed-window counter   | Service Role→DB        | count 경쟁·bucket 누적       | SEC-007/012                   | `IN_PROGRESS` | 정적 계약 3/3, DB 동시성 필요                 |
+| `supabase/migrations/20260725030000_upload_intents.sql`                                |   1-347 | intent·Storage 정책    | Storage/API→DB         | key 재사용·직접 object 조작  | SEC-005/010/011               | `IN_PROGRESS` | 정적 계약 6/6, 실제 matrix 필요               |
+| `supabase/migrations/20260725040000_atomic_domain_idempotency.sql`                     |   1-407 | 원자 멱등 도메인 생성  | API→DB                 | 동시 중복·부분 커밋          | SEC-005, M2-06                | `IN_PROGRESS` | 계약 3/3, DB 20-way 경쟁 검증 필요            |
+| `supabase/migrations/20260725050000_protect_precise_sighting_locations.sql`            |   1-423 | 정밀 위치·claim RPC    | 사용자 JWT→DB          | 위치/note IDOR·직접 mutation | PRIV-001, M1-06               | `IN_PROGRESS` | 정적 경계 5/5·마스킹 3/3, DB 역할 matrix 필요 |
+| `supabase/migrations/20260725070000_lost_post_status_history.sql`                      |    1-94 | 상태 전이·이력         | 사용자 update→trigger  | 불법 전이·이력 유실          | M2-03                         | `IN_PROGRESS` | 상태/권한/API 계약 5/5, DB replay 필요        |
+| `supabase/migrations/20260725080000_admin_moderation_audit.sql`                        |   1-222 | 관리자 숨김·감사       | app_metadata→권한 RPC  | 권한 남용·감사 변조          | OPS-003, M1-04                | `IN_PROGRESS` | 로컬 계약 4/4, DB role/admin E2E 필요         |
+| `supabase/migrations/20260725090000_reports_blocks_sla.sql`                            |   1-824 | 신고·차단·SLA          | 사용자/관리자→권한 RPC | 중복 신고·차단 우회·SLA 누락 | OPS-003, M1-05                | `IN_PROGRESS` | 로컬 계약 6/6, DB 동시성·역할 E2E 필요        |
+| `supabase/migrations/20260726000000_auth_map_precise_pins.sql`                         |   1-211 | 회원 지도 정밀 핀 복원 | 인증 JWT→RPC           | 비회원 정밀·줌 캡 회귀       | PRIV-001, M1-06               | `IN_PROGRESS` | contract + ops-verify 적용, 브라우저 E2E 필요 |
+| `supabase/migrations/20260725100000_account_deletion_jobs.sql`                         |   1-437 | 계정 삭제 lease queue  | 사용자/Worker→Auth/DB  | 부분 삭제·접근 잔존          | PRIV-002, M1-09               | `IN_PROGRESS` | 로컬 계약/worker 10/10, DB·backup E2E 필요    |
+| `supabase/migrations/20260725110000_operational_slo_snapshot.sql`                      |   1-366 | 운영 지표 snapshot     | Service Role→집계 RPC  | PII label·경보 누락          | OPS-004, M1-08                | `IN_PROGRESS` | evaluator/계약 7/7, live dashboard/alert 필요 |
 
 ### 5.4 테스트·시뮬레이션·root 설정
 
-| 파일                                             |  라인 | 역할                     | 신뢰 경계             | 주요 실패 모드               | finding/과제         | 상태          | 마지막 검토 기준                          |
-| ------------------------------------------------ | ----: | ------------------------ | --------------------- | ---------------------------- | -------------------- | ------------- | ----------------------------------------- |
-| `tests/security/app-origin.test.mjs`             |  1-75 | canonical origin 테스트  | 테스트→origin 모듈    | 변조 origin 누락             | SEC-006, SEC-013     | `IN_PROGRESS` | `aa7c48a+dirty`, 4/4                      |
-| `tests/security/authenticated-list.test.mjs`     |  1-34 | token 목록 경계 테스트   | 테스트→목록 상태      | 이전 계정 데이터 노출        | QUAL-002, PRIV-001   | `IN_PROGRESS` | `aa7c48a+dirty`, 1/1                      |
-| `tests/security/cron-auth.test.mjs`              | 1-129 | Cron 인증 실패 테스트    | 테스트→인증 모듈      | 경계 case 누락               | SEC-001              | `VERIFIED`    | `aa7c48a+dirty`, 9/9                      |
-| `tests/security/service-role-boundary.test.mjs`  |  1-42 | Service Role 경계 테스트 | source→server bundle  | client import·특권 이름 혼동 | SEC-003              | `VERIFIED`    | server-only/fail-fast·client scan 2/2     |
-| `tests/security/security-headers.test.mjs`       |  1-51 | 보안 헤더·origin 테스트  | 환경→Next config      | CSP/헤더·환경 drift          | SEC-009, G0-17       | `IN_PROGRESS` | Supabase origin RED 0/2 → GREEN 2/2       |
-| `tests/security/precise-location-boundary.test.mjs` | 1-160 | 정밀 위치 권한 계약   | route/SQL→권한 경계   | 비회원 mask·회원 pin 회귀    | PRIV-001, M1-06      | `IN_PROGRESS` | auth pin contract GREEN, 실제 DB E2E 필요   |
-| `tests/unit/embedding-queue.test.mjs`            |  1-29 | Worker 조회 분류 테스트  | 테스트→Worker 경계    | DB 오류 은폐                 | QUAL-005             | `IN_PROGRESS` | `aa7c48a+dirty`, 2/2                      |
-| `tests/unit/embedding-worker-faults.test.mjs`    | 1-109 | Worker fault injection   | fake provider/RPC→processor | retry·503·lease 회귀      | QUAL-005, G0-16      | `VERIFIED`    | provider/finalize/lease 4/4               |
-| `tests/unit/embedding-job-contract.test.mjs`     | 1-107 | Worker lease/Cron 계약   | source/SQL→계약 검사  | 잠금·grant·GET 누락          | SEC-001, QUAL-005    | `VERIFIED`    | RED 0/6 → GREEN 6/6                       |
-| `tests/unit/data-plane-permissions.test.mjs`     | 1-120 | DB 권한 SQL 계약         | source/SQL→권한 검사  | RLS·grant·search_path 회귀   | SEC-003/004/011      | `VERIFIED`    | RED 0/4 → GREEN 5/5                       |
-| `tests/unit/atomic-rate-limit-contract.test.mjs` |  1-61 | atomic counter 계약      | source/SQL→경쟁 경계  | count-then-record 회귀       | SEC-007/012          | `VERIFIED`    | RED 0/3 → GREEN 3/3                       |
-| `tests/unit/api-input.test.mjs`                  | 1-221 | 공용 API schema 테스트   | 비신뢰 입력→validator | 위조·과대 입력 허용          | SEC-005/008          | `IN_PROGRESS` | RED 0/8 → GREEN 9/9, route E2E 필요       |
-| `tests/unit/api-request.test.mjs`                |  1-60 | JSON byte 상한 테스트    | HTTP stream→reader    | length 위조·과대 할당        | SEC-008              | `VERIFIED`    | RED 0/3 → GREEN 3/3                       |
-| `tests/unit/ci-release-gate.test.mjs`            |  1-59 | CI 설정 계약 테스트      | workflow/package→검사 | 검증 누락·과권한·secret 의존 | G0-11/12/18          | `VERIFIED`    | RED 0/4 → GREEN 4/4                       |
-| `tests/unit/public-api-guard.test.mjs`           | 1-114 | 공개 API·IP 경계 테스트  | query/header→guard    | sweep·numeric prefix         | SEC-007/008/012      | `VERIFIED`    | RED 0/5 → GREEN 5/5                       |
-| `tests/unit/operational-health.test.mjs`         |  1-55 | readiness 판정 테스트    | 설정/probe→상태       | 설정 누락·오류 원문 노출     | OPS-001, M1-02       | `VERIFIED`    | fail-closed·probe 분리 3/3                 |
-| `tests/unit/monitoring-sanitizer.test.mjs`       | 1-103 | Sentry 정제 테스트       | 합성 민감 event→정제  | query·body·user·note 전송    | OPS-001, M1-01       | `VERIFIED`    | event/span 민감값 제거 2/2                 |
-| `tests/unit/offline-build-assets.test.mjs`       |  1-19 | offline build 계약       | asset import→Webpack  | 외부 DNS로 release 실패      | G0-18                | `VERIFIED`    | next/font/google 재도입 차단 1/1           |
-| `tests/unit/privacy-location.test.mjs`           |  1-49 | 좌표 마스킹 테스트       | 정밀 좌표→근사 좌표   | grid drift·claim 정밀 해제   | PRIV-001, M1-06      | `VERIFIED`    | stable grid·claim 비해제·NaN 3/3          |
-| `tests/unit/request-id-proxy.test.mjs`           |  1-34 | request ID 경계 테스트   | header→proxy          | ID 위조·재사용               | OPS-001, M1-01       | `VERIFIED`    | server UUID overwrite 2/2                 |
-| `tests/unit/sentry-contract.test.mjs`            |  1-52 | Sentry 설정 계약         | source/config→계측    | runtime·boundary 누락        | OPS-001, M1-01       | `VERIFIED`    | client/server/edge/boundary 3/3            |
-| `tests/unit/structured-log.test.mjs`             | 1-196 | 로그 redaction 계약      | 오류/컨텍스트→JSON    | secret·위치·note 원문 노출   | OPS-001, M1-01       | `VERIFIED`    | logger/redaction/Sentry 경계 7/7           |
-| `tests/unit/upload-intent-contract.test.mjs`     | 1-117 | upload SQL/route 계약    | source/SQL→계약 검사  | intent·RPC·Storage 정책 회귀 | SEC-005/010/011      | `VERIFIED`    | Storage 보강 RED 5/6 → GREEN 6/6          |
-| `tests/unit/upload-intents.test.mjs`             | 1-247 | 실파일·cleanup 테스트    | fake Storage→검증기   | IDOR·만료·late upload·위조   | SEC-005, M2-06       | `VERIFIED`    | 소비 후 replay·token cutoff GREEN 6/6     |
-| `tests/unit/domain-idempotency-contract.test.mjs` |  1-97 | 원자 멱등 SQL/API 계약   | source/SQL→계약 검사  | 조회-생성-저장 경쟁 회귀     | SEC-005, M2-06       | `VERIFIED`    | RED 0/3 → GREEN 3/3                       |
-| `tests/unit/idempotency-replay.test.mjs`         |  1-89 | 멱등 cache replay 단위   | fake DB→API helper    | 타 신원 응답·DB 장애 우회    | SEC-005, M2-06       | `VERIFIED`    | RED module 없음 → GREEN 2/2               |
-| `tests/unit/form-submission-lifecycle.test.mjs`  | 1-103 | form retry 수명 테스트   | payload/file→key·intent | 중복 생성·파일 혼동        | M2-06               | `VERIFIED`    | key/intent 재사용·SHA-256 회전 4/4        |
-| `tests/unit/lost-post-status-history.test.mjs`   |  1-75 | 상태 전이·이력 계약      | SQL/route→상태 machine | 불법 전이·IDOR·actor 노출  | M2-03               | `IN_PROGRESS` | source 계약 5/5, 실제 DB E2E 필요         |
-| `tests/unit/map-data-state.test.mjs`             | 1-146 | 계정별 지도 상태 테스트  | 테스트→data reducer   | stale 계정 snapshot          | QUAL-004, PRIV-001   | `IN_PROGRESS` | RED 0/4·0/1 → GREEN 5/5                   |
-| `tests/unit/map-domain.test.mjs`                 | 1-107 | 지도 계산 특성 테스트    | 테스트→순수 계산      | 필터·grid·경로 회귀          | QUAL-004             | `VERIFIED`    | RED 0/4 → GREEN 4/4                       |
-| `tests/unit/map-request-guard.test.mjs`          |  1-54 | 최신 요청 취소 테스트    | 테스트→요청 lifecycle | stale 응답 갱신              | QUAL-004, PRIV-001   | `VERIFIED`    | RED 0/4 → GREEN 4/4                       |
-| `tests/unit/naver-map-adapter.test.mjs`          | 1-128 | SDK 정리 계약 테스트     | fake SDK→adapter      | listener·overlay 중복 정리   | QUAL-004             | `VERIFIED`    | RED 0/3·2/4 → GREEN 4/4                   |
-| `tests/unit/map-layer-renderer.test.mjs`         | 1-315 | layer 정리 계약 테스트   | fake SDK→renderer     | marker·frame·timer 누수      | QUAL-004             | `VERIFIED`    | RED 3/5 → GREEN 5/5                       |
-| `tests/integration/http-boundaries.mjs`          | 1-123 | production HTTP 경계     | 실제 Next HTTP→route  | 실패/trace/health 계약 회귀  | SEC-001/005/008/OPS-001 | `IN_PROGRESS` | 실패경계·request ID·health 8/8, staging 필요 |
-| `tests/integration/db-permission-matrix.sql`     | 1-134 | 실제 DB 권한 행렬        | PostgreSQL roles→DB/Storage | grant·RLS·Storage drift | G0-03/04/10/13/14 | `IN_PROGRESS` | CI job 연결, Docker replay 실행 필요       |
-| `tests/integration/db-concurrency.mjs`           |  1-97 | DB 경쟁 검증             | 50/20 병렬 psql→RPC   | rate 초과·중복 lease         | G0-07/16            | `IN_PROGRESS` | CI job 연결, Docker 실행 필요              |
-| `tests/unit/migration-order.test.mjs`            |  1-87 | migration 순서 preflight | SQL chain→검사        | 생성 전 ALTER·빈 DB 실패     | DB-003, G0-13        | `IN_PROGRESS` | RED 0/2 → GREEN 2/2, 실제 replay 필요     |
-| `sim_test/compute_similarity.py`                 | 1-176 | 유사도 계산              | CSV/embedding→지표    | 수치·정규화 오류             | M3 제외, 품질 감사   | `NOT_STARTED` | 미검토                                    |
-| `sim_test/fetch_embeddings.py`                   | 1-155 | embedding 수집           | 로컬→OpenAI           | secret 로그·비용             | SEC-003, 품질 감사   | `NOT_STARTED` | 미검토                                    |
-| `sim_test/image/placeholder_pipeline.py`         |  1-85 | 이미지 실험 placeholder  | 파일→모델             | 미완성 경로 오사용           | M3 제외, 품질 감사   | `NOT_STARTED` | 미검토                                    |
-| `sim_test/run_all.py`                            |  1-22 | 시뮬레이션 runner        | 로컬 프로세스         | 부분 실패 은폐               | QUAL-001             | `NOT_STARTED` | 미검토                                    |
-| `sim_test/visualize_embeddings.py`               | 1-142 | embedding 시각화         | 결과 파일→HTML/이미지 | 경로·데이터 누출             | SEC-003              | `NOT_STARTED` | 미검토                                    |
-| `.github/workflows/release-gate.yml`             |  1-59 | PR/push release gate     | GitHub→검증 toolchain | 단계 누락·과권한·secret 의존 | G0-11/12/18          | `IN_PROGRESS` | HTTP 8/8 포함·합성 env build, CI run 필요 |
-| `package.json`                                   |  1-50 | script·dependency 계약   | 개발/CI→toolchain     | script 불일치·취약 의존성    | SEC-002, G0-11/12/18 | `IN_PROGRESS` | Sentry 10.68·Webpack; Babel low 1 남음    |
-| `next.config.ts`                                 | 1-155 | Next/Sentry 설정·헤더    | 환경→서버·브라우저    | CSP/ingest/source-map drift  | SEC-009, OPS-001     | `IN_PROGRESS` | Sentry ingest 검증·Webpack, staging 필요  |
-| `sentry.server.config.ts`                        |  1-22 | Node Sentry 설정         | server 오류→외부 SaaS | PII·과다 sampling            | OPS-001, M1-01       | `IN_PROGRESS` | no PII·sanitizer·5% trace, 실제 DSN 필요 |
-| `sentry.edge.config.ts`                          |  1-22 | Edge Sentry 설정         | edge 오류→외부 SaaS   | PII·runtime 초기화 누락      | OPS-001, M1-01       | `IN_PROGRESS` | no PII·sanitizer·5% trace, 실제 DSN 필요 |
-| `eslint.config.mjs`                              |  1-23 | lint 정책                | 코드→CI               | `.venv` 포함·규칙 공백       | QUAL-002             | `IN_PROGRESS` | `aa7c48a+dirty`, 외부 환경 제외           |
-| `postcss.config.mjs`                             |   1-7 | CSS build 설정           | source→build          | 빌드 드리프트                | G0-18                | `NOT_STARTED` | 미검토                                    |
-| `tsconfig.json`                                  |  1-43 | TypeScript 설정          | source→compiler       | 과도한 제외·검사 공백        | QUAL-002             | `IN_PROGRESS` | `aa7c48a+dirty`, stale dev type 제외      |
-| `vercel.json`                                    |  1-12 | Cron 배포 설정           | Vercel→Worker         | GET 불일치·정리 누락         | SEC-001/005, G0-18   | `IN_PROGRESS` | Worker GET·일일 cleanup 정적 검증         |
+| 파일                                                |  라인 | 역할                     | 신뢰 경계                   | 주요 실패 모드               | finding/과제            | 상태          | 마지막 검토 기준                             |
+| --------------------------------------------------- | ----: | ------------------------ | --------------------------- | ---------------------------- | ----------------------- | ------------- | -------------------------------------------- |
+| `tests/security/app-origin.test.mjs`                |  1-75 | canonical origin 테스트  | 테스트→origin 모듈          | 변조 origin 누락             | SEC-006, SEC-013        | `IN_PROGRESS` | `aa7c48a+dirty`, 4/4                         |
+| `tests/security/authenticated-list.test.mjs`        |  1-34 | token 목록 경계 테스트   | 테스트→목록 상태            | 이전 계정 데이터 노출        | QUAL-002, PRIV-001      | `IN_PROGRESS` | `aa7c48a+dirty`, 1/1                         |
+| `tests/security/cron-auth.test.mjs`                 | 1-129 | Cron 인증 실패 테스트    | 테스트→인증 모듈            | 경계 case 누락               | SEC-001                 | `VERIFIED`    | `aa7c48a+dirty`, 9/9                         |
+| `tests/security/service-role-boundary.test.mjs`     |  1-42 | Service Role 경계 테스트 | source→server bundle        | client import·특권 이름 혼동 | SEC-003                 | `VERIFIED`    | server-only/fail-fast·client scan 2/2        |
+| `tests/security/security-headers.test.mjs`          |  1-51 | 보안 헤더·origin 테스트  | 환경→Next config            | CSP/헤더·환경 drift          | SEC-009, G0-17          | `IN_PROGRESS` | Supabase origin RED 0/2 → GREEN 2/2          |
+| `tests/security/precise-location-boundary.test.mjs` | 1-160 | 정밀 위치 권한 계약      | route/SQL→권한 경계         | 비회원 mask·회원 pin 회귀    | PRIV-001, M1-06         | `IN_PROGRESS` | auth pin contract GREEN, 실제 DB E2E 필요    |
+| `tests/unit/embedding-queue.test.mjs`               |  1-29 | Worker 조회 분류 테스트  | 테스트→Worker 경계          | DB 오류 은폐                 | QUAL-005                | `IN_PROGRESS` | `aa7c48a+dirty`, 2/2                         |
+| `tests/unit/embedding-worker-faults.test.mjs`       | 1-109 | Worker fault injection   | fake provider/RPC→processor | retry·503·lease 회귀         | QUAL-005, G0-16         | `VERIFIED`    | provider/finalize/lease 4/4                  |
+| `tests/unit/embedding-job-contract.test.mjs`        | 1-107 | Worker lease/Cron 계약   | source/SQL→계약 검사        | 잠금·grant·GET 누락          | SEC-001, QUAL-005       | `VERIFIED`    | RED 0/6 → GREEN 6/6                          |
+| `tests/unit/data-plane-permissions.test.mjs`        | 1-120 | DB 권한 SQL 계약         | source/SQL→권한 검사        | RLS·grant·search_path 회귀   | SEC-003/004/011         | `VERIFIED`    | RED 0/4 → GREEN 5/5                          |
+| `tests/unit/atomic-rate-limit-contract.test.mjs`    |  1-61 | atomic counter 계약      | source/SQL→경쟁 경계        | count-then-record 회귀       | SEC-007/012             | `VERIFIED`    | RED 0/3 → GREEN 3/3                          |
+| `tests/unit/api-input.test.mjs`                     | 1-221 | 공용 API schema 테스트   | 비신뢰 입력→validator       | 위조·과대 입력 허용          | SEC-005/008             | `IN_PROGRESS` | RED 0/8 → GREEN 9/9, route E2E 필요          |
+| `tests/unit/api-request.test.mjs`                   |  1-60 | JSON byte 상한 테스트    | HTTP stream→reader          | length 위조·과대 할당        | SEC-008                 | `VERIFIED`    | RED 0/3 → GREEN 3/3                          |
+| `tests/unit/ci-release-gate.test.mjs`               |  1-59 | CI 설정 계약 테스트      | workflow/package→검사       | 검증 누락·과권한·secret 의존 | G0-11/12/18             | `VERIFIED`    | RED 0/4 → GREEN 4/4                          |
+| `tests/unit/public-api-guard.test.mjs`              | 1-114 | 공개 API·IP 경계 테스트  | query/header→guard          | sweep·numeric prefix         | SEC-007/008/012         | `VERIFIED`    | RED 0/5 → GREEN 5/5                          |
+| `tests/unit/operational-health.test.mjs`            |  1-55 | readiness 판정 테스트    | 설정/probe→상태             | 설정 누락·오류 원문 노출     | OPS-001, M1-02          | `VERIFIED`    | fail-closed·probe 분리 3/3                   |
+| `tests/unit/monitoring-sanitizer.test.mjs`          | 1-103 | Sentry 정제 테스트       | 합성 민감 event→정제        | query·body·user·note 전송    | OPS-001, M1-01          | `VERIFIED`    | event/span 민감값 제거 2/2                   |
+| `tests/unit/offline-build-assets.test.mjs`          |  1-19 | offline build 계약       | asset import→Webpack        | 외부 DNS로 release 실패      | G0-18                   | `VERIFIED`    | next/font/google 재도입 차단 1/1             |
+| `tests/unit/privacy-location.test.mjs`              |  1-49 | 좌표 마스킹 테스트       | 정밀 좌표→근사 좌표         | grid drift·claim 정밀 해제   | PRIV-001, M1-06         | `VERIFIED`    | stable grid·claim 비해제·NaN 3/3             |
+| `tests/unit/request-id-proxy.test.mjs`              |  1-34 | request ID 경계 테스트   | header→proxy                | ID 위조·재사용               | OPS-001, M1-01          | `VERIFIED`    | server UUID overwrite 2/2                    |
+| `tests/unit/sentry-contract.test.mjs`               |  1-52 | Sentry 설정 계약         | source/config→계측          | runtime·boundary 누락        | OPS-001, M1-01          | `VERIFIED`    | client/server/edge/boundary 3/3              |
+| `tests/unit/structured-log.test.mjs`                | 1-196 | 로그 redaction 계약      | 오류/컨텍스트→JSON          | secret·위치·note 원문 노출   | OPS-001, M1-01          | `VERIFIED`    | logger/redaction/Sentry 경계 7/7             |
+| `tests/unit/upload-intent-contract.test.mjs`        | 1-117 | upload SQL/route 계약    | source/SQL→계약 검사        | intent·RPC·Storage 정책 회귀 | SEC-005/010/011         | `VERIFIED`    | Storage 보강 RED 5/6 → GREEN 6/6             |
+| `tests/unit/upload-intents.test.mjs`                | 1-247 | 실파일·cleanup 테스트    | fake Storage→검증기         | IDOR·만료·late upload·위조   | SEC-005, M2-06          | `VERIFIED`    | 소비 후 replay·token cutoff GREEN 6/6        |
+| `tests/unit/domain-idempotency-contract.test.mjs`   |  1-97 | 원자 멱등 SQL/API 계약   | source/SQL→계약 검사        | 조회-생성-저장 경쟁 회귀     | SEC-005, M2-06          | `VERIFIED`    | RED 0/3 → GREEN 3/3                          |
+| `tests/unit/idempotency-replay.test.mjs`            |  1-89 | 멱등 cache replay 단위   | fake DB→API helper          | 타 신원 응답·DB 장애 우회    | SEC-005, M2-06          | `VERIFIED`    | RED module 없음 → GREEN 2/2                  |
+| `tests/unit/form-submission-lifecycle.test.mjs`     | 1-103 | form retry 수명 테스트   | payload/file→key·intent     | 중복 생성·파일 혼동          | M2-06                   | `VERIFIED`    | key/intent 재사용·SHA-256 회전 4/4           |
+| `tests/unit/lost-post-status-history.test.mjs`      |  1-75 | 상태 전이·이력 계약      | SQL/route→상태 machine      | 불법 전이·IDOR·actor 노출    | M2-03                   | `IN_PROGRESS` | source 계약 5/5, 실제 DB E2E 필요            |
+| `tests/unit/map-data-state.test.mjs`                | 1-146 | 계정별 지도 상태 테스트  | 테스트→data reducer         | stale 계정 snapshot          | QUAL-004, PRIV-001      | `IN_PROGRESS` | RED 0/4·0/1 → GREEN 5/5                      |
+| `tests/unit/map-domain.test.mjs`                    | 1-107 | 지도 계산 특성 테스트    | 테스트→순수 계산            | 필터·grid·경로 회귀          | QUAL-004                | `VERIFIED`    | RED 0/4 → GREEN 4/4                          |
+| `tests/unit/map-request-guard.test.mjs`             |  1-54 | 최신 요청 취소 테스트    | 테스트→요청 lifecycle       | stale 응답 갱신              | QUAL-004, PRIV-001      | `VERIFIED`    | RED 0/4 → GREEN 4/4                          |
+| `tests/unit/naver-map-adapter.test.mjs`             | 1-128 | SDK 정리 계약 테스트     | fake SDK→adapter            | listener·overlay 중복 정리   | QUAL-004                | `VERIFIED`    | RED 0/3·2/4 → GREEN 4/4                      |
+| `tests/unit/map-layer-renderer.test.mjs`            | 1-315 | layer 정리 계약 테스트   | fake SDK→renderer           | marker·frame·timer 누수      | QUAL-004                | `VERIFIED`    | RED 3/5 → GREEN 5/5                          |
+| `tests/integration/http-boundaries.mjs`             | 1-123 | production HTTP 경계     | 실제 Next HTTP→route        | 실패/trace/health 계약 회귀  | SEC-001/005/008/OPS-001 | `IN_PROGRESS` | 실패경계·request ID·health 8/8, staging 필요 |
+| `tests/integration/db-permission-matrix.sql`        | 1-134 | 실제 DB 권한 행렬        | PostgreSQL roles→DB/Storage | grant·RLS·Storage drift      | G0-03/04/10/13/14       | `IN_PROGRESS` | CI job 연결, Docker replay 실행 필요         |
+| `tests/integration/db-concurrency.mjs`              |  1-97 | DB 경쟁 검증             | 50/20 병렬 psql→RPC         | rate 초과·중복 lease         | G0-07/16                | `IN_PROGRESS` | CI job 연결, Docker 실행 필요                |
+| `tests/unit/migration-order.test.mjs`               |  1-87 | migration 순서 preflight | SQL chain→검사              | 생성 전 ALTER·빈 DB 실패     | DB-003, G0-13           | `IN_PROGRESS` | RED 0/2 → GREEN 2/2, 실제 replay 필요        |
+| `sim_test/compute_similarity.py`                    | 1-176 | 유사도 계산              | CSV/embedding→지표          | 수치·정규화 오류             | M3 제외, 품질 감사      | `NOT_STARTED` | 미검토                                       |
+| `sim_test/fetch_embeddings.py`                      | 1-155 | embedding 수집           | 로컬→OpenAI                 | secret 로그·비용             | SEC-003, 품질 감사      | `NOT_STARTED` | 미검토                                       |
+| `sim_test/image/placeholder_pipeline.py`            |  1-85 | 이미지 실험 placeholder  | 파일→모델                   | 미완성 경로 오사용           | M3 제외, 품질 감사      | `NOT_STARTED` | 미검토                                       |
+| `sim_test/run_all.py`                               |  1-22 | 시뮬레이션 runner        | 로컬 프로세스               | 부분 실패 은폐               | QUAL-001                | `NOT_STARTED` | 미검토                                       |
+| `sim_test/visualize_embeddings.py`                  | 1-142 | embedding 시각화         | 결과 파일→HTML/이미지       | 경로·데이터 누출             | SEC-003                 | `NOT_STARTED` | 미검토                                       |
+| `.github/workflows/release-gate.yml`                |  1-59 | PR/push release gate     | GitHub→검증 toolchain       | 단계 누락·과권한·secret 의존 | G0-11/12/18             | `IN_PROGRESS` | HTTP 8/8 포함·합성 env build, CI run 필요    |
+| `package.json`                                      |  1-50 | script·dependency 계약   | 개발/CI→toolchain           | script 불일치·취약 의존성    | SEC-002, G0-11/12/18    | `IN_PROGRESS` | Sentry 10.68·Webpack; Babel low 1 남음       |
+| `next.config.ts`                                    | 1-155 | Next/Sentry 설정·헤더    | 환경→서버·브라우저          | CSP/ingest/source-map drift  | SEC-009, OPS-001        | `IN_PROGRESS` | Sentry ingest 검증·Webpack, staging 필요     |
+| `sentry.server.config.ts`                           |  1-22 | Node Sentry 설정         | server 오류→외부 SaaS       | PII·과다 sampling            | OPS-001, M1-01          | `IN_PROGRESS` | no PII·sanitizer·5% trace, 실제 DSN 필요     |
+| `sentry.edge.config.ts`                             |  1-22 | Edge Sentry 설정         | edge 오류→외부 SaaS         | PII·runtime 초기화 누락      | OPS-001, M1-01          | `IN_PROGRESS` | no PII·sanitizer·5% trace, 실제 DSN 필요     |
+| `eslint.config.mjs`                                 |  1-23 | lint 정책                | 코드→CI                     | `.venv` 포함·규칙 공백       | QUAL-002                | `IN_PROGRESS` | `aa7c48a+dirty`, 외부 환경 제외              |
+| `postcss.config.mjs`                                |   1-7 | CSS build 설정           | source→build                | 빌드 드리프트                | G0-18                   | `NOT_STARTED` | 미검토                                       |
+| `tsconfig.json`                                     |  1-43 | TypeScript 설정          | source→compiler             | 과도한 제외·검사 공백        | QUAL-002                | `IN_PROGRESS` | `aa7c48a+dirty`, stale dev type 제외         |
+| `vercel.json`                                       |  1-12 | Cron 배포 설정           | Vercel→Worker               | GET 불일치·정리 누락         | SEC-001/005, G0-18      | `IN_PROGRESS` | Worker GET·일일 cleanup 정적 검증            |
 
 ## 6. 코드 감사 제외 자산
 
@@ -620,13 +620,13 @@ Goal은 다음 조건을 동시에 만족할 때만 완료한다.
 
 #### PRIV-001 역할별 목표 응답
 
-| 주체 | 지도 좌표 | 추천 좌표 | 사진·공개 특성 | 비공개 note | 정밀 상세 |
-| --- | --- | --- | --- | --- | --- |
-| anon | 마스킹 클러스터 | 없음 | 집계/공개 범위만 | 금지 | 금지 |
-| 일반 member | 확대 시 정밀 pin | 마스킹 | 지도·상세 허용 | 지도·상세 허용 | 비차단 제보 허용 |
-| sighting owner | 본인 제보 정밀 | 마스킹(타 후보) | 본인 제보 허용 | 본인 제보 허용 | 허용 |
-| lost-post owner, 매칭 전 | 회원 지도와 동일 | 마스킹 | 후보 공개 범위만(추천) | 추천에서는 금지 | 회원 상세와 동일 |
-| 서버 검증 matched-owner | 해당 관계의 제보 정밀 | 해당 제보 정밀 | 해당 제보 허용 | 해당 제보 허용 | 허용 |
+| 주체                     | 지도 좌표             | 추천 좌표       | 사진·공개 특성         | 비공개 note     | 정밀 상세        |
+| ------------------------ | --------------------- | --------------- | ---------------------- | --------------- | ---------------- |
+| anon                     | 마스킹 클러스터       | 없음            | 집계/공개 범위만       | 금지            | 금지             |
+| 일반 member              | 확대 시 정밀 pin      | 마스킹          | 지도·상세 허용         | 지도·상세 허용  | 비차단 제보 허용 |
+| sighting owner           | 본인 제보 정밀        | 마스킹(타 후보) | 본인 제보 허용         | 본인 제보 허용  | 허용             |
+| lost-post owner, 매칭 전 | 회원 지도와 동일      | 마스킹          | 후보 공개 범위만(추천) | 추천에서는 금지 | 회원 상세와 동일 |
+| 서버 검증 matched-owner  | 해당 관계의 제보 정밀 | 해당 제보 정밀  | 해당 제보 허용         | 해당 제보 허용  | 허용             |
 
 실패 테스트는 다른 회원의 UUID 직접 상세, 후보가 아닌 UUID claim, 다른
 사용자의 lostPostId와 sightingId 조합, claim 삭제 후 재접근, archived

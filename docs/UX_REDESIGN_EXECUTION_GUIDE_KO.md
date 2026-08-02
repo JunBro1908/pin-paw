@@ -1,8 +1,9 @@
 # PinPaw 따뜻한 UX 개편 실행 가이드
 
 > 기준일: 2026-08-02  
-> 상태: 설계 승인 완료, 구현 시작 대기  
-> 기준 설계: [PinPaw 따뜻한 현장 구조 도구 UX 설계](./superpowers/specs/2026-08-02-pinpaw-warm-field-ux-design.md)
+> 상태: 구현 IN PROGRESS — Goal COMPLETE 금지(브라우저·정책 페이지·DB 환경 gate 미충족)  
+> 기준 설계: [PinPaw 따뜻한 현장 구조 도구 UX 설계](./superpowers/specs/2026-08-02-pinpaw-warm-field-ux-design.md)  
+> 증거: [브라우저 검증 증거](./verification/2026-08-02-warm-ux-browser-evidence.md)
 
 ## 1. 승인된 방향
 
@@ -46,15 +47,15 @@ AI 서비스가 아니라 긴급한 상황에서 신뢰할 수 있는 **현장 �
 
 ## 4. Goal Checkpoint
 
-| Checkpoint   | 완료 조건                                           | 상태 |
-| ------------ | --------------------------------------------------- | ---- |
-| UX-0 설계    | 색상, 정보 구조, 금지 표현, 접근성 기준 승인        | 완료 |
-| UX-1 기반    | token, typography, SVG icon, 하단 탐색 test 통과    | 대기 |
-| UX-2 제보    | 한 화면 제보, 원시 좌표 비노출, lifecycle 회귀 없음 | 대기 |
-| UX-3 지도    | 보호소 출처 RPC, marker, legend, 단일 detail sheet  | 대기 |
-| UX-4 확인    | 거리·시간·특징 근거, similarity/topK 비노출         | 대기 |
-| UX-5 내 활동 | 최신 `searching` 사건과 다음 action 우선            | 대기 |
-| UX-6 출시    | format/type/lint/test/build/browser gate 통과       | 대기 |
+| Checkpoint   | 완료 조건                                           | 상태                                          |
+| ------------ | --------------------------------------------------- | --------------------------------------------- |
+| UX-0 설계    | 색상, 정보 구조, 금지 표현, 접근성 기준 승인        | 완료                                          |
+| UX-1 기반    | token, typography, SVG icon, 하단 탐색 test 통과    | 코드·단위 완료 (브라우저 미실행)              |
+| UX-2 제보    | 한 화면 제보, 원시 좌표 비노출, lifecycle 회귀 없음 | 코드·단위 완료 (10초 실측 미실행)             |
+| UX-3 지도    | 보호소 출처 RPC, marker, legend, 단일 detail sheet  | 코드·SQL 계약 완료 (DB apply·브라우저 미실행) |
+| UX-4 확인    | 거리·시간·특징 근거, similarity/topK 비노출         | 코드·단위 완료 (로그인 E2E 미실행)            |
+| UX-5 내 활동 | 최신 `searching` 사건과 다음 action 우선            | 코드·단위 완료 (로그인 E2E 미실행)            |
+| UX-6 출시    | format/type/lint/test/build/browser gate 통과       | 부분 — browser/axe/정책 페이지/DB 미충족      |
 
 ## 5. 운영 안전 기준
 

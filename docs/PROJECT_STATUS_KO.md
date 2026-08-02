@@ -25,19 +25,21 @@
 
 이전의 빈 `main`과 달리 현재 브랜치에는 목격 제보, 유실글, 지도, 추천,
 인증, 알림, 신고·차단, 계정 삭제, 백그라운드 작업과 운영 통제가 통합돼 있다.
-코드 기준 공개 MVP 기능은 상당 부분 구현됐으나 다음 이유로 운영 출시를 승인할
-수는 없다.
+`feat/warm-field-ux-final` worktree에서는 따뜻한 UX 기반·지도/확인·내 활동
+코드와 정적 gate가 통과했으나, 다음 이유로 **Goal COMPLETE와 공개 출시는
+아직 HOLD**다.
 
-1. 전체 테스트 246개와 TypeScript, production build는 통과했다.
-2. ESLint는 React 규칙 오류 2건과 미사용 변수 경고 1건으로 실패한다.
-3. Prettier 검사는 91개 파일에서 실패한다. 로컬 `sim_test/.venv`가 검사 범위에
-   들어간 문제도 포함한다.
+1. 전체 테스트 330개와 TypeScript, ESLint, Prettier, production build,
+   HTTP boundary(8/8)는 worktree에서 통과했다.
+2. 실브라우저 viewport/keyboard/axe/10초 제보 타이밍은 서버 env 승인·Browser
+   세션 부재로 미실행이다. 증거는
+   [warm-ux browser evidence](./verification/2026-08-02-warm-ux-browser-evidence.md).
+3. LoginPrompt는 `/terms`·`/privacy`를 링크하지만 공개 페이지가 없어 404다.
 4. Docker와 `psql`이 없어 빈 Supabase DB migration replay, 실제 권한 행렬,
    동시성 검증을 이 노트북에서 실행하지 못했다.
-5. 연결 가능한 브라우저가 없어 지도·로그인·제보·추천의 실제 모바일 E2E와
-   시각 회귀를 확인하지 못했다.
-6. npm 보안 감사는 네트워크 제한으로 실행되지 않았다. 외부 npm registry에
+5. npm 보안 감사는 네트워크 제한으로 실행되지 않았다. 외부 npm registry에
    의존성 메타데이터를 보내는 작업은 사용자 명시 승인을 받은 뒤 재실행해야 한다.
+6. map-confirmation·activity-release 구현 커밋은 사용자 요청 전까지 pending이다.
 
 ## 3. 저장소 규모
 
@@ -114,33 +116,39 @@ flowchart LR
 
 ## 6. 2026-08-02 로컬 검증 결과
 
-| 명령/검사              | 결과                               | 판정    |
-| ---------------------- | ---------------------------------- | ------- |
-| `npm test`             | 246/246 통과                       | PASS    |
-| `npm run typecheck`    | 오류 0                             | PASS    |
-| `npm run build`        | Next 16.2.11, 40개 route/page 생성 | PASS    |
-| `npm run lint`         | 오류 2, 경고 1                     | FAIL    |
-| `npm run format:check` | 91개 파일 경고                     | FAIL    |
-| 홈 HTTP smoke          | `200`                              | PASS    |
-| 지도 HTTP smoke        | `200`                              | PASS    |
-| health HTTP smoke      | `200`                              | PASS    |
-| 브라우저 E2E           | 연결 가능한 브라우저 없음          | NOT RUN |
-| DB replay/권한/동시성  | Docker·`psql` 없음                 | NOT RUN |
-| production `npm audit` | 외부 registry 승인 필요            | NOT RUN |
+> worktree `pinpaw-warm-ux-final` / branch `feat/warm-field-ux-final` 기준.
+> 상세 브라우저 대체 증거:
+> [docs/verification/2026-08-02-warm-ux-browser-evidence.md](./verification/2026-08-02-warm-ux-browser-evidence.md)
 
-### 현재 lint 차단 항목
+| 명령/검사                  | 결과                                     | 판정    |
+| -------------------------- | ---------------------------------------- | ------- |
+| `npm test`                 | 330/330 통과                             | PASS    |
+| `npm run typecheck`        | 오류 0                                   | PASS    |
+| `npm run build`            | Next 16.2.11, route/page 생성            | PASS    |
+| `npm run lint`             | 오류 0                                   | PASS    |
+| `npm run format:check`     | Prettier 전부 통과 (`.venv` ignore 추가) | PASS    |
+| `npm run test:integration` | HTTP boundary 8/8                        | PASS    |
+| 홈/지도/health smoke       | integration harness 내 포함              | PASS    |
+| 브라우저 E2E               | 서버 env 승인·Browser 탭 없음            | NOT RUN |
+| axe-core 페이지 스캔       | axe 4.11.0 존재, DOM 주입 세션 없음      | NOT RUN |
+| 10초 제보 중앙값           | 실측 없음                                | NOT RUN |
+| `/terms`·`/privacy`        | 링크만 존재, 페이지 없음                 | GAP     |
+| DB replay/권한/동시성      | Docker·`psql` 없음                       | NOT RUN |
+| production `npm audit`     | 외부 registry 승인 필요                  | NOT RUN |
 
-- `src/features/auth/components/AuthFeedbackBanner.tsx`: effect 안의 동기
-  `setState`로 `react-hooks/set-state-in-effect` 오류
-- `src/features/map/components/NaverMap.tsx`: render 중 ref 갱신으로
-  `react-hooks/refs` 오류
-- `src/app/(tabs)/recommend/page.tsx`: 사용하지 않는 `session` 경고
+### 해소된 lint/format 차단 항목
 
-### formatting 범위 문제
+- `AuthFeedbackBanner`: effect 내 `setMessage` 제거, `dismissedCode` + render latch
+- `NaverMap`: `initMapRef.current`를 effect에서 갱신, guest `mapLayer`는 render 조정
+- `useRecommendations`: effect 동기 `setState` 제거(응답 콜백에서만 publish)
+- `.prettierignore`에 `**/.venv/**` 추가 후 repository format baseline 적용
 
-소스와 문서의 실제 formatting 차이 외에 `sim_test/.venv` 내부의 제3자 파일도
-Prettier 대상에 포함됐다. `.prettierignore`에 `**/.venv/**`를 추가한 뒤 앱 코드와
-문서의 실제 formatting 차이를 별도로 정리해야 한다.
+### 남은 Goal COMPLETE blocker
+
+1. 실브라우저 viewport/keyboard/axe/10초 타이밍 증거
+2. `/terms`·`/privacy` 공개 페이지(또는 링크 정책 재정의)
+3. Docker/`psql` migration reset·permission matrix(사용자 승인 후)
+4. map-confirmation·activity-release 커밋 및(필요 시) production SQL 적용 승인
 
 ## 7. 새 노트북 의존성 검토
 

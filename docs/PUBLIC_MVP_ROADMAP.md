@@ -3,6 +3,10 @@
 > **최신 상태 안내 (2026-08-02):** 이 문서의 과제 정의와 2026-07-25 진행
 > 기록은 유지한다. 현재 코드 규모, 최신 검증 결과, 의존성 설치 상태와 출시
 > 판정은 [현재 프로젝트 진행 현황](./PROJECT_STATUS_KO.md)을 우선한다.
+> 따뜻한 UX Goal은 worktree에서 format/lint/typecheck/test(330)/build/
+> integration(8/8)까지 통과했으나 **브라우저·정책 페이지·DB 환경 gate 미충족으로
+> COMPLETE가 아니다.** 증거:
+> [warm-ux browser evidence](./verification/2026-08-02-warm-ux-browser-evidence.md).
 
 > 기준일: 2026-07-25  
 > 최우선 성과: **운영 안정성**  
