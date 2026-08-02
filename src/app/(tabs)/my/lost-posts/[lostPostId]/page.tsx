@@ -149,7 +149,8 @@ function LostPostDetailContent() {
       petName: item.pet_name ?? "",
       traitColor: item.trait_color ?? "",
       traitSize:
-        item.trait_size && ["small", "medium", "large", "unknown"].includes(item.trait_size)
+        item.trait_size &&
+        ["small", "medium", "large", "unknown"].includes(item.trait_size)
           ? item.trait_size
           : item.trait_size === "소"
             ? "small"
@@ -434,9 +435,7 @@ function LostPostDetailContent() {
           targetType="lost-post"
           targetId={item.id}
           onClose={() => setReportOpen(false)}
-          onCompleted={(message) =>
-            setToast({ message, type: "success" })
-          }
+          onCompleted={(message) => setToast({ message, type: "success" })}
         />
       ) : null}
 
@@ -533,7 +532,9 @@ function LostPostDetailContent() {
                 <label className="mb-1 block text-sm font-medium">종</label>
                 <select
                   value={
-                    DOG_BREEDS.includes(editForm.traitSpecies as (typeof DOG_BREEDS)[number])
+                    DOG_BREEDS.includes(
+                      editForm.traitSpecies as (typeof DOG_BREEDS)[number]
+                    )
                       ? editForm.traitSpecies
                       : SPECIES_UNKNOWN
                   }
@@ -569,7 +570,9 @@ function LostPostDetailContent() {
                           if (selected) {
                             setEditForm((prev) => ({
                               ...prev,
-                              traitTags: prev.traitTags.filter((id) => id !== tag.id),
+                              traitTags: prev.traitTags.filter(
+                                (id) => id !== tag.id
+                              ),
                             }));
                           } else if (!disabled) {
                             setEditForm((prev) => ({
@@ -584,7 +587,7 @@ function LostPostDetailContent() {
                           selected
                             ? "bg-primary text-white"
                             : "bg-muted text-muted-foreground hover:bg-muted/80",
-                          disabled && "opacity-50 cursor-not-allowed"
+                          disabled && "cursor-not-allowed opacity-50"
                         )}
                       >
                         {tag.labelKo}

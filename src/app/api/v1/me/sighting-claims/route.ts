@@ -87,10 +87,9 @@ export async function DELETE(request: Request) {
   }
   const sightingId = parsed.value;
 
-  const { error } = await supabase.rpc(
-    "unclaim_sighting_from_all_my_posts",
-    { p_sighting_id: sightingId }
-  );
+  const { error } = await supabase.rpc("unclaim_sighting_from_all_my_posts", {
+    p_sighting_id: sightingId,
+  });
 
   if (error) {
     logger.error("sighting_claim.delete_failed", { error, status: 500 });

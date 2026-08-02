@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { getOAuthReturnPath, authFeedbackMessage } = await import(
-  "../../src/shared/lib/oauth-return-path.ts"
-);
+const { getOAuthReturnPath, authFeedbackMessage } =
+  await import("../../src/shared/lib/oauth-return-path.ts");
 
 test("preserves pathname and search for OAuth return", () => {
   assert.equal(

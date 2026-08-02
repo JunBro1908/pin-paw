@@ -11,10 +11,7 @@ const source = readFileSync(
 );
 
 test("bookmark sightings effect does not clear default-layer markers", () => {
-  assert.match(
-    source,
-    /if \(mapLayer !== "bookmark"\) return;/
-  );
+  assert.match(source, /if \(mapLayer !== "bookmark"\) return;/);
   assert.doesNotMatch(
     source,
     /paths:\s*mapLayer === "bookmark" \? pathData : \[\]/

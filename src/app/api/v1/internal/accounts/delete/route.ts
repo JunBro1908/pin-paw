@@ -62,14 +62,14 @@ export async function POST(request: Request) {
     };
     const result = await processAccountDeletionJob(job, {
       ensureBanned: async (userId) => {
-        const { error: banError } =
-          await supabase.auth.admin.updateUserById(userId, {
+        const { error: banError } = await supabase.auth.admin.updateUserById(
+          userId,
+          {
             ban_duration: "876000h",
-          });
+          }
+        );
         const alreadyDeleted =
-          banError != null &&
-          "status" in banError &&
-          banError.status === 404;
+          banError != null && "status" in banError && banError.status === 404;
         return { ok: banError == null || alreadyDeleted };
       },
       removeStorage: async (bucket, keys) => {

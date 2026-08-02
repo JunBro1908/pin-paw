@@ -132,11 +132,7 @@ export function parseOperationalSnapshot(
     !isBoundedNumber(api.readP95Ms, 60_000, true) ||
     !isBoundedNumber(api.writeP95Ms, 60_000, true) ||
     !isRecord(embedding) ||
-    !hasExactKeys(embedding, [
-      "queueDepth",
-      "oldestAgeSeconds",
-      "failures",
-    ]) ||
+    !hasExactKeys(embedding, ["queueDepth", "oldestAgeSeconds", "failures"]) ||
     !isBoundedNumber(embedding.queueDepth, MAX_COUNT) ||
     !isBoundedNumber(embedding.oldestAgeSeconds, 31_536_000) ||
     !isBoundedNumber(embedding.failures, MAX_COUNT) ||
@@ -207,8 +203,7 @@ export function evaluateOperationalSnapshot(
     alerts.push({
       id: "api.availability",
       metric: "availabilityPercent",
-      severity:
-        snapshot.api.availabilityPercent < 99 ? "critical" : "warning",
+      severity: snapshot.api.availabilityPercent < 99 ? "critical" : "warning",
       value: snapshot.api.availabilityPercent,
       threshold: SLO_THRESHOLDS.availabilityPercent,
     });
@@ -216,9 +211,7 @@ export function evaluateOperationalSnapshot(
 
   if (snapshot.api.errorRatePercent === null) {
     missing("api.error_rate", "errorRatePercent");
-  } else if (
-    snapshot.api.errorRatePercent >= SLO_THRESHOLDS.errorRatePercent
-  ) {
+  } else if (snapshot.api.errorRatePercent >= SLO_THRESHOLDS.errorRatePercent) {
     alerts.push({
       id: "api.error_rate",
       metric: "errorRatePercent",
@@ -298,13 +291,7 @@ export function evaluateOperationalSnapshot(
   ] as const;
   for (const [id, metric, value, threshold] of thresholdMetrics) {
     push(
-      thresholdAlert(
-        id,
-        metric,
-        value,
-        threshold.warning,
-        threshold.critical
-      )
+      thresholdAlert(id, metric, value, threshold.warning, threshold.critical)
     );
   }
 

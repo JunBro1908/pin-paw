@@ -224,8 +224,7 @@ export async function POST(request: Request) {
             const recorded = await recordOperationalCounter(supabase, {
               metric: "embedding_request",
               eventCount: 1,
-              estimatedCostUsdMicros:
-                estimateEmbeddingCostUsdMicros(texts),
+              estimatedCostUsdMicros: estimateEmbeddingCostUsdMicros(texts),
             });
             if (!recorded) {
               logger.warn("embedding.cost_metric_failed");

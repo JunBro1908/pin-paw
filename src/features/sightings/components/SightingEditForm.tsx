@@ -85,7 +85,9 @@ export function SightingEditForm({ sightingId }: { sightingId: string }) {
         );
       })
       .catch((cause) =>
-        setError(cause instanceof Error ? cause.message : "오류가 발생했습니다.")
+        setError(
+          cause instanceof Error ? cause.message : "오류가 발생했습니다."
+        )
       );
   }, [session?.access_token, sightingId]);
 
@@ -311,7 +313,9 @@ export function SightingEditForm({ sightingId }: { sightingId: string }) {
         <select
           className={`${selectClass} mt-1`}
           value={item.trait_color ?? ""}
-          onChange={(event) => update("trait_color", event.target.value || null)}
+          onChange={(event) =>
+            update("trait_color", event.target.value || null)
+          }
         >
           <option value="">선택</option>
           {TRAIT_COLOR_OPTIONS.map((color) => (

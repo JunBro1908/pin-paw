@@ -3,9 +3,8 @@ import test from "node:test";
 
 let processAccountDeletionJob;
 try {
-  ({ processAccountDeletionJob } = await import(
-    "../../src/shared/lib/account-deletion-worker.ts"
-  ));
+  ({ processAccountDeletionJob } =
+    await import("../../src/shared/lib/account-deletion-worker.ts"));
 } catch {
   // RED: the deletion worker orchestration does not exist yet.
 }

@@ -1,9 +1,4 @@
-type TraitTexts = [
-  string | null,
-  string | null,
-  string | null,
-  string | null,
-];
+type TraitTexts = [string | null, string | null, string | null, string | null];
 
 interface EmbeddingJobInput {
   id: string;
@@ -76,9 +71,7 @@ export async function processEmbeddingJob(
   job: EmbeddingJobInput,
   dependencies: EmbeddingJobDependencies
 ): Promise<EmbeddingJobResult> {
-  const indices = [0, 1, 2, 3].filter(
-    (index) => job.traitTexts[index] != null
-  );
+  const indices = [0, 1, 2, 3].filter((index) => job.traitTexts[index] != null);
   const texts = indices.map((index) => job.traitTexts[index] as string);
 
   let vectors: number[][];

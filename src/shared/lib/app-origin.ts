@@ -20,10 +20,7 @@ export function parseAppOrigin(value: string | undefined): AppOriginResult {
       !url.search &&
       !url.hash;
 
-    if (
-      (url.protocol !== "https:" && !isLoopbackHttp) ||
-      !isExactOrigin
-    ) {
+    if ((url.protocol !== "https:" && !isLoopbackHttp) || !isExactOrigin) {
       return {
         ok: false,
         error: "APP_ORIGIN must be an exact HTTPS origin",

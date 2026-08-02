@@ -247,9 +247,8 @@ export function LostPostForm() {
         properties: { source: "lost_post_form" },
       });
       setToast({ message: "유실글이 등록되었습니다.", type: "success" });
-      const { invalidateMyLostPostsCache } = await import(
-        "@/features/lost-posts/hooks/useMyLostPosts"
-      );
+      const { invalidateMyLostPostsCache } =
+        await import("@/features/lost-posts/hooks/useMyLostPosts");
       invalidateMyLostPostsCache();
       setTimeout(() => router.push("/my"), 1000);
     } catch (err) {

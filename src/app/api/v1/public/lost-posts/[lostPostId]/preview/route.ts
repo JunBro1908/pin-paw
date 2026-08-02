@@ -35,7 +35,11 @@ export async function GET(request: Request, context: RouteContext) {
 
   if (error) {
     logger.error("share_preview.lookup_failed", { error, status: 500 });
-    return fail(ApiErrorCode.INTERNAL_ERROR, "미리보기 조회에 실패했습니다.", 500);
+    return fail(
+      ApiErrorCode.INTERNAL_ERROR,
+      "미리보기 조회에 실패했습니다.",
+      500
+    );
   }
 
   const row = Array.isArray(data) ? data[0] : data;
@@ -64,15 +68,17 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   try {
-    assertSharePreviewIsSafe(
-      preview as unknown as Record<string, unknown>
-    );
+    assertSharePreviewIsSafe(preview as unknown as Record<string, unknown>);
   } catch (cause) {
     logger.error("share_preview.safety_failed", {
       error: cause,
       status: 500,
     });
-    return fail(ApiErrorCode.INTERNAL_ERROR, "미리보기 검증에 실패했습니다.", 500);
+    return fail(
+      ApiErrorCode.INTERNAL_ERROR,
+      "미리보기 검증에 실패했습니다.",
+      500
+    );
   }
 
   return ok(preview);

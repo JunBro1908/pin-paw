@@ -1,9 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const { createAuthenticatedListCache } = await import(
-  "../../src/shared/lib/client-resource-cache.ts"
-);
+const { createAuthenticatedListCache } =
+  await import("../../src/shared/lib/client-resource-cache.ts");
 
 test("authenticated list cache reuses fresh entries and dedupes in-flight loads", async () => {
   let calls = 0;

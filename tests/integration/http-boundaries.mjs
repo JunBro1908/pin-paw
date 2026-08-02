@@ -110,7 +110,10 @@ try {
     undefined,
     503
   );
-  assert.match(readinessResponse.headers.get("cache-control") ?? "", /no-store/);
+  assert.match(
+    readinessResponse.headers.get("cache-control") ?? "",
+    /no-store/
+  );
   const readinessBody = JSON.stringify(await readinessResponse.json());
   assert.doesNotMatch(
     readinessBody,

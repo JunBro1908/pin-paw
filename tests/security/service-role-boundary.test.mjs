@@ -11,7 +11,8 @@ async function collectTypeScriptFiles(root) {
     for (const entry of await readdir(directory, { withFileTypes: true })) {
       const target = path.join(directory, entry.name);
       if (entry.isDirectory()) pending.push(target);
-      if (entry.isFile() && /\.(?:ts|tsx)$/.test(entry.name)) files.push(target);
+      if (entry.isFile() && /\.(?:ts|tsx)$/.test(entry.name))
+        files.push(target);
     }
   }
   return files;

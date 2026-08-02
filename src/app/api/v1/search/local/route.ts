@@ -115,8 +115,7 @@ export async function GET(request: Request) {
     });
     const metricRecorded = await recordOperationalCounter(supabase, {
       metric: "naver_local_search",
-      estimatedCostUsdMicros:
-        COST_ESTIMATES_USD_MICROS.naverLocalSearchRequest,
+      estimatedCostUsdMicros: COST_ESTIMATES_USD_MICROS.naverLocalSearchRequest,
     });
     if (!metricRecorded) {
       logger.warn("search.cost_metric_failed");

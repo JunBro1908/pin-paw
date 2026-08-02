@@ -5,9 +5,8 @@ let processEmbeddingJob;
 let getEmbeddingWorkerStatus;
 
 try {
-  ({ processEmbeddingJob, getEmbeddingWorkerStatus } = await import(
-    "../../src/shared/lib/embedding-job-processor.ts"
-  ));
+  ({ processEmbeddingJob, getEmbeddingWorkerStatus } =
+    await import("../../src/shared/lib/embedding-job-processor.ts"));
 } catch {
   // RED: the injectable worker boundary does not exist yet.
 }

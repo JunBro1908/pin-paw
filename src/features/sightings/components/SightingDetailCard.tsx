@@ -69,7 +69,7 @@ export function SightingDetailCard({
       <div className="max-h-[min(70vh,640px)] overflow-y-auto">
         <div className="flex flex-col">
           {sighting.photo_keys?.[0] && (
-            <div className="relative aspect-[4/3] w-full max-h-56 overflow-hidden bg-gray-100 sm:max-h-64 dark:bg-gray-800">
+            <div className="relative aspect-[4/3] max-h-56 w-full overflow-hidden bg-gray-100 sm:max-h-64 dark:bg-gray-800">
               <Image
                 src={getImageUrl(sighting.photo_keys[0])}
                 alt="목격 사진"

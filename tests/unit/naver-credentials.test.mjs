@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-const {
-  getNaverMapsClientId,
-  getNaverSearchCredentials,
-} = await import("../../src/shared/lib/naver-credentials.ts");
+const { getNaverMapsClientId, getNaverSearchCredentials } =
+  await import("../../src/shared/lib/naver-credentials.ts");
 
 test("search credentials prefer NEXT_PUBLIC_NAVER_* names", () => {
   assert.deepEqual(

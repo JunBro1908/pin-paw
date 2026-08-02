@@ -4,9 +4,8 @@ import test from "node:test";
 let getAuthenticatedListView;
 
 try {
-  ({ getAuthenticatedListView } = await import(
-    "../../src/shared/lib/authenticated-list.ts"
-  ));
+  ({ getAuthenticatedListView } =
+    await import("../../src/shared/lib/authenticated-list.ts"));
 } catch {
   // RED: token-bound list state does not exist yet.
 }
@@ -18,14 +17,11 @@ test("does not expose a previous account snapshot after the token changes", () =
     error: null,
   };
 
-  assert.deepEqual(
-    getAuthenticatedListView?.("new-token", previousSnapshot),
-    {
-      loading: true,
-      items: [],
-      error: null,
-    }
-  );
+  assert.deepEqual(getAuthenticatedListView?.("new-token", previousSnapshot), {
+    loading: true,
+    items: [],
+    error: null,
+  });
   assert.deepEqual(getAuthenticatedListView?.(undefined, previousSnapshot), {
     loading: false,
     items: [],

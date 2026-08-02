@@ -94,4 +94,6 @@ async function verifySingleEmbeddingLease() {
 await verifyAtomicRateLimit();
 await verifySingleEmbeddingLease();
 
-console.log("Database concurrency checks passed (rate limit 50-way, lease 20-way)");
+console.log(
+  "Database concurrency checks passed (rate limit 50-way, lease 20-way)"
+);

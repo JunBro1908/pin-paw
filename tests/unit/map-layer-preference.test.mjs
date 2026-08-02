@@ -24,7 +24,10 @@ test("NaverMap restores and writes map layer preference", async () => {
   assert.match(source, /readStoredMapLayer/);
   assert.match(source, /writeStoredMapLayer/);
   assert.match(source, /resolveMapLayerForSession/);
-  assert.match(source, /useState<MapLayer>\(\(\) => readStoredMapLayer\(\)\)/);
+  assert.match(
+    source,
+    /useState<MapLayer>\(\s*\(\)\s*=>\s*readStoredMapLayer\(\)\s*\)/
+  );
 });
 
 test("NaverMap refetches bookmark layer after claim mutations succeed", async () => {

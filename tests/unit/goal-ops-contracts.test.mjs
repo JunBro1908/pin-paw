@@ -31,12 +31,15 @@ test("concurrency harness encodes 50-way rate limit and 20-way lease claims", as
 test("status history rejects illegal terminal transitions", async () => {
   const sql = await readFile(statusHistoryPath, "utf8");
   assert.match(sql, /invalid_lost_post_status_transition/);
-  assert.match(sql, /old\.status = 'searching' and new\.status in \('found', 'closed'\)/);
-  assert.match(sql, /old\.status = 'found' and new\.status in \('searching', 'closed'\)/);
-  assert.doesNotMatch(
+  assert.match(
     sql,
-    /old\.status = 'closed' and new\.status/
+    /old\.status = 'searching' and new\.status in \('found', 'closed'\)/
   );
+  assert.match(
+    sql,
+    /old\.status = 'found' and new\.status in \('searching', 'closed'\)/
+  );
+  assert.doesNotMatch(sql, /old\.status = 'closed' and new\.status/);
 });
 
 test("embedding jobs and rate limits are service-role scoped atomic RPCs", async () => {

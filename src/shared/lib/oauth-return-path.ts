@@ -2,10 +2,7 @@
  * Capture the in-app path to restore after OAuth, including query string.
  * Rejects protocol-relative and backslash open-redirect shapes.
  */
-export function getOAuthReturnPath(
-  pathname: string,
-  search = ""
-): string {
+export function getOAuthReturnPath(pathname: string, search = ""): string {
   const path = pathname.startsWith("/") ? pathname : `/${pathname}`;
   const withSearch = `${path}${search.startsWith("?") || search === "" ? search : `?${search}`}`;
   if (

@@ -37,7 +37,10 @@ test("auth map markers unlock precise points on zoom without public zoom cap", a
   assert.match(sql, /'type',\s*'point'/);
   assert.match(sql, /'location_precision',\s*'precise'/);
   assert.match(sql, /users_are_blocked/);
-  assert.match(sql, /grant\s+execute[\s\S]*get_block_filtered_sighting_markers[\s\S]*\bto\s+authenticated\b/i);
+  assert.match(
+    sql,
+    /grant\s+execute[\s\S]*get_block_filtered_sighting_markers[\s\S]*\bto\s+authenticated\b/i
+  );
   assert.doesNotMatch(
     sql,
     /grant\s+execute[\s\S]*get_block_filtered_sighting_markers[\s\S]*\bto\s+anon\b/i

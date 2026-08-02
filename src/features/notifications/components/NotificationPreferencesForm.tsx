@@ -35,7 +35,9 @@ export function NotificationPreferencesForm() {
       .then(async (response) => {
         const result = await response.json();
         if (!response.ok || !result.success) {
-          throw new Error(result.error?.message ?? "설정을 불러오지 못했습니다.");
+          throw new Error(
+            result.error?.message ?? "설정을 불러오지 못했습니다."
+          );
         }
         const row = result.data ?? {};
         setPrefs({

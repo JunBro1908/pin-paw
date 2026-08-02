@@ -13,10 +13,7 @@ import crypto from "crypto";
  * 지도상의 목격 제보를 클러스터링하여 반환합니다.
  */
 export async function GET(request: Request) {
-  const logger = createRequestLogger(
-    request,
-    "/api/v1/public/map/clusters"
-  );
+  const logger = createRequestLogger(request, "/api/v1/public/map/clusters");
   const { searchParams } = new URL(request.url);
 
   const viewportResult = parseMapViewportQuery({

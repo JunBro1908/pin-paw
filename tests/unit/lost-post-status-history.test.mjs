@@ -8,11 +8,17 @@ const migrationPath =
 test("status history records the actor and every changed state", async () => {
   const sql = await readFile(migrationPath, "utf8");
 
-  assert.match(sql, /create table if not exists public\.lost_post_status_history/i);
+  assert.match(
+    sql,
+    /create table if not exists public\.lost_post_status_history/i
+  );
   assert.match(sql, /from_status public\.lost_status/i);
   assert.match(sql, /to_status public\.lost_status not null/i);
   assert.match(sql, /changed_by uuid null references auth\.users/i);
-  assert.match(sql, /values \(new\.id, old\.status, new\.status, auth\.uid\(\)\)/i);
+  assert.match(
+    sql,
+    /values \(new\.id, old\.status, new\.status, auth\.uid\(\)\)/i
+  );
   assert.match(sql, /after update of status on public\.lost_posts/i);
 });
 
@@ -34,7 +40,10 @@ test("state machine keeps closed terminal and permits a mistaken found reopening
 test("only the lost-post owner can read history and browser roles cannot write it", async () => {
   const sql = await readFile(migrationPath, "utf8");
 
-  assert.match(sql, /alter table public\.lost_post_status_history enable row level security/i);
+  assert.match(
+    sql,
+    /alter table public\.lost_post_status_history enable row level security/i
+  );
   assert.match(sql, /lp\.owner_id = auth\.uid\(\)/i);
   assert.match(
     sql,
@@ -55,10 +64,7 @@ test("history API validates ownership, pagination, and returns no actor identifi
   assert.match(route, /isValidUuid\(lostPostId\)/);
   assert.match(route, /parsePagination\(/);
   assert.match(route, /\.eq\(\s*"owner_id",\s*user\.id\s*\)/);
-  assert.match(
-    route,
-    /\.select\("id, from_status, to_status, changed_at"\)/
-  );
+  assert.match(route, /\.select\("id, from_status, to_status, changed_at"\)/);
   assert.doesNotMatch(route, /changed_by/);
 });
 

@@ -131,7 +131,7 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
         </Link>
         <Link
           href={`/my/sightings/${item.id}/edit`}
-          className="text-primary ml-3 mt-2 inline-block text-sm font-medium hover:underline"
+          className="text-primary mt-2 ml-3 inline-block text-sm font-medium hover:underline"
         >
           수정
         </Link>

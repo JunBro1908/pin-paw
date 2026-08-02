@@ -53,9 +53,7 @@ export function getTraitTexts(
     attrs.traitSize
       ? `이 유실 반려동물의 크기는 ${attrs.traitSize}입니다.`
       : null,
-    attrs.note
-      ? `이 유실 반려동물에 대한 메모는 ${attrs.note}입니다.`
-      : null,
+    attrs.note ? `이 유실 반려동물에 대한 메모는 ${attrs.note}입니다.` : null,
   ];
 }
 

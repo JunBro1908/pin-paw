@@ -4,8 +4,7 @@ import test from "node:test";
 
 const migrationPath =
   "supabase/migrations/20260726050000_shelter_animal_imports.sql";
-const routePath =
-  "src/app/api/v1/internal/shelter-animals/import/route.ts";
+const routePath = "src/app/api/v1/internal/shelter-animals/import/route.ts";
 const vercelPath = "vercel.json";
 
 async function source(path) {
@@ -15,7 +14,10 @@ async function source(path) {
 test("shelter import migration locks the mapping table and RPC to service_role", async () => {
   const sql = await source(migrationPath);
 
-  assert.match(sql, /create table if not exists public\.shelter_animal_imports/i);
+  assert.match(
+    sql,
+    /create table if not exists public\.shelter_animal_imports/i
+  );
   assert.match(
     sql,
     /revoke all on table public\.shelter_animal_imports[\s\S]*from public, anon, authenticated/i

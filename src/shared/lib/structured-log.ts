@@ -203,8 +203,9 @@ export interface StructuredLogger {
 export function createLogger(
   baseContext: LogContext = {},
   sink: LogSink = defaultLogSink,
-  errorReporter: ErrorReporter | undefined =
-    sink === defaultLogSink ? defaultErrorReporter : undefined
+  errorReporter: ErrorReporter | undefined = sink === defaultLogSink
+    ? defaultErrorReporter
+    : undefined
 ): StructuredLogger {
   const write = (level: LogLevel, event: string, context: LogContext = {}) => {
     const entry = createStructuredLogEntry(level, event, {
@@ -248,7 +249,8 @@ export function createRequestLogger(
   const logger = createLogger(
     { requestId, route },
     sink,
-    errorReporter ?? (sink === defaultLogSink ? defaultErrorReporter : undefined)
+    errorReporter ??
+      (sink === defaultLogSink ? defaultErrorReporter : undefined)
   );
 
   return {

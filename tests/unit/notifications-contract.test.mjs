@@ -99,14 +99,8 @@ test("recommendation notify dedupe_key parenthesizes jsonb extraction", async ()
     "utf8"
   );
 
-  assert.match(
-    sql,
-    /\|\|\s*\(candidate\.value\s*->>\s*'sightingId'\)/
-  );
-  assert.doesNotMatch(
-    sql,
-    /\|\|\s*candidate\.value\s*->>\s*'sightingId'/
-  );
+  assert.match(sql, /\|\|\s*\(candidate\.value\s*->>\s*'sightingId'\)/);
+  assert.doesNotMatch(sql, /\|\|\s*candidate\.value\s*->>\s*'sightingId'/);
 });
 
 test("anonymous sightings are skipped and status recipients require a claim relationship", async () => {

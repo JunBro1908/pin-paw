@@ -24,7 +24,9 @@ export function LostPostStatusHistory({ lostPostId }: { lostPostId: string }) {
       .then(async (response) => {
         const result = await response.json();
         if (!response.ok || !result.success) {
-          throw new Error(result.error?.message ?? "이력을 불러오지 못했습니다.");
+          throw new Error(
+            result.error?.message ?? "이력을 불러오지 못했습니다."
+          );
         }
         setItems((result.data?.items ?? result.data ?? []) as HistoryItem[]);
       })

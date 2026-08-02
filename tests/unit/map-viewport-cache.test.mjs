@@ -19,10 +19,7 @@ test("default auth warm viewport snaps to a stable cache key", () => {
     true,
     "default"
   );
-  assert.equal(
-    typeof key,
-    "string"
-  );
+  assert.equal(typeof key, "string");
   assert.match(key, /^true:default:/);
   assert.equal(
     mapDomain.buildMapCacheKey(

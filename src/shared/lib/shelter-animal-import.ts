@@ -24,7 +24,10 @@ export function isShelterProcessActive(processState: string): boolean {
   return /보호|공고/.test(processState);
 }
 
-export function parseHappenDate(happenDt: string, now = new Date()): Date | null {
+export function parseHappenDate(
+  happenDt: string,
+  now = new Date()
+): Date | null {
   const raw = happenDt.trim();
   if (!/^\d{8}$/.test(raw)) return null;
   const year = Number(raw.slice(0, 4));
@@ -43,7 +46,9 @@ export function parseHappenDate(happenDt: string, now = new Date()): Date | null
 }
 
 export function parseWeightKg(weight: string): number | null {
-  const match = weight.replace(/,/g, "").match(/(\d+(?:\.\d+)?)\s*(?:kg|Kg|KG)?/);
+  const match = weight
+    .replace(/,/g, "")
+    .match(/(\d+(?:\.\d+)?)\s*(?:kg|Kg|KG)?/);
   if (!match) return null;
   const value = Number(match[1]);
   return Number.isFinite(value) ? value : null;
@@ -298,9 +303,7 @@ export interface ShelterImportDeps {
   fetchImpl?: typeof fetch;
   listExistingDesertionNos: (
     desertionNos: string[]
-  ) => Promise<
-    { ok: true; ids: Set<string> } | { ok: false }
-  >;
+  ) => Promise<{ ok: true; ids: Set<string> } | { ok: false }>;
   uploadSightingPhoto: (input: {
     objectKey: string;
     bytes: Uint8Array;
@@ -418,7 +421,9 @@ export async function fetchAbandonmentPage(input: {
     const records = rows
       .map(normalizeShelterAnimalItem)
       .filter((row): row is ShelterAnimalRecord => row != null);
-    const totalCount = Number(body.response?.body?.totalCount ?? records.length);
+    const totalCount = Number(
+      body.response?.body?.totalCount ?? records.length
+    );
     return {
       ok: true,
       records,
@@ -447,11 +452,7 @@ async function geocodeRecord(
   | { ok: false }
 > {
   for (const candidate of buildGeocodeQueries(record)) {
-    const result = await fetchNaverLocalSearch(
-      candidate.query,
-      env,
-      fetchImpl
-    );
+    const result = await fetchNaverLocalSearch(candidate.query, env, fetchImpl);
     if (!result.ok) continue;
     const place = pickFirstGeocodedPlace(result.items);
     if (!place) continue;
@@ -513,9 +514,7 @@ async function downloadPhoto(
   }
 }
 
-export async function runShelterAnimalImport(
-  deps: ShelterImportDeps
-): Promise<
+export async function runShelterAnimalImport(deps: ShelterImportDeps): Promise<
   | { ok: true; summary: ShelterImportSummary }
   | {
       ok: false;

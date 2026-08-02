@@ -24,7 +24,10 @@ test("LocationPicker also re-inits cached Naver SDK via onReady + mount effect",
     "utf8"
   );
   assert.match(source, /onReady=\{initMap\}/);
-  assert.match(source, /useEffect\(\s*\(\)\s*=>\s*\{\s*initMap\(\);\s*\},\s*\[initMap\]\s*\)/);
+  assert.match(
+    source,
+    /useEffect\(\s*\(\)\s*=>\s*\{\s*initMap\(\);\s*\},\s*\[initMap\]\s*\)/
+  );
   assert.match(source, /aria-label="위치 선택 닫기"/);
 });
 

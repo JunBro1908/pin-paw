@@ -41,10 +41,7 @@ test("domain creation serializes matching idempotency keys inside the transactio
   assert.match(sql, /p_request_hash is null/i);
   assert.match(sql, /p_ip_hash is null/i);
   assert.match(sql, /pg_advisory_xact_lock/i);
-  assert.match(
-    sql,
-    /from public\.idempotency_keys[\s\S]*for update/i
-  );
+  assert.match(sql, /from public\.idempotency_keys[\s\S]*for update/i);
   assert.match(
     sql,
     /idempotency_conflict/i,
@@ -65,10 +62,7 @@ test("domain row, consumed intents, and cached response share one database trans
     );
   }
 
-  assert.match(
-    sql,
-    /jsonb_build_object\(\s*'success', true,\s*'data'/i
-  );
+  assert.match(sql, /jsonb_build_object\(\s*'success', true,\s*'data'/i);
   assert.match(sql, /return v_(?:sighting|lost_post)/i);
 });
 
@@ -91,7 +85,9 @@ test("create routes delegate idempotency to the atomic domain RPC", async () => 
   }
   assert.ok(
     sighting.indexOf("const replay = await getIdempotencyReplay") <
-      sighting.indexOf("const rateLimitResult = await checkRateLimitDimensions"),
+      sighting.indexOf(
+        "const rateLimitResult = await checkRateLimitDimensions"
+      ),
     "cached retries must not be rejected by the create-request rate limit"
   );
 });

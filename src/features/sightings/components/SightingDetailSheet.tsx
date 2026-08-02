@@ -33,7 +33,7 @@ export function SightingDetailSheet({
       onWheel={stopPropagation}
       onClick={stopPropagation}
     >
-      <div className="w-full min-w-0 max-w-md">{children}</div>
+      <div className="w-full max-w-md min-w-0">{children}</div>
     </div>
   );
 }

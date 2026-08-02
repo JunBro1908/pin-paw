@@ -21,7 +21,13 @@ type MonitoringSpan = UnknownRecord & {
 };
 
 const GENERIC_ERROR_MESSAGE = "Application error";
-const SAFE_CONTEXT_KEYS = new Set(["app", "browser", "device", "os", "runtime"]);
+const SAFE_CONTEXT_KEYS = new Set([
+  "app",
+  "browser",
+  "device",
+  "os",
+  "runtime",
+]);
 const SAFE_TAG_KEYS = new Set([
   "boundary",
   "digest",

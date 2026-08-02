@@ -16,7 +16,10 @@ interface AuthDeleteResult extends StepResult {
 
 interface AccountDeletionDependencies {
   ensureBanned(userId: string): Promise<StepResult>;
-  removeStorage(bucket: "lost" | "sightings", keys: string[]): Promise<StepResult>;
+  removeStorage(
+    bucket: "lost" | "sightings",
+    keys: string[]
+  ): Promise<StepResult>;
   cleanupDatabase(job: AccountDeletionJob): Promise<StepResult>;
   deleteAuthUser(userId: string): Promise<AuthDeleteResult>;
   complete(job: AccountDeletionJob): Promise<StepResult>;

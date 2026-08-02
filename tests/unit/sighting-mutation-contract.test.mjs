@@ -21,7 +21,10 @@ test("owner sighting update is one atomic, idempotent transaction", async () => 
   assert.match(sql, /hidden_at is null/i);
   assert.match(sql, /archived_at is null/i);
   assert.match(sql, /cardinality\(p_photo_keys\) not between 1 and 3/i);
-  assert.match(sql, /update public\.sightings[\s\S]*embedding_status = 'pending'/i);
+  assert.match(
+    sql,
+    /update public\.sightings[\s\S]*embedding_status = 'pending'/i
+  );
   assert.match(sql, /update public\.embeddings[\s\S]*status = 'pending'/i);
   assert.match(sql, /delete from public\.recommendation_cache/i);
   assert.match(sql, /insert into public\.sighting_mutation_audit/i);

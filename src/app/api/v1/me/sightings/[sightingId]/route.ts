@@ -29,10 +29,7 @@ async function authenticate(request: Request) {
   return { supabase, user };
 }
 
-function mutationError(
-  error: { message?: string } | null,
-  fallback: string
-) {
+function mutationError(error: { message?: string } | null, fallback: string) {
   if (error?.message?.includes("resource_not_found")) {
     return fail(ApiErrorCode.NOT_FOUND, "제보를 찾을 수 없습니다.", 404);
   }

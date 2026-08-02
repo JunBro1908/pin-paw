@@ -134,7 +134,10 @@ test("parses Naver local WGS84 microdegree coordinates", () => {
 
 test("import skips inactive newcomers and syncs existing ids", async () => {
   const jpeg = Uint8Array.from([
-    0xff, 0xd8, 0xff, 0xd9,
+    0xff,
+    0xd8,
+    0xff,
+    0xd9,
     ...Array.from({ length: 40 }, (_, i) => i),
   ]);
   const calls = [];
