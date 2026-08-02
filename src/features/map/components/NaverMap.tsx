@@ -37,7 +37,11 @@ import {
   createMapLayerRenderer,
   type MapLayerRenderer,
 } from "../lib/map-layer-renderer";
-import { normalizeMapSourceType } from "../lib/map-marker-presentation";
+import {
+  getMapMarkerPresentation,
+  getSightingPinStatusColor,
+  normalizeMapSourceType,
+} from "../lib/map-marker-presentation";
 import { useMapData } from "../hooks/use-map-data";
 
 interface NaverMapProps {
@@ -454,6 +458,8 @@ export function NaverMap({
         normalizeId: normalizeSightingId,
         getPathCoordinates: getBookmarkPathCoordinates,
         interpolatePath,
+        getMapMarkerPresentation,
+        getSightingPinStatusColor,
       });
 
       adapter.listen(mapInstanceRef.current, "idle", handleMapIdle);

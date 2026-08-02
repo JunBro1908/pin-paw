@@ -2,12 +2,28 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 let createMapLayerRenderer;
+let getMapMarkerPresentation;
+let getSightingPinStatusColor;
 
 try {
   ({ createMapLayerRenderer } =
     await import("../../src/features/map/lib/map-layer-renderer.ts"));
+  ({ getMapMarkerPresentation, getSightingPinStatusColor } = await import(
+    "../../src/features/map/lib/map-marker-presentation.ts"
+  ));
 } catch {
   // RED: path animation ownership still lives in NaverMap.
+}
+
+function createRenderer(deps) {
+  return createMapLayerRenderer({
+    toLatLng: (coordinate) => coordinate,
+    toPoint: (x, y) => ({ x, y }),
+    normalizeId: (id) => id.toLowerCase().trim(),
+    getMapMarkerPresentation,
+    getSightingPinStatusColor,
+    ...deps,
+  });
 }
 
 function createFakeScheduler() {
@@ -141,12 +157,9 @@ function interpolatePath(coordinates, progress) {
 test("animates a path for 1800ms and schedules a 1000ms replay pause", () => {
   const clock = createFakeScheduler();
   const fake = createFakeAdapter();
-  const renderer = createMapLayerRenderer({
+  const renderer = createRenderer({
     adapter: fake.adapter,
     scheduler: clock.scheduler,
-    toLatLng: (coordinate) => coordinate,
-    toPoint: (x, y) => ({ x, y }),
-    normalizeId: (id) => id.toLowerCase().trim(),
     getPathCoordinates,
     interpolatePath,
   });
@@ -171,12 +184,9 @@ test("animates a path for 1800ms and schedules a 1000ms replay pause", () => {
 test("clears old frames, delays, and both polyline groups idempotently", () => {
   const clock = createFakeScheduler();
   const fake = createFakeAdapter();
-  const renderer = createMapLayerRenderer({
+  const renderer = createRenderer({
     adapter: fake.adapter,
     scheduler: clock.scheduler,
-    toLatLng: (coordinate) => coordinate,
-    toPoint: (x, y) => ({ x, y }),
-    normalizeId: (id) => id.toLowerCase().trim(),
     getPathCoordinates,
     interpolatePath,
   });
@@ -199,12 +209,9 @@ test("clears old frames, delays, and both polyline groups idempotently", () => {
 test("does not allocate animation resources for disabled or short paths", () => {
   const clock = createFakeScheduler();
   const fake = createFakeAdapter();
-  const renderer = createMapLayerRenderer({
+  const renderer = createRenderer({
     adapter: fake.adapter,
     scheduler: clock.scheduler,
-    toLatLng: (coordinate) => coordinate,
-    toPoint: (x, y) => ({ x, y }),
-    normalizeId: (id) => id.toLowerCase().trim(),
     getPathCoordinates,
     interpolatePath,
   });
@@ -224,12 +231,9 @@ test("keeps source identity outside feedback state and exposes accessible marker
   const clock = createFakeScheduler();
   const fake = createFakeAdapter();
   const clicked = [];
-  const renderer = createMapLayerRenderer({
+  const renderer = createRenderer({
     adapter: fake.adapter,
     scheduler: clock.scheduler,
-    toLatLng: (coordinate) => coordinate,
-    toPoint: (x, y) => ({ x, y }),
-    normalizeId: (id) => id.toLowerCase().trim(),
     getPathCoordinates,
     interpolatePath,
   });
@@ -323,12 +327,9 @@ test("keeps source identity outside feedback state and exposes accessible marker
 test("renders bookmark sightings and lost posts in independent groups", () => {
   const clock = createFakeScheduler();
   const fake = createFakeAdapter();
-  const renderer = createMapLayerRenderer({
+  const renderer = createRenderer({
     adapter: fake.adapter,
     scheduler: clock.scheduler,
-    toLatLng: (coordinate) => coordinate,
-    toPoint: (x, y) => ({ x, y }),
-    normalizeId: (id) => id.toLowerCase().trim(),
     getPathCoordinates,
     interpolatePath,
   });
