@@ -425,7 +425,8 @@ export function SightingForm() {
               as="h2"
               id="sighting-sent-title"
               variant="title"
-              className="block text-lg"
+              color="main"
+              className="block"
             >
               제보가 전송되었습니다
             </Text>
@@ -436,7 +437,7 @@ export function SightingForm() {
             <Button
               type="button"
               variant="primary"
-              className="mt-5 w-full"
+              className="mt-5 min-h-11 w-full"
               onClick={() => setOptimisticSent(false)}
             >
               이어서 제보하기
@@ -444,7 +445,7 @@ export function SightingForm() {
           </div>
         </div>
       ) : null}
-      <form onSubmit={handleSubmit} className="space-y-8">
+      <form onSubmit={handleSubmit} className="space-y-6">
         <SightingEssentials
           photoUrl={formData.photoUrl}
           occurredAt={formData.time}
@@ -496,11 +497,11 @@ export function SightingForm() {
           onTraitTagToggle={handleToggleTag}
         />
 
-        <div className="sticky bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] z-10 pt-4">
+        <div className="sticky bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] z-10 pt-2">
           <Button
             type="submit"
             variant="primary"
-            className="h-14 w-full rounded-2xl text-lg font-bold shadow-xl transition-all active:scale-[0.98]"
+            className="min-h-12 w-full rounded-2xl text-base font-semibold"
             isLoading={isSubmitting}
           >
             제보 등록

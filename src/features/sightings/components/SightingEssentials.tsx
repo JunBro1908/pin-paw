@@ -40,8 +40,8 @@ function FieldTitle({
 }) {
   return (
     <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-      <Icon name={icon} size={20} className="text-action-primary" />
-      <Text variant="body" className="text-text-main font-bold">
+      <Icon name={icon} size={18} className="text-action-primary" />
+      <Text variant="body" color="main" className="font-semibold">
         {label}
         {required ? <span className="text-action-primary"> *</span> : null}
       </Text>
@@ -117,7 +117,7 @@ export function SightingEssentials({
                 <span className="border-border-subtle bg-surface text-action-primary flex h-16 w-16 items-center justify-center rounded-full border shadow-sm">
                   <Icon name="camera" size={30} />
                 </span>
-                <Text variant="body" className="text-text-sub font-medium">
+                <Text variant="body" color="sub" className="font-medium">
                   촬영 및 앨범 선택
                 </Text>
               </div>
@@ -164,7 +164,7 @@ export function SightingEssentials({
             type="button"
             onClick={onOpenLocationPicker}
             disabled={disabled}
-            className="bg-surface-soft text-action-primary hover:bg-accent-warm/20 focus-visible:outline-action-primary flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-3 py-2 font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="bg-surface-soft text-action-primary hover:bg-accent-warm/20 focus-visible:outline-action-primary flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-3 py-2 text-sm font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Icon name="map" size={18} />
             위치 수정
@@ -177,10 +177,10 @@ export function SightingEssentials({
           htmlFor="sighting-occurred-at"
           className="flex flex-wrap items-center gap-x-2 gap-y-1"
         >
-          <Icon name="clock" size={20} className="text-action-primary" />
-          <span className="text-text-main font-bold">
+          <Icon name="clock" size={18} className="text-action-primary" />
+          <Text as="span" variant="body" color="main" className="font-semibold">
             목격 시각 <span className="text-action-primary">*</span>
-          </span>
+          </Text>
           {timeError ? (
             <span
               id="sighting-time-error"

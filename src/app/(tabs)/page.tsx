@@ -12,11 +12,11 @@ export default function HomePage() {
   return (
     <Container className="py-8">
       <header className="mb-8">
-        <Text as="h1" variant="title" className="text-2xl">
+        <Text as="h1" variant="title" color="main">
           길 잃은 반려동물을 보셨나요?
         </Text>
         <Text variant="body" color="sub" className="mt-1">
-          짧은 제보 하나가 PinPaw에서 가족을 찾는 따뜻한 실마리가 됩니다.
+          쉽고 빠른 제보들이 모여, 유실견을 따듯한 가족의 품으로 안내해줍니다.
         </Text>
       </header>
 
@@ -29,9 +29,10 @@ export default function HomePage() {
       <div className="mt-6 flex justify-center">
         <Link
           href="/my/lost-posts/new"
-          className="text-action-primary focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 items-center justify-center text-center text-sm font-medium underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="text-action-primary focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 flex-col items-center justify-center text-center text-sm font-medium underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          반려동물을 잃어버렸나요? 유실 등록하기
+          <span>반려동물을 잃어버렸나요?</span>
+          <span>유실 등록하기</span>
         </Link>
       </div>
 

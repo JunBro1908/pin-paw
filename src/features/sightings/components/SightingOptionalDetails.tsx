@@ -45,9 +45,9 @@ export function SightingOptionalDetails({
 }: SightingOptionalDetailsProps) {
   return (
     <details className="group border-border-subtle bg-surface rounded-2xl border shadow-sm">
-      <summary className="text-text-main focus-visible:outline-action-primary flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-bold focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
+      <summary className="text-text-main focus-visible:outline-action-primary flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-base font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
         <span className="flex items-center gap-2">
-          <Icon name="paw" size={20} className="text-action-primary" />
+          <Icon name="paw" size={18} className="text-action-primary" />
           특징을 더 알려주기 (선택)
         </span>
         <span
@@ -61,7 +61,7 @@ export function SightingOptionalDetails({
       <div className="border-border-subtle space-y-6 border-t px-4 py-5">
         <ScrollablePanel variant="panel">
         <div className="space-y-3">
-          <Text variant="body" className="text-text-main font-bold">
+          <Text variant="body" color="main" className="font-semibold">
             색상 · 크기 · 종
           </Text>
           <label htmlFor="sighting-trait-color" className="sr-only">
@@ -155,7 +155,7 @@ export function SightingOptionalDetails({
         <div className="space-y-3">
           <label
             htmlFor="sighting-description"
-            className="text-text-main font-bold"
+            className="text-text-main font-semibold"
           >
             추가 설명
           </label>
