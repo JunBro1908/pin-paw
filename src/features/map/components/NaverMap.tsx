@@ -737,6 +737,12 @@ export function NaverMap({
     });
   }, [mapLayer, lostPostsForMap, getLostPostImageUrl]);
 
+  const mapDetailSelection = selectedLostPostForCard
+    ? ({ kind: "lost", item: selectedLostPostForCard } as const)
+    : selectedSighting?.type === "point"
+      ? ({ kind: "sighting", item: selectedSighting } as const)
+      : null;
+
   if (error) {
     return (
       <div className="bg-surface flex h-full items-center justify-center">
@@ -761,7 +767,8 @@ export function NaverMap({
         {(selectedSighting?.type === "point" || selectedLostPostForCard) && (
           <button
             type="button"
-            aria-label="상세 닫기"
+            aria-hidden="true"
+            tabIndex={-1}
             onClick={() => {
               setSelectedSighting(null);
               setSelectedLostPostForCard(null);
@@ -770,112 +777,109 @@ export function NaverMap({
           />
         )}
 
-        <MapDetailSheet
-          selection={
-            selectedLostPostForCard
-              ? { kind: "lost", item: selectedLostPostForCard }
-              : selectedSighting?.type === "point"
-                ? { kind: "sighting", item: selectedSighting }
-                : null
-          }
-          onClose={() => {
-            setSelectedSighting(null);
-            setSelectedLostPostForCard(null);
-          }}
-          getLostPostImageUrl={getLostPostImageUrl}
-        >
-          {selectedSighting?.type === "point" && (
-            <SightingDetailCard
-              sighting={selectedSighting as SightingDetailData}
-              getImageUrl={getImageUrl}
-              onClose={() => setSelectedSighting(null)}
-              showCloseButton={false}
-              className="!rounded-2xl !shadow-none !ring-0"
-              rightSlot={
-                isAuthenticated &&
-                accessToken &&
-                "id" in selectedSighting &&
-                myLostPosts.length > 0 ? (
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const sid = selectedSighting.id as string;
-                      const isClaimed =
-                        sightingFeedbackMap[normalizeSightingId(sid)]?.claimed;
-                      if (isClaimed) {
-                        setBookmarkModalMode("unregister");
-                        setBookmarkModalOpen(true);
-                        setClaimedLostPostsForSighting(null);
-                        fetch(
-                          `/api/v1/me/sighting-claims/${encodeURIComponent(sid)}`,
-                          {
-                            credentials: "include",
-                            headers: {
-                              Authorization: `Bearer ${accessToken}`,
-                            },
-                          }
-                        )
-                          .then((response) => response.json())
-                          .then((result) => {
-                            if (
-                              result?.success &&
-                              Array.isArray(result.data?.lostPosts)
-                            ) {
-                              setClaimedLostPostsForSighting(
-                                result.data.lostPosts
-                              );
-                            } else {
-                              setClaimedLostPostsForSighting([]);
+        {mapDetailSelection && (
+          <MapDetailSheet
+            selection={mapDetailSelection}
+            onClose={() => {
+              setSelectedSighting(null);
+              setSelectedLostPostForCard(null);
+            }}
+            getLostPostImageUrl={getLostPostImageUrl}
+          >
+            {selectedSighting?.type === "point" && (
+              <SightingDetailCard
+                sighting={selectedSighting as SightingDetailData}
+                getImageUrl={getImageUrl}
+                onClose={() => setSelectedSighting(null)}
+                showCloseButton={false}
+                className="!rounded-2xl !shadow-none !ring-0"
+                rightSlot={
+                  isAuthenticated &&
+                  accessToken &&
+                  "id" in selectedSighting &&
+                  myLostPosts.length > 0 ? (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        const sid = selectedSighting.id as string;
+                        const isClaimed =
+                          sightingFeedbackMap[normalizeSightingId(sid)]
+                            ?.claimed;
+                        if (isClaimed) {
+                          setBookmarkModalMode("unregister");
+                          setBookmarkModalOpen(true);
+                          setClaimedLostPostsForSighting(null);
+                          fetch(
+                            `/api/v1/me/sighting-claims/${encodeURIComponent(sid)}`,
+                            {
+                              credentials: "include",
+                              headers: {
+                                Authorization: `Bearer ${accessToken}`,
+                              },
                             }
-                          })
-                          .catch(() => setClaimedLostPostsForSighting([]));
-                      } else {
-                        setBookmarkModalMode("register");
-                        setClaimedLostPostsForSighting(null);
-                        setBookmarkModalOpen(true);
+                          )
+                            .then((response) => response.json())
+                            .then((result) => {
+                              if (
+                                result?.success &&
+                                Array.isArray(result.data?.lostPosts)
+                              ) {
+                                setClaimedLostPostsForSighting(
+                                  result.data.lostPosts
+                                );
+                              } else {
+                                setClaimedLostPostsForSighting([]);
+                              }
+                            })
+                            .catch(() => setClaimedLostPostsForSighting([]));
+                        } else {
+                          setBookmarkModalMode("register");
+                          setClaimedLostPostsForSighting(null);
+                          setBookmarkModalOpen(true);
+                        }
+                      }}
+                      className="hover:bg-surface-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors"
+                      aria-label={
+                        sightingFeedbackMap[
+                          normalizeSightingId(selectedSighting.id as string)
+                        ]?.claimed
+                          ? "북마크 해제"
+                          : "북마크 등록"
                       }
-                    }}
-                    className="hover:bg-surface-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors"
-                    aria-label={
-                      sightingFeedbackMap[
+                    >
+                      {sightingFeedbackMap[
                         normalizeSightingId(selectedSighting.id as string)
-                      ]?.claimed
-                        ? "북마크 해제"
-                        : "북마크 등록"
-                    }
-                  >
-                    {sightingFeedbackMap[
-                      normalizeSightingId(selectedSighting.id as string)
-                    ]?.claimed ? (
-                      <svg
-                        className="h-8 w-8 text-yellow-500"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      >
-                        <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                      </svg>
-                    ) : (
-                      <svg
-                        className="h-8 w-8 text-gray-400"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden="true"
-                      >
-                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 20.27 12 17.77 5.82 20.27 7 14.14 2 9.27 8.91 8.26 12 2" />
-                      </svg>
-                    )}
-                  </button>
-                ) : undefined
-              }
-            />
-          )}
-        </MapDetailSheet>
+                      ]?.claimed ? (
+                        <svg
+                          className="h-8 w-8 text-yellow-500"
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          aria-hidden="true"
+                        >
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="h-8 w-8 text-gray-400"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.5"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          aria-hidden="true"
+                        >
+                          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 20.27 12 17.77 5.82 20.27 7 14.14 2 9.27 8.91 8.26 12 2" />
+                        </svg>
+                      )}
+                    </button>
+                  ) : undefined
+                }
+              />
+            )}
+          </MapDetailSheet>
+        )}
 
         {/* 7-5: 북마크 등록/해제 — 유실글 선택 모달 */}
         {bookmarkModalOpen &&

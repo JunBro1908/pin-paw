@@ -58,8 +58,29 @@ test("detail sheet has one labelled surface and an accessible close target", asy
     "the extracted detail surface owns exactly one aside"
   );
   assert.match(detail, /aria-label="선택한 지도 정보"/);
+  assert.match(detail, /role="dialog"/);
+  assert.match(detail, /aria-modal="true"/);
   assert.match(detail, /aria-label="선택한 지도 정보 닫기"/);
   assert.match(detail, /h-11 w-11|min-h-\[44px\].*min-w-\[44px\]/);
+});
+
+test("detail dialog owns a mount-only keyboard and focus lifecycle", async () => {
+  const [detail, map] = await Promise.all([
+    readFile("src/features/map/components/MapDetailSheet.tsx", "utf8"),
+    readFile("src/features/map/components/NaverMap.tsx", "utf8"),
+  ]);
+
+  assert.match(detail, /previousFocusRef/);
+  assert.match(detail, /onCloseRef/);
+  assert.match(detail, /closeButtonRef\.current\?\.focus\(\)/);
+  assert.match(detail, /event\.key === "Escape"/);
+  assert.match(detail, /event\.key !== "Tab"/);
+  assert.match(detail, /querySelectorAll<HTMLElement>/);
+  assert.match(detail, /!dialog\.contains\(active\)/);
+  assert.match(detail, /previousFocusRef\.current\?\.focus\(\)/);
+  assert.match(detail, /\}, \[\]\);/);
+  assert.match(map, /\{mapDetailSelection && \(/);
+  assert.match(map, /selection=\{mapDetailSelection\}/);
 });
 
 test("extracted controller surfaces use only restrained warm treatments", async () => {

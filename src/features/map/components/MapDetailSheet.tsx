@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import type { ReactNode, SyntheticEvent } from "react";
+import { useCallback, useEffect, useRef } from "react";
+import type { ReactNode, Ref, SyntheticEvent } from "react";
 import type { LostPostMapItem } from "../lib/map-data-state";
 import type { MapItem } from "../types/naver";
 
@@ -10,11 +11,25 @@ export type MapDetailSelection =
   | { kind: "lost"; item: LostPostMapItem };
 
 interface MapDetailSheetProps {
-  selection: MapDetailSelection | null;
+  selection: MapDetailSelection;
   onClose: () => void;
   getLostPostImageUrl: (key: string) => string;
   children?: ReactNode;
 }
+
+interface MapDetailSheetSurfaceProps extends MapDetailSheetProps {
+  closeButtonRef?: Ref<HTMLButtonElement>;
+  dialogRef?: Ref<HTMLElement>;
+}
+
+const FOCUSABLE_SELECTOR = [
+  "a[href]",
+  "button:not([disabled])",
+  "input:not([disabled])",
+  "select:not([disabled])",
+  "textarea:not([disabled])",
+  '[tabindex]:not([tabindex="-1"])',
+].join(",");
 
 function stopPropagation(event: SyntheticEvent) {
   event.stopPropagation();
@@ -26,10 +41,93 @@ export function MapDetailSheet({
   getLostPostImageUrl,
   children,
 }: MapDetailSheetProps) {
-  if (!selection) return null;
+  const dialogRef = useRef<HTMLElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const onCloseRef = useRef(onClose);
+
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+
+  const closeDialog = useCallback(() => {
+    onCloseRef.current();
+  }, []);
+
+  useEffect(() => {
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+    closeButtonRef.current?.focus();
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onCloseRef.current();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      const dialog = dialogRef.current;
+      if (!dialog) return;
+      const focusable = Array.from(
+        dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
+      ).filter((element) => element.getAttribute("aria-hidden") !== "true");
+      if (focusable.length === 0) {
+        event.preventDefault();
+        closeButtonRef.current?.focus();
+        return;
+      }
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !dialog.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (
+        !event.shiftKey &&
+        (active === last || !dialog.contains(active))
+      ) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      previousFocusRef.current?.focus();
+    };
+  }, []);
 
   return (
+    <MapDetailSheetSurface
+      selection={selection}
+      onClose={closeDialog}
+      getLostPostImageUrl={getLostPostImageUrl}
+      closeButtonRef={closeButtonRef}
+      dialogRef={dialogRef}
+    >
+      {children}
+    </MapDetailSheetSurface>
+  );
+}
+
+export function MapDetailSheetSurface({
+  selection,
+  onClose,
+  getLostPostImageUrl,
+  closeButtonRef,
+  dialogRef,
+  children,
+}: MapDetailSheetSurfaceProps) {
+  return (
     <aside
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
       aria-label="선택한 지도 정보"
       className="absolute inset-x-0 bottom-[104px] z-50 flex justify-center px-4 sm:px-6"
       onMouseDown={stopPropagation}
@@ -43,6 +141,7 @@ export function MapDetailSheet({
     >
       <div className="border-border-subtle bg-surface relative w-full max-w-md overflow-hidden rounded-2xl border shadow-sm">
         <button
+          ref={closeButtonRef}
           type="button"
           onClick={onClose}
           className="border-border-subtle bg-surface text-text-main hover:bg-surface-soft absolute top-2 right-2 z-30 flex h-11 w-11 items-center justify-center rounded-xl border shadow-sm transition-colors"
