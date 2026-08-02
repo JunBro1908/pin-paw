@@ -59,7 +59,7 @@ function SimilarityInfoTip() {
           e.stopPropagation();
           setOpen((value) => !value);
         }}
-        className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary inline-flex h-5 w-5 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary inline-flex h-5 w-5 items-center justify-center rounded-full border border-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <Icon name="info" size={12} />
       </button>
@@ -211,7 +211,7 @@ export function RecommendationCard({
       >
         {claimed ? (
           <svg
-            className="h-8 w-8 text-yellow-500"
+            className="h-5 w-5 text-yellow-500"
             viewBox="0 0 24 24"
             fill="currentColor"
           >
@@ -219,7 +219,7 @@ export function RecommendationCard({
           </svg>
         ) : (
           <svg
-            className="h-8 w-8 text-gray-400"
+            className="h-5 w-5 text-gray-400"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -251,7 +251,7 @@ export function RecommendationCard({
         <span className="text-primary text-xs font-medium">✓ 북마크한 제보</span>
       ) : null}
 
-      <div className="flex items-start gap-3">
+      <div className="flex items-stretch gap-3">
         <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-gray-100 dark:bg-gray-800">
           {thumbUrl ? (
             <Image
@@ -285,12 +285,12 @@ export function RecommendationCard({
                 ))}
               </ul>
               <Text
-                variant="body"
-                className="text-text-main block font-semibold"
+                variant="caption"
+                className="text-text-main block text-xs font-medium"
               >
                 {occurredAt}
               </Text>
-              <div className="mt-1 flex items-center gap-1">
+              <div className="mt-1 flex items-center gap-0.5">
                 <Text
                   as="p"
                   variant="caption"
@@ -305,7 +305,7 @@ export function RecommendationCard({
             {bookmarkButton}
           </div>
 
-          <span className="text-action-primary mt-3 inline-flex min-h-11 items-center text-sm font-medium">
+          <span className="text-action-primary mt-auto inline-flex min-h-11 items-center pt-1 text-sm font-medium">
             지도에서 보기
           </span>
         </div>

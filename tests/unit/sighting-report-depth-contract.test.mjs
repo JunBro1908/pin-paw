@@ -6,7 +6,8 @@ test("home report entry is a single SightingForm screen without intermediate rou
   const page = await readFile("src/app/(tabs)/page.tsx", "utf8");
   assert.match(page, /<SightingForm\s*\/>/);
   assert.doesNotMatch(page, /step|wizard|Stepper/i);
-  assert.match(page, /유실글 올리기/);
+  assert.match(page, /반려동물을 잃어버렸나요\?/);
+  assert.doesNotMatch(page, /유실글 올리기/);
   assert.match(page, /href="\/my\/lost-posts\/new"/);
 });
 

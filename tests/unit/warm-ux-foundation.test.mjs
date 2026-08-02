@@ -88,9 +88,9 @@ test("home has a real h1 and secondary lost-registration link", async () => {
   assert.match(page, /<Text[^>]+as="h1"/);
   assert.match(page, /소중한 제보들이 모여, 유실견을 따듯한 가족의 품으로 안내해줍니다/);
   assert.match(page, /href="\/my\/lost-posts\/new"/);
-  assert.match(page, /flex-col items-center/);
   assert.match(page, /반려동물을 잃어버렸나요\?/);
-  assert.match(page, /유실글 올리기/);
+  assert.doesNotMatch(page, /유실글 올리기/);
+  assert.doesNotMatch(page, /flex-col items-center/);
   assert.match(page, /<Text variant="body" color="sub" className="mt-1">/);
   assert.doesNotMatch(page, /opacity-70/);
   assert.doesNotMatch(
@@ -114,7 +114,7 @@ test("lost-registration link exposes a 44px target", async () => {
   const page = await read("src/app/(tabs)/page.tsx");
   assert.match(
     page,
-    /href="\/my\/lost-posts\/new"[\s\S]*?className="[^"]*inline-flex min-h-11 min-w-11 flex-col items-center justify-center/
+    /href="\/my\/lost-posts\/new"[\s\S]*?className="[^"]*inline-flex min-h-11 min-w-11 items-center justify-center/
   );
 });
 

@@ -234,11 +234,11 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
                 ▼
               </span>
             </summary>
-            <div className="border-t border-gray-200 px-4 pt-3 pb-4 dark:border-gray-700">
-              <ScrollablePanel variant="panel" className="pr-0.5">
-                <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <label className="flex items-center gap-1.5">
-                    <Text variant="caption" color="caption">
+            <div className="border-t border-gray-200 px-4 py-3 dark:border-gray-700">
+              <ScrollablePanel variant="panel" className="space-y-3 pr-0.5">
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
+                  <label className="flex items-center gap-2">
+                    <Text variant="caption" color="caption" className="shrink-0">
                       반경
                     </Text>
                     <select
@@ -250,7 +250,7 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
                           })
                         )
                       }
-                      className="border-border-subtle focus:ring-action-primary min-h-11 min-w-0 rounded-xl border bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
+                      className="border-border-subtle focus:ring-action-primary h-11 min-h-11 min-w-[5.5rem] rounded-xl border bg-transparent px-3 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
                     >
                       {RADIUS_OPTIONS.map((v) => (
                         <option key={v} value={v}>
@@ -259,8 +259,8 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
                       ))}
                     </select>
                   </label>
-                  <label className="flex items-center gap-1.5">
-                    <Text variant="caption" color="caption">
+                  <label className="flex items-center gap-2">
+                    <Text variant="caption" color="caption" className="shrink-0">
                       기간
                     </Text>
                     <select
@@ -272,7 +272,7 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
                           })
                         )
                       }
-                      className="border-border-subtle focus:ring-action-primary min-h-11 min-w-0 rounded-xl border bg-transparent px-3 py-2 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
+                      className="border-border-subtle focus:ring-action-primary h-11 min-h-11 min-w-[5.5rem] rounded-xl border bg-transparent px-3 text-sm focus:ring-2 focus:ring-offset-0 focus:outline-none"
                     >
                       {DAYS_OPTIONS.map((v) => (
                         <option key={v} value={v}>
@@ -283,8 +283,8 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
                   </label>
                 </div>
                 <Button
-                  variant="primary"
-                  className="min-h-11 w-full text-sm"
+                  variant="secondary"
+                  className="h-11 min-h-11 w-full py-0 text-sm"
                   onClick={() => setRange(applyDraftRange)}
                 >
                   적용
@@ -293,20 +293,24 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
             </div>
           </details>
 
-          <div className="mb-4 flex flex-wrap items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-end gap-2">
             {calculatedAtLabel ? (
-              <Text variant="caption" color="caption">
+              <Text
+                variant="caption"
+                color="caption"
+                className="text-xs leading-none"
+              >
                 {calculatedAtLabel} 기준
               </Text>
             ) : null}
-            <Button
-              variant="secondary"
-              className="ml-auto min-h-11 min-w-11 px-0"
+            <button
+              type="button"
+              className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary ml-auto inline-flex min-h-11 min-w-11 items-end justify-center pb-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
               onClick={() => refetchRecommendations()}
               aria-label="새로고침"
             >
-              <Icon name="refresh" size={20} />
-            </Button>
+              <Icon name="refresh" size={18} />
+            </button>
           </div>
 
           {recoError ? (

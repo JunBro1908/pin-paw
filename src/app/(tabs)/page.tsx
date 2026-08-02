@@ -29,10 +29,9 @@ export default function HomePage() {
       <div className="mt-6 flex justify-center">
         <Link
           href="/my/lost-posts/new"
-          className="text-action-primary focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 flex-col items-center justify-center text-center text-sm font-medium underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="text-action-primary focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 items-center justify-center text-center text-sm font-medium underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         >
-          <span>반려동물을 잃어버렸나요?</span>
-          <span>유실글 올리기</span>
+          반려동물을 잃어버렸나요?
         </Link>
       </div>
 
