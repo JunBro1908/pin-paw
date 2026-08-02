@@ -14,6 +14,7 @@ import { selectActiveLostCase } from "@/features/lost-posts/lib/active-lost-case
 import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
 import type { LostPostItem } from "@/features/lost-posts/model/types";
 import { cn } from "@/shared/lib/cn";
+import { Icon } from "@/shared/ui/Icon";
 import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
 import { MySightingList } from "@/features/sightings/components/MySightingList";
 import { useMySightings } from "@/features/sightings/hooks/useMySightings";
@@ -69,9 +70,18 @@ function MyPageContent() {
   return (
     <Container className="py-8">
       <header className="mb-8">
-        <Text as="h1" variant="title" color="main">
-          내 정보
-        </Text>
+        <div className="flex items-center justify-between gap-3">
+          <Text as="h1" variant="title" color="main">
+            내 정보
+          </Text>
+          <Link
+            href="/my/settings"
+            aria-label="설정"
+            className="text-action-primary focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            <Icon name="settings" size={22} />
+          </Link>
+        </div>
         <Text variant="body" color="sub" className="mt-1">
           올린 유실글과 제보를 이어서 관리하세요.
         </Text>
@@ -203,20 +213,6 @@ function AccountSurface({
         >
           로그아웃
         </button>
-      </div>
-      <div className="mt-4 flex flex-wrap gap-3">
-        <Link
-          href="/my/notifications"
-          className="text-action-primary text-sm font-medium hover:underline"
-        >
-          알림
-        </Link>
-        <Link
-          href="/my/settings"
-          className="text-action-primary text-sm font-medium hover:underline"
-        >
-          설정
-        </Link>
       </div>
     </div>
   );

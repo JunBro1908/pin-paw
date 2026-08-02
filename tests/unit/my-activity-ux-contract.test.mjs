@@ -95,6 +95,19 @@ test("my activity leads with user profile before case carousel", async () => {
   assert.doesNotMatch(page, /LostCaseNextActions/);
 });
 
+test("my header exposes settings gear and omits alerts entry", async () => {
+  const page = await readFile("src/app/(tabs)/my/page.tsx", "utf8");
+  const header = page.match(/<header[\s\S]*?<\/header>/);
+  assert.ok(header, "my page should have a header");
+  assert.match(header[0], /aria-label="설정"/);
+  assert.match(header[0], /href="\/my\/settings"/);
+  assert.match(header[0], /name="settings"/);
+  assert.match(header[0], /내 정보/);
+  assert.doesNotMatch(page, /\/my\/notifications/);
+  assert.doesNotMatch(page, />\s*알림\s*</);
+  assert.doesNotMatch(page, />\s*설정\s*</);
+});
+
 test("my empty lost-post state centers title, copy, and CTA", async () => {
   const page = await readFile("src/app/(tabs)/my/page.tsx", "utf8");
   const emptyBlock = page.match(

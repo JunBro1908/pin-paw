@@ -50,7 +50,6 @@ test("shared BackLink keeps 44px targets across my chrome", async () => {
   assert.doesNotMatch(backLink, /hover:underline/);
   for (const path of [
     "src/app/(tabs)/my/settings/page.tsx",
-    "src/app/(tabs)/my/notifications/page.tsx",
     "src/app/(tabs)/my/sightings/page.tsx",
     "src/app/(tabs)/my/lost-posts/new/page.tsx",
   ]) {
