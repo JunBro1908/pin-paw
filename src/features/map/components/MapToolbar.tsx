@@ -52,6 +52,8 @@ export function MapToolbar({
                 type="button"
                 aria-label={filter.label}
                 aria-pressed={selected}
+                data-layer={filter.layer}
+                data-layer-icon={filter.icon}
                 onClick={() => onLayerChange(filter.layer)}
                 className={cn(
                   "flex h-11 w-full items-center justify-center rounded-xl transition-colors",

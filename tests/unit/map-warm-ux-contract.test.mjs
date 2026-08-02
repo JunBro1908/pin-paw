@@ -54,6 +54,8 @@ test("toolbar keeps layer semantics explicit and guest-safe", async () => {
   assert.match(toolbar, /icon: "layers"/);
   assert.match(toolbar, /icon: "sparkle"/);
   assert.match(toolbar, /icon: "star"/);
+  assert.match(toolbar, /data-layer-icon=\{filter\.icon\}/);
+  assert.match(toolbar, /data-layer=\{filter\.layer\}/);
   assert.match(toolbar, /bg-primary-soft text-action-primary/);
   assert.match(toolbar, /text-yellow-500/);
   assert.match(toolbar, /filter\.layer === "bookmark"/);
@@ -64,6 +66,7 @@ test("toolbar keeps layer semantics explicit and guest-safe", async () => {
   assert.doesNotMatch(toolbar, />\s*New\s*</);
   assert.doesNotMatch(toolbar, /BookmarkPinIcon/);
   assert.doesNotMatch(toolbar, />저장한 흔적</);
+  assert.doesNotMatch(toolbar, />\{filter\.label\}</);
   assert.match(toolbar, /authenticated/);
   assert.match(toolbar, /min-h-11|min-h-\[44px\]|h-11|h-12/);
 });
