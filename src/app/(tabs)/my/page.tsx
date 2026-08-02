@@ -195,7 +195,12 @@ function AccountSurface({
   return (
     <div className="border-border-subtle bg-surface mb-6 rounded-2xl border p-5 shadow-sm">
       <div className="flex items-center gap-4">
-        <div className="bg-primary-soft h-14 w-14 shrink-0 rounded-full" />
+        <div
+          className="bg-primary-soft text-action-primary flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full"
+          aria-hidden
+        >
+          <Icon name="paw" size={28} className="shrink-0" />
+        </div>
         <div className="min-w-0 flex-1">
           <Text variant="body" color="main" className="font-semibold">
             {displayName}님
