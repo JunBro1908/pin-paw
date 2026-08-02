@@ -57,7 +57,7 @@ export function ActiveLostCaseCard({
   const primaryHref =
     primaryAction === "detail" ? detailHref : recommendHref;
   const primaryLabel =
-    primaryAction === "detail" ? "사건 보기" : "확인할 제보 보기";
+    primaryAction === "detail" ? "사건 보기" : "비슷한 제보 보기";
 
   return (
     <article

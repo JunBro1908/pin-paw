@@ -34,16 +34,17 @@ function RecommendContent() {
     reload: reloadLostPosts,
   } = useMyLostPosts();
 
-  // 유실글을 선택하지 않았을 때: 가로 슬라이드로 선택
   if (!lostPostId) {
     return (
-      <Container className="py-10">
-        <Text as="h1" variant="title" className="mb-2">
-          확인할 제보
-        </Text>
-        <Text variant="caption" color="caption" className="mb-6 block">
-          찾고 있는 동물을 선택하면 먼저 확인할 목격 제보를 모아 보여드려요.
-        </Text>
+      <Container className="py-8">
+        <header className="mb-8">
+          <Text as="h1" variant="title" className="text-2xl">
+            비슷한 제보 찾기
+          </Text>
+          <Text variant="body" color="sub" className="mt-1">
+            유실글을 고르면 가능성이 높은 목격 제보를 모아 보여드려요.
+          </Text>
+        </header>
         {loading ? (
           <div className="space-y-3">
             <div className="bg-border-subtle h-3 w-40 animate-pulse rounded-full" />
@@ -62,12 +63,12 @@ function RecommendContent() {
             </Button>
           </div>
         ) : lostPosts.length === 0 ? (
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-8 text-center dark:border-gray-700 dark:bg-gray-800/50">
+          <div className="border-border-subtle bg-surface rounded-2xl border border-dashed p-8 text-center shadow-sm">
             <Text variant="body" color="caption" className="mb-4 block">
               등록된 유실글이 없습니다.
             </Text>
-            <Link href="/my">
-              <Button variant="primary">내 정보에서 유실글 등록하기</Button>
+            <Link href="/my/lost-posts/new">
+              <Button variant="primary">유실글 올리기</Button>
             </Link>
           </div>
         ) : (
@@ -82,7 +83,6 @@ function RecommendContent() {
     );
   }
 
-  // 유실글 선택됨: 선택된 유실글 미리보기 + 해당 추천 목록
   return <RecommendWithLostPost lostPostId={lostPostId} />;
 }
 
@@ -153,17 +153,22 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
       : null;
 
   return (
-    <Container className="py-10">
+    <Container className="py-8">
       <Link
         href="/recommend"
-        className="text-primary mb-4 inline-block text-sm font-medium"
+        className="text-action-primary mb-6 inline-flex min-h-11 items-center text-sm font-medium underline-offset-4 hover:underline"
       >
         ← 다른 유실글 선택
       </Link>
 
-      <Text as="h1" variant="title" className="mb-3">
-        확인할 제보
-      </Text>
+      <header className="mb-6">
+        <Text as="h1" variant="title" className="text-2xl">
+          비슷한 제보 찾기
+        </Text>
+        <Text variant="body" color="sub" className="mt-1">
+          거리·시각·특징을 바탕으로 먼저 볼 제보를 정리했어요.
+        </Text>
+      </header>
 
       {isLoading ? (
         <div className="border-border-subtle mb-6 rounded-2xl border p-4">
@@ -306,14 +311,11 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
           </details>
 
           <div className="mb-4 flex flex-wrap items-center gap-2">
-            <Text variant="caption" color="caption">
-              거리, 목격 시각, 특징을 바탕으로 확인 순서를 정리했습니다.
-            </Text>
-            {calculatedAtLabel && (
+            {calculatedAtLabel ? (
               <Text variant="caption" color="caption">
-                · {calculatedAtLabel} 기준
+                {calculatedAtLabel} 기준
               </Text>
-            )}
+            ) : null}
             <Button
               variant="secondary"
               className="ml-auto min-h-11 text-sm"
@@ -326,20 +328,20 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
           {recoError ? (
             <div className="border-border-subtle mb-4 rounded-xl border border-amber-200 bg-amber-50/50 p-4 dark:border-amber-800 dark:bg-amber-900/20">
               <Text variant="caption" color="caption">
-                추천을 불러오는 중 오류가 났습니다.
+                비슷한 제보를 불러오는 중 오류가 났습니다.
               </Text>
             </div>
           ) : recoLoading || recommendations?.status === "pending" ? (
             <div className="border-border-subtle rounded-xl border p-6 text-center">
               <Text variant="body" color="caption">
-                확인할 제보를 정리하고 있습니다...
+                비슷한 제보를 정리하고 있습니다...
               </Text>
             </div>
           ) : recommendations?.status === "ready" &&
             (!recommendations.items || recommendations.items.length === 0) ? (
             <div className="border-border-subtle rounded-xl border p-6 text-center">
               <Text variant="body" color="caption">
-                이 탐색 범위에는 아직 확인할 목격 제보가 없습니다.
+                이 탐색 범위에는 아직 볼 목격 제보가 없습니다.
               </Text>
             </div>
           ) : (
@@ -366,7 +368,7 @@ export default function RecommendPage() {
     <AuthGuard>
       <Suspense
         fallback={
-          <Container className="py-10">
+          <Container className="py-8">
             <Text variant="caption" color="caption">
               로딩 중...
             </Text>
