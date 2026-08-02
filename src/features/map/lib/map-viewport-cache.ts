@@ -6,6 +6,7 @@ import {
 } from "./map-domain";
 import type { MapViewport } from "./map-domain";
 import type { MapItem } from "../types/naver";
+import { getCachedUserMapCenter } from "./map-user-center-cache";
 
 export type MapViewportCacheEntry = {
   etag: string;
@@ -19,7 +20,8 @@ export function getDefaultAuthMapViewport(): {
   viewport: MapViewport;
   zoom: number;
 } {
-  const { lat, lng } = DEFAULT_MAP_CENTER;
+  const center = getCachedUserMapCenter() ?? DEFAULT_MAP_CENTER;
+  const { lat, lng } = center;
   const half = DEFAULT_MAP_WARM_HALF_SPAN;
   return {
     zoom: DEFAULT_MAP_WARM_ZOOM,
@@ -59,8 +61,8 @@ export function clearMapViewportCache(): void {
 }
 
 /**
- * Warm the default Seoul viewport for an authenticated user so the map tab
- * can paint immediately and revalidate with If-None-Match.
+ * Warm markers around the cached user center (or Seoul fallback) so the map
+ * tab can paint immediately and revalidate with If-None-Match.
  */
 export function prefetchAuthMapViewport(accessToken: string): Promise<void> {
   if (!accessToken) return Promise.resolve();

@@ -22,6 +22,7 @@ import {
   clearMapViewportCache,
   prefetchAuthMapViewport,
 } from "@/features/map/lib/map-viewport-cache";
+import { warmUserMapCenter } from "@/features/map/lib/map-user-center-cache";
 
 function warmAuthenticatedCaches(accessToken: string | undefined) {
   if (!accessToken) {
@@ -32,7 +33,8 @@ function warmAuthenticatedCaches(accessToken: string | undefined) {
   }
   void prefetchMyLostPosts(accessToken);
   void prefetchMySightings(accessToken);
-  void prefetchAuthMapViewport(accessToken);
+  // Geolocation first so marker prefetch targets the user, not Seoul.
+  void warmUserMapCenter().then(() => prefetchAuthMapViewport(accessToken));
 }
 
 export interface AuthState {

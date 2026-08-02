@@ -43,6 +43,11 @@ import {
   normalizeMapSourceType,
 } from "../lib/map-marker-presentation";
 import { useMapData } from "../hooks/use-map-data";
+import {
+  getCachedUserMapCenter,
+  setCachedUserMapCenter,
+  warmUserMapCenter,
+} from "../lib/map-user-center-cache";
 
 interface NaverMapProps {
   clientId: string;
@@ -85,6 +90,9 @@ export function NaverMap({
   const myLocationMarkerRef = useRef<NaverMarkerInstance>(null);
   /** 경로 선이 '내 위치'로 연결되지 않도록, 마지막으로 아는 현재 위치 저장 */
   const lastMyPositionRef = useRef<{ lat: number; lng: number } | null>(null);
+  /** 사용자가 지도를 직접 움직이면 자동 위치 이동을 덮어쓰지 않음 */
+  const userMovedMapRef = useRef(false);
+  const autoLocateAttemptedRef = useRef(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // 선택된 제보 정보 (팝업용)
@@ -227,8 +235,48 @@ export function NaverMap({
   }, []);
 
   /**
-   * 현재 위치 찾기 및 지도 이동
+   * 현재 위치 찾기 및 지도 이동 (locate 버튼 — 실패 시 toast)
    */
+  const placeMyLocationMarker = useCallback(
+    (latitude: number, longitude: number) => {
+      if (!window.naver?.maps || !mapInstanceRef.current) return;
+      const currentLatLng = new window.naver.maps.LatLng(latitude, longitude);
+      lastMyPositionRef.current = { lat: latitude, lng: longitude };
+      setCachedUserMapCenter(latitude, longitude);
+
+      if (myLocationMarkerRef.current) {
+        myLocationMarkerRef.current.setPosition(currentLatLng);
+        return;
+      }
+      if (!mapAdapterRef.current) return;
+
+      myLocationMarkerRef.current = mapAdapterRef.current.createMarker({
+        position: currentLatLng,
+        map: mapInstanceRef.current,
+        zIndex: 300,
+        icon: {
+          content: `
+                <div style="width: 22px; height: 22px; background: #4285F4; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.3); position: relative;">
+                  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #4285F4; border-radius: 50%; animation: pulse 2s infinite;"></div>
+                </div>
+                <style>
+                  @keyframes pulse {
+                    0% { transform: scale(1); opacity: 0.8; }
+                    100% { transform: scale(2.5); opacity: 0; }
+                  }
+                </style>
+              `,
+          anchor: new window.naver.maps.Point(11, 11),
+        },
+      });
+      mapAdapterRef.current.replaceMarkers(
+        [myLocationMarkerRef.current],
+        "my-location"
+      );
+    },
+    []
+  );
+
   const handleCurrentLocation = useCallback(() => {
     if (!navigator.geolocation) {
       setToast({
@@ -242,41 +290,13 @@ export function NaverMap({
 
     const applyPosition = (position: GeolocationPosition) => {
       const { latitude, longitude } = position.coords;
-      const pos = { lat: latitude, lng: longitude };
-      lastMyPositionRef.current = pos;
       const currentLatLng = new window.naver.maps.LatLng(latitude, longitude);
 
       if (mapInstanceRef.current) {
         mapInstanceRef.current.panTo(currentLatLng);
         mapInstanceRef.current.setZoom(16);
       }
-
-      if (myLocationMarkerRef.current) {
-        myLocationMarkerRef.current.setPosition(currentLatLng);
-      } else if (window.naver?.maps && mapAdapterRef.current) {
-        myLocationMarkerRef.current = mapAdapterRef.current.createMarker({
-          position: currentLatLng,
-          map: mapInstanceRef.current,
-          icon: {
-            content: `
-                <div style="width: 22px; height: 22px; background: #4285F4; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.3); position: relative;">
-                  <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #4285F4; border-radius: 50%; animation: pulse 2s infinite;"></div>
-                </div>
-                <style>
-                  @keyframes pulse {
-                    0% { transform: scale(1); opacity: 0.8; }
-                    100% { transform: scale(2.5); opacity: 0; }
-                  }
-                </style>
-              `,
-            anchor: new window.naver.maps.Point(11, 11),
-          },
-        });
-        mapAdapterRef.current.replaceMarkers(
-          [myLocationMarkerRef.current],
-          "my-location"
-        );
-      }
+      placeMyLocationMarker(latitude, longitude);
       setIsLocating(false);
     };
 
@@ -321,7 +341,31 @@ export function NaverMap({
         maximumAge: 60000,
       }
     );
-  }, []);
+  }, [placeMyLocationMarker]);
+
+  /**
+   * Cache miss 시 한 번만 조용히 이동. 권한 거부/타임아웃은 toast 없이 기본 유지.
+   * 사용자가 이미 지도를 움직였으면 덮어쓰지 않음.
+   */
+  const silentFollowUserLocation = useCallback(() => {
+    if (autoLocateAttemptedRef.current) return;
+    autoLocateAttemptedRef.current = true;
+
+    void warmUserMapCenter().then((center) => {
+      if (!center || !mapInstanceRef.current || !window.naver?.maps) return;
+      if (userMovedMapRef.current) return;
+      if (initialCenter || initialCenterSightingId) return;
+
+      const latLng = new window.naver.maps.LatLng(center.lat, center.lng);
+      if (typeof mapInstanceRef.current.morph === "function") {
+        mapInstanceRef.current.morph(latLng, 15);
+      } else {
+        mapInstanceRef.current.panTo(latLng);
+        mapInstanceRef.current.setZoom(15);
+      }
+      placeMyLocationMarker(center.lat, center.lng);
+    });
+  }, [initialCenter, initialCenterSightingId, placeMyLocationMarker]);
 
   /**
    * 마커 및 클러스터 렌더링 함수
@@ -440,10 +484,11 @@ export function NaverMap({
       return;
 
     try {
-      const center = initialCenter ?? DEFAULT_MAP_CENTER;
+      const warmedCenter = getCachedUserMapCenter();
+      const center = initialCenter ?? warmedCenter ?? DEFAULT_MAP_CENTER;
       const mapOptions = {
         center: new window.naver.maps.LatLng(center.lat, center.lng),
-        zoom: initialCenter ? 16 : DEFAULT_MAP_WARM_ZOOM,
+        zoom: initialCenter ? 16 : warmedCenter ? 15 : DEFAULT_MAP_WARM_ZOOM,
         zoomControl: false,
       };
 
@@ -464,14 +509,21 @@ export function NaverMap({
 
       adapter.listen(mapInstanceRef.current, "idle", handleMapIdle);
 
+      adapter.listen(mapInstanceRef.current, "dragstart", () => {
+        userMovedMapRef.current = true;
+      });
+
       adapter.listen(mapInstanceRef.current, "click", () => {
         setSelectedSighting(null);
       });
 
       setIsLoaded(true);
 
-      if (!initialCenter && !initialCenterSightingId) {
-        handleCurrentLocation();
+      if (warmedCenter && !initialCenter) {
+        placeMyLocationMarker(warmedCenter.lat, warmedCenter.lng);
+      } else if (!initialCenter && !initialCenterSightingId) {
+        // Cache miss: keep Seoul (or default) until a quiet one-shot fix arrives.
+        silentFollowUserLocation();
       }
     } catch (err) {
       console.error("Naver Map Init Error:", err);
@@ -479,7 +531,8 @@ export function NaverMap({
     }
   }, [
     handleMapIdle,
-    handleCurrentLocation,
+    silentFollowUserLocation,
+    placeMyLocationMarker,
     initialCenter,
     initialCenterSightingId,
   ]);
@@ -698,6 +751,7 @@ export function NaverMap({
   }, [mapLayer, isLoaded, fetchClusters]);
 
   // Own lost posts + trail paths load for "전체" and bookmark.
+  // Lost-post pins stay outside sighting clusters (separate marker group + zIndex).
   useEffect(() => {
     if (!isAuthenticated || !accessToken) return;
     if (mapLayer !== "bookmark" && mapLayer !== "default") return;
@@ -748,7 +802,7 @@ export function NaverMap({
     setSelectedLostPostForCard,
   ]);
 
-  // 북마크 레이어일 때만 유실글 마커 표시, 해제 시 제거
+  // 전체·북마크 레이어에서 내 유실글 마커 표시 (클러스터 그룹과 분리)
   useEffect(() => {
     if (!mapInstanceRef.current || !mapLayerRendererRef.current) return;
 

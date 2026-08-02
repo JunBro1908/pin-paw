@@ -10,7 +10,11 @@ test("AuthProvider warms the default auth map viewport on login", async () => {
 
   assert.match(source, /prefetchAuthMapViewport/);
   assert.match(source, /clearMapViewportCache/);
-  assert.match(source, /void prefetchAuthMapViewport\(accessToken\)/);
+  assert.match(source, /warmUserMapCenter/);
+  assert.match(
+    source,
+    /warmUserMapCenter\(\)\.then\(\(\)\s*=>\s*prefetchAuthMapViewport\(accessToken\)\)/
+  );
 });
 
 test("NaverMap hides guest list entry points that cannot show points", async () => {
