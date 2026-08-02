@@ -2,13 +2,15 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-import {
+import * as submissionLifecycle from "../../src/shared/lib/form-submission-lifecycle.ts";
+
+const {
   completeSubmission,
   fingerprintUploadFile,
   prepareSubmission,
   rememberUploadIntent,
   startNewSubmission,
-} from "../../src/shared/lib/form-submission-lifecycle.ts";
+} = submissionLifecycle;
 
 const uuids = [
   "123e4567-e89b-42d3-a456-426614174001",
@@ -31,6 +33,41 @@ test("sighting reset keeps datetime-local values in local time", async () => {
   );
 
   assert.doesNotMatch(form, /new Date\(\)\.toISOString\(\)\.slice\(0, 16\)/);
+});
+
+test("successful sighting reset preserves accepted location readiness", async () => {
+  const form = await readFile(
+    "src/features/sightings/components/SightingForm.tsx",
+    "utf8"
+  );
+  const reset = form.match(
+    /const resetForm = \(\) => \{([\s\S]*?)\n  \};/
+  )?.[1];
+
+  assert.ok(reset, "resetForm source should be present");
+  assert.match(reset, /setFormData\(\(prev\) => \(\{/);
+  assert.match(reset, /lat: prev\.lat/);
+  assert.match(reset, /lng: prev\.lng/);
+  assert.doesNotMatch(reset, /setIsLocationSet\(false\)/);
+  assert.doesNotMatch(reset, /setGeolocationErrorKind\("error"\)/);
+});
+
+test("best-effort submission follow-up swallows asynchronous failures", async () => {
+  assert.equal(typeof submissionLifecycle.runBestEffort, "function");
+
+  let unhandled = null;
+  const onUnhandled = (error) => {
+    unhandled = error;
+  };
+  process.once("unhandledRejection", onUnhandled);
+
+  submissionLifecycle.runBestEffort(async () => {
+    throw new Error("cache invalidation failed");
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+
+  process.removeListener("unhandledRejection", onUnhandled);
+  assert.equal(unhandled, null);
 });
 
 test("reuses both keys and the upload intent after an ambiguous failure", () => {

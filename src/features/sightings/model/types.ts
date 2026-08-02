@@ -20,6 +20,7 @@ export interface SightingFormData {
 export interface SightingFormErrors {
   photo?: string;
   location?: string;
+  time?: string;
 }
 
 /**

@@ -14,6 +14,7 @@ import {
 export interface SightingEssentialsProps {
   photoUrl: string | null;
   occurredAt: string;
+  timeError?: string;
   locationStatus: SightingLocationStatus;
   disabled: boolean;
   onPhotoChange(file: File | null): void;
@@ -27,6 +28,7 @@ const inputBase =
 export function SightingEssentials({
   photoUrl,
   occurredAt,
+  timeError,
   locationStatus,
   disabled,
   onPhotoChange,
@@ -65,7 +67,7 @@ export function SightingEssentials({
           <label
             htmlFor="sighting-photo"
             className={cn(
-              "group border-border-subtle bg-surface-soft hover:border-action-primary/50 hover:bg-accent-warm-soft/30 peer-focus-visible:outline-action-primary relative flex aspect-4/3 max-h-80 w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-all peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2",
+              "group border-border-subtle bg-surface-soft hover:border-action-primary/50 hover:bg-accent-warm/10 peer-focus-visible:outline-action-primary relative flex aspect-4/3 max-h-80 w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-all peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2",
               disabled && "pointer-events-none opacity-60"
             )}
           >
@@ -80,7 +82,7 @@ export function SightingEssentials({
               />
             ) : (
               <div className="flex flex-col items-center gap-3 text-center">
-                <span className="bg-accent-warm-soft text-action-primary flex h-16 w-16 items-center justify-center rounded-full shadow-sm">
+                <span className="border-border-subtle bg-surface text-action-primary flex h-16 w-16 items-center justify-center rounded-full border shadow-sm">
                   <Icon name="camera" size={30} />
                 </span>
                 <Text variant="body" className="text-text-sub font-medium">
@@ -127,7 +129,7 @@ export function SightingEssentials({
             type="button"
             onClick={onOpenLocationPicker}
             disabled={disabled}
-            className="bg-accent-warm-soft text-action-primary hover:bg-accent-warm/25 focus-visible:outline-action-primary flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-3 py-2 font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="bg-surface-soft text-action-primary hover:bg-accent-warm/20 focus-visible:outline-action-primary flex min-h-11 shrink-0 items-center gap-1 rounded-xl px-3 py-2 font-bold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <Icon name="map" size={18} />
             위치 수정
@@ -149,10 +151,22 @@ export function SightingEssentials({
           name="time"
           value={occurredAt}
           max={toLocalDateTimeInputValue(new Date())}
+          required
+          aria-invalid={Boolean(timeError)}
+          aria-describedby={timeError ? "sighting-time-error" : undefined}
           disabled={disabled}
           onChange={(event) => onOccurredAtChange(event.target.value)}
           className={cn(inputBase, "py-4")}
         />
+        {timeError ? (
+          <p
+            id="sighting-time-error"
+            role="alert"
+            className="text-error text-sm"
+          >
+            {timeError}
+          </p>
+        ) : null}
       </div>
     </section>
   );

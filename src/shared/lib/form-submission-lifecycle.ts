@@ -13,10 +13,19 @@ export interface FormSubmissionAttempt {
 
 type CreateUuid = () => string;
 
+export function runBestEffort(task: () => void | Promise<void>): void {
+  void Promise.resolve()
+    .then(task)
+    .catch(() => undefined);
+}
+
 export async function fingerprintUploadFile(
   file: Blob & { name?: string; lastModified?: number }
 ): Promise<string> {
-  const digest = await crypto.subtle.digest("SHA-256", await file.arrayBuffer());
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    await file.arrayBuffer()
+  );
   const hash = Array.from(new Uint8Array(digest), (byte) =>
     byte.toString(16).padStart(2, "0")
   ).join("");

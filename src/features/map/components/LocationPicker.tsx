@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   useCallback,
+  useId,
   useSyncExternalStore,
 } from "react";
 import { createPortal } from "react-dom";
@@ -61,7 +62,9 @@ export function LocationPicker({
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<NaverMapInstance>(null);
   const markerRef = useRef<NaverMarkerInstance>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const titleId = useId();
   const mounted = useSyncExternalStore(
     subscribeToClientRuntime,
     () => true,
@@ -79,10 +82,55 @@ export function LocationPicker({
 
   // 1. 컴포넌트 마운트 및 스크롤 잠금 처리
   useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    const previouslyFocusedElement =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     document.body.style.overflow = "hidden";
+    const focusFrame = window.requestAnimationFrame(() => {
+      searchInputRef.current?.focus();
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+
+      const focusableElements = Array.from(
+        dialogRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((element) => element.getClientRects().length > 0);
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements.at(-1);
+      if (!firstElement || !lastElement) return;
+
+      const activeElement = document.activeElement;
+      const focusTarget = !dialogRef.current.contains(activeElement)
+        ? event.shiftKey
+          ? lastElement
+          : firstElement
+        : event.shiftKey && activeElement === firstElement
+          ? lastElement
+          : !event.shiftKey && activeElement === lastElement
+            ? firstElement
+            : null;
+      if (focusTarget) {
+        event.preventDefault();
+        focusTarget.focus();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = "";
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", handleKeyDown);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocusedElement?.focus();
       if (mapInstanceRef.current) {
         if (window.naver?.maps?.Event) {
           window.naver.maps.Event.clearInstanceListeners(
@@ -93,7 +141,7 @@ export function LocationPicker({
         mapInstanceRef.current = null;
       }
     };
-  }, []);
+  }, [onClose]);
 
   // 드롭다운 외부 클릭 시 닫기
   useEffect(() => {
@@ -143,7 +191,7 @@ export function LocationPicker({
         map,
         "click",
         (e: NaverMapClickEvent) => {
-        marker.setPosition(e.coord);
+          marker.setPosition(e.coord);
         }
       );
     } catch (error) {
@@ -351,11 +399,15 @@ export function LocationPicker({
       setIsLocating(false);
     };
 
-    navigator.geolocation.getCurrentPosition(onSuccess, (err) => onError(err, false), {
-      enableHighAccuracy: false,
-      timeout: 20000,
-      maximumAge: 60000,
-    });
+    navigator.geolocation.getCurrentPosition(
+      onSuccess,
+      (err) => onError(err, false),
+      {
+        enableHighAccuracy: false,
+        timeout: 20000,
+        maximumAge: 60000,
+      }
+    );
   }, [moveMapAndMarker]);
 
   const handleConfirm = () => {
@@ -371,42 +423,52 @@ export function LocationPicker({
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex flex-col justify-end bg-black/40 backdrop-blur-[2px]">
-      <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative flex h-[90vh] w-full flex-col overflow-hidden rounded-t-[32px] bg-white shadow-2xl transition-all">
+    <div className="fixed inset-0 z-[9999] flex flex-col justify-end bg-black/40">
+      <div className="absolute inset-0" aria-hidden="true" onClick={onClose} />
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="bg-surface text-text-main relative flex h-[90vh] w-full flex-col overflow-hidden rounded-t-[32px] shadow-2xl transition-all"
+      >
         <Script
           src={`https://openapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=geocoder`}
           onLoad={initMap}
           onReady={initMap}
         />
-        <div className="mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full bg-gray-200" />
+        <div className="bg-border-subtle mx-auto mt-3 h-1.5 w-12 shrink-0 rounded-full" />
 
         <header className="flex h-14 shrink-0 items-center justify-between px-4">
           <button
             type="button"
             onClick={onClose}
             aria-label="위치 선택 닫기"
-            className="text-text-sub p-2 text-xl"
+            className="text-text-sub hover:bg-surface-soft focus-visible:outline-action-primary flex min-h-11 min-w-11 items-center justify-center rounded-xl text-xl focus-visible:outline-2 focus-visible:outline-offset-2"
           >
-            ✕
+            <span aria-hidden="true">×</span>
           </button>
-          <Text variant="body" className="font-bold">
+          <Text as="h2" id={titleId} variant="body" className="font-bold">
             {title}
           </Text>
-          <div className="w-10" />
+          <div className="w-11" />
         </header>
 
         {/* 주소 검색 */}
         <div className="shrink-0 px-4 pb-3">
           <div className="relative">
+            <label htmlFor="location-search" className="sr-only">
+              주소 또는 장소 검색
+            </label>
             <input
               ref={searchInputRef}
+              id="location-search"
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder={`주소 또는 장소 검색 (${MIN_SEARCH_LENGTH}글자 이상)`}
-              className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 pr-24 outline-none focus:ring-2"
+              className="border-border-subtle bg-surface text-text-main focus:border-action-primary focus:ring-action-primary/20 w-full rounded-xl border px-4 py-3 pr-24 outline-none focus:ring-2"
             />
             <Button
               type="button"
@@ -423,7 +485,7 @@ export function LocationPicker({
                 className="border-border-subtle bg-surface absolute top-full right-0 left-0 z-20 mt-1 max-h-48 overflow-auto rounded-xl border shadow-lg"
               >
                 {searchResults.length === 0 ? (
-                  <div className="px-4 py-3 text-sm text-gray-500">
+                  <div className="text-text-caption px-4 py-3 text-sm">
                     {isSearching ? "검색 중..." : "검색 결과가 없습니다."}
                   </div>
                 ) : (
@@ -433,7 +495,7 @@ export function LocationPicker({
                         <button
                           type="button"
                           onClick={() => handleSelectResult(item)}
-                          className="w-full px-4 py-3 text-left text-sm hover:bg-gray-100"
+                          className="hover:bg-surface-soft min-h-11 w-full px-4 py-3 text-left text-sm"
                         >
                           {item.label}
                         </button>
@@ -445,7 +507,9 @@ export function LocationPicker({
             )}
           </div>
           {currentLocationError && (
-            <p className="mt-1 text-sm text-red-500">{currentLocationError}</p>
+            <p role="alert" className="text-danger-text mt-1 text-sm">
+              {currentLocationError}
+            </p>
           )}
         </div>
 
@@ -453,8 +517,8 @@ export function LocationPicker({
           <div ref={mapRef} className="h-full w-full" />
           <div className="pointer-events-none absolute inset-0 z-10">
             <div className="absolute top-2 right-4 left-4 flex justify-center">
-              <div className="text-text-main flex items-center gap-2 rounded-full border border-gray-100 bg-white px-5 py-2.5 text-[13px] font-medium shadow-[0_4px_20px_rgb(0,0,0,0.08)]">
-                <div className="bg-primary h-1.5 w-1.5 shrink-0 animate-pulse rounded-full" />
+              <div className="border-border-subtle bg-surface text-text-main flex items-center gap-2 rounded-full border px-5 py-2.5 text-[13px] font-medium shadow-[0_4px_20px_rgb(0,0,0,0.08)]">
+                <div className="bg-action-primary h-1.5 w-1.5 shrink-0 animate-pulse rounded-full" />
                 <span>{guideMessage}</span>
               </div>
             </div>
@@ -464,15 +528,16 @@ export function LocationPicker({
                 type="button"
                 onClick={handleCurrentLocation}
                 disabled={isLocating}
-                className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xl transition-transform active:scale-95 disabled:opacity-50 dark:bg-gray-800"
+                aria-label="현재 위치로 이동"
+                className="bg-surface focus-visible:outline-action-primary pointer-events-auto flex h-12 min-h-11 w-12 min-w-11 items-center justify-center rounded-2xl shadow-xl transition-transform focus-visible:outline-2 focus-visible:outline-offset-2 active:scale-95 disabled:opacity-50"
               >
                 {isLocating ? (
-                  <div className="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
+                  <div className="border-action-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
                 ) : (
                   <div className="relative h-1/2 w-1/2">
                     <Image
                       src="/icons/my_location.svg"
-                      alt="현재 위치"
+                      alt=""
                       fill
                       className="object-contain"
                     />
@@ -482,8 +547,10 @@ export function LocationPicker({
             </div>
             <div className="pb-safe absolute inset-x-0 bottom-8 flex justify-center px-6">
               <Button
+                type="button"
+                variant="primary"
                 onClick={handleConfirm}
-                className="bg-primary pointer-events-auto h-14 w-full max-w-md rounded-2xl text-white shadow-xl transition-transform active:scale-[0.98]"
+                className="pointer-events-auto h-14 w-full max-w-md rounded-2xl shadow-xl transition-transform active:scale-[0.98]"
               >
                 이 위치로 선택
               </Button>

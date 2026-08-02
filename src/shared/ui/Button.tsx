@@ -1,7 +1,7 @@
 import { cn } from "@/shared/lib/cn";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary";
+  variant?: "primary" | "secondary" | "danger" | "quiet";
   isLoading?: boolean;
 }
 
@@ -24,6 +24,9 @@ export function Button({
       "bg-action-primary text-action-on-primary hover:bg-action-primary-hover active:bg-action-primary-hover",
     secondary:
       "border border-action-primary bg-surface text-text-main hover:bg-surface-soft",
+    danger:
+      "border border-danger-text bg-surface text-danger-text hover:bg-surface-soft",
+    quiet: "bg-transparent text-action-primary hover:bg-surface-soft",
   };
 
   const variantStyles = variant ? variants[variant] : "";

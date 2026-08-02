@@ -17,12 +17,14 @@
   --status-lost: #b85c1b;
   --status-shelter: #28736f;
   --status-danger: #b93c38;
+  --danger-text: #a52f2b;
+  --bottom-nav-height: 3.5rem;
 
   --background: var(--background-warm);
   --foreground: var(--text-main);
   --primary: var(--brand-pin);
   --primary-soft: #eafbf2;
-  --error: var(--status-danger);
+  --error: var(--danger-text);
 }
 
 @theme inline {
@@ -46,8 +48,11 @@
   --color-status-lost: var(--status-lost);
   --color-status-shelter: var(--status-shelter);
   --color-status-danger: var(--status-danger);
+  --color-danger-text: var(--danger-text);
   --color-error: var(--error);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR",
+    "Malgun Gothic", sans-serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
 }
 
@@ -63,6 +68,7 @@
     --action-primary: #45db8a;
     --action-primary-hover: #63e49b;
     --action-on-primary: #171411;
+    --danger-text: #ff9c98;
   }
 }
 
@@ -75,7 +81,9 @@ body {
 body {
   background: var(--background-warm);
   color: var(--text-main);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR",
+    "Malgun Gothic", sans-serif;
   touch-action: pan-y;
 }
 

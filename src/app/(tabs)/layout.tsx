@@ -30,18 +30,22 @@ export default function TabsLayout({
       >
         메인 콘텐츠로 건너뛰기
       </a>
-      <main id="main-content" className="flex-1 pb-20" tabIndex={-1}>
+      <main
+        id="main-content"
+        className="flex-1 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1rem)]"
+        tabIndex={-1}
+      >
         {children}
       </main>
 
       <nav
         aria-label="주요 탐색"
-        className="fixed right-0 bottom-0 left-0 z-[100] border-t border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+        className="border-border-subtle bg-surface fixed right-0 bottom-0 left-0 z-[100] border-t"
         style={{
           paddingBottom: "env(safe-area-inset-bottom)",
         }}
       >
-        <div className="mx-auto flex max-w-md items-center justify-around">
+        <div className="mx-auto flex h-[var(--bottom-nav-height)] max-w-md items-center justify-around">
           {tabs.map((tab) => {
             const isActive =
               tab.href === "/"
@@ -52,10 +56,8 @@ export default function TabsLayout({
                 key={tab.href}
                 href={tab.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 px-4 py-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary ${
-                  isActive
-                    ? "text-action-primary"
-                    : "text-text-caption"
+                className={`focus-visible:outline-action-primary flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 px-4 py-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                  isActive ? "text-action-primary" : "text-text-caption"
                 }`}
               >
                 <Icon name={tab.icon} size={24} />

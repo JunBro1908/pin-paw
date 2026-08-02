@@ -15,7 +15,7 @@ export default function HomePage() {
         <Text as="h1" variant="title" className="text-2xl">
           방금 본 동물을 알려주세요
         </Text>
-        <Text variant="body" className="mt-1 opacity-70">
+        <Text variant="body" color="sub" className="mt-1">
           방금 유실된 반려동물을 보셨나요? 빠르게 알려주세요.
         </Text>
       </header>

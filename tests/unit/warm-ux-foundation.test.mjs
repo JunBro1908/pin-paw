@@ -24,6 +24,8 @@ test("icons are local SVGs and Text supports real headings", async () => {
   ]);
   assert.match(icon, /export type IconName/);
   assert.match(icon, /<svg/);
+  assert.match(icon, /strokeLinecap="round"/);
+  assert.match(icon, /strokeLinejoin="round"/);
   assert.doesNotMatch(icon, /🏠|🗺️|⭐|👤/u);
   assert.match(text, /as\?:\s*"p"\s*\|\s*"span"\s*\|\s*"h1"/);
 });
@@ -34,6 +36,27 @@ test("buttons expose 44px target and primary action token", async () => {
   assert.match(button, /min-w-11/);
   assert.match(button, /bg-action-primary/);
   assert.match(button, /focus-visible/);
+});
+
+test("buttons expose semantic danger and quiet variants", async () => {
+  const [button, css] = await Promise.all([
+    read("src/shared/ui/Button.tsx"),
+    read("src/app/globals.css"),
+  ]);
+
+  assert.match(
+    button,
+    /variant\?: "primary" \| "secondary" \| "danger" \| "quiet"/
+  );
+  assert.match(button, /danger:\s*"[^"]*text-danger-text/);
+  assert.match(button, /quiet:\s*"[^"]*text-action-primary/);
+  assert.match(css, /--danger-text:\s*#[0-9a-f]{6}/i);
+  assert.match(css, /--color-danger-text:\s*var\(--danger-text\)/);
+  assert.match(css, /--error:\s*var\(--danger-text\)/);
+  assert.match(
+    css,
+    /prefers-color-scheme:\s*dark[\s\S]*--danger-text:\s*#[0-9a-f]{6}/i
+  );
 });
 
 test("primary buttons use the action token when pressed", async () => {
@@ -63,6 +86,17 @@ test("home has a real h1 and secondary lost-registration link", async () => {
   assert.match(page, /<Text[^>]+as="h1"/);
   assert.match(page, /반려동물을 잃어버렸나요\?/);
   assert.match(page, /href="\/my\/lost-posts\/new"/);
+  assert.match(page, /<Text variant="body" color="sub" className="mt-1">/);
+  assert.doesNotMatch(page, /opacity-70/);
+});
+
+test("global typography uses the approved Korean system font stack", async () => {
+  const css = (await read("src/app/globals.css")).replace(/\s+/g, " ");
+  const stack =
+    '-apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif';
+
+  assert.ok(css.includes(`--font-sans: ${stack}`));
+  assert.ok(css.includes(`font-family: ${stack}`));
 });
 
 test("lost-registration link exposes a 44px target", async () => {
@@ -71,4 +105,37 @@ test("lost-registration link exposes a 44px target", async () => {
     page,
     /href="\/my\/lost-posts\/new"[\s\S]*?className="[^"]*inline-flex min-h-11 min-w-11 items-center justify-center/
   );
+});
+
+test("core-flow semantic color utilities map to declared tokens", async () => {
+  const paths = [
+    "src/app/(tabs)/layout.tsx",
+    "src/app/(tabs)/page.tsx",
+    "src/features/map/components/LocationPicker.tsx",
+    "src/features/sightings/components/SightingEssentials.tsx",
+    "src/features/sightings/components/SightingForm.tsx",
+    "src/features/sightings/components/SightingOptionalDetails.tsx",
+    "src/shared/ui/Button.tsx",
+    "src/shared/ui/Text.tsx",
+    "src/shared/ui/Toast.tsx",
+  ];
+  const [css, ...sources] = await Promise.all([
+    read("src/app/globals.css"),
+    ...paths.map(read),
+  ]);
+  const semanticToken =
+    /\b(?:bg|text|border|outline|ring)-(brand-pin|action-[a-z-]+|background-warm|surface(?:-soft)?|text-(?:main|sub|caption)|border-subtle|accent-warm(?:-text)?|status-[a-z-]+|danger-text|error|primary(?:-soft)?)(?:\/\d+)?\b/g;
+  const referenced = new Set(
+    sources.flatMap((source) =>
+      Array.from(source.matchAll(semanticToken), (match) => match[1])
+    )
+  );
+
+  for (const token of referenced) {
+    assert.match(
+      css,
+      new RegExp(`--color-${token}:\\s*var\\(--${token}\\)`),
+      `${token} must map to a declared semantic color token`
+    );
+  }
 });

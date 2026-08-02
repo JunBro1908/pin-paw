@@ -1,10 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
 import { Button } from "@/shared/ui/Button";
 import { SightingFormData } from "../model/types";
 import { validateSightingForm } from "../lib/validators";
-import { cn } from "@/shared/lib/cn";
 import { Toast } from "@/shared/ui/Toast";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { supabase } from "@/shared/supabase/client";
@@ -21,6 +21,7 @@ import {
   markUploadCompleted,
   prepareSubmission,
   rememberUploadIntent,
+  runBestEffort,
   type FormSubmissionAttempt,
 } from "@/shared/lib/form-submission-lifecycle";
 
@@ -39,6 +40,7 @@ export function SightingForm() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionSucceeded, setSubmissionSucceeded] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isLocationSet, setIsLocationSet] = useState(false);
@@ -152,6 +154,7 @@ export function SightingForm() {
       return;
     }
 
+    setSubmissionSucceeded(false);
     setIsSubmitting(true);
 
     try {
@@ -187,16 +190,18 @@ export function SightingForm() {
       );
       submissionAttemptRef.current = completeSubmission();
 
+      resetForm();
+      setSubmissionSucceeded(true);
+
       setToast({
         message: "제보가 성공적으로 등록되었습니다!",
         type: "success",
       });
-      const { invalidateMySightingsCache } =
-        await import("@/features/sightings/hooks/useMySightings");
-      invalidateMySightingsCache();
-
-      // 폼 초기화
-      resetForm();
+      runBestEffort(async () => {
+        const { invalidateMySightingsCache } =
+          await import("@/features/sightings/hooks/useMySightings");
+        invalidateMySightingsCache();
+      });
     } catch (err) {
       setToast({
         message: err instanceof Error ? err.message : "오류가 발생했습니다.",
@@ -364,20 +369,18 @@ export function SightingForm() {
    * 폼 상태를 초기화합니다.
    */
   const resetForm = () => {
-    setFormData({
+    setFormData((prev) => ({
       photo: null,
       photoUrl: null,
-      lat: 37.5665,
-      lng: 126.978,
+      lat: prev.lat,
+      lng: prev.lng,
       time: toLocalDateTimeInputValue(new Date()),
       traitColor: "",
       traitSize: "unknown",
       traitSpecies: SPECIES_UNKNOWN,
       traitTags: [],
       description: "",
-    });
-    setIsLocationSet(false);
-    setGeolocationErrorKind("error");
+    }));
     setShowErrors(false);
   };
 
@@ -390,10 +393,26 @@ export function SightingForm() {
           onClose={() => setToast(null)}
         />
       )}
+      {submissionSucceeded ? (
+        <div
+          role="status"
+          aria-live="polite"
+          className="border-border-subtle bg-surface text-text-main mb-6 rounded-2xl border p-4"
+        >
+          <p className="font-semibold">제보가 지도에 등록되었습니다.</p>
+          <Link
+            href="/map"
+            className="text-action-primary focus-visible:outline-action-primary mt-2 inline-flex min-h-11 min-w-11 items-center font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            지도에서 확인
+          </Link>
+        </div>
+      ) : null}
       <form onSubmit={handleSubmit} className="space-y-8">
         <SightingEssentials
           photoUrl={formData.photoUrl}
           occurredAt={formData.time}
+          timeError={errors.time}
           locationStatus={locationStatus}
           disabled={isSubmitting}
           onPhotoChange={handlePhotoChange}
@@ -445,15 +464,11 @@ export function SightingForm() {
           onTraitTagToggle={handleToggleTag}
         />
 
-        <div className="sticky bottom-6 pt-4">
+        <div className="sticky bottom-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+0.75rem)] z-10 pt-4">
           <Button
             type="submit"
-            className={cn(
-              "h-14 w-full rounded-2xl text-lg font-bold shadow-xl transition-all active:scale-[0.98]",
-              isValid
-                ? "bg-primary text-white"
-                : "pointer-events-none bg-gray-200 text-gray-400 shadow-none"
-            )}
+            variant="primary"
+            className="h-14 w-full rounded-2xl text-lg font-bold shadow-xl transition-all active:scale-[0.98]"
             isLoading={isSubmitting}
           >
             제보 등록

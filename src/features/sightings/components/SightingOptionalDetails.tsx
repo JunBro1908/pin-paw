@@ -138,7 +138,7 @@ export function SightingOptionalDetails({
                       "focus-visible:outline-action-primary min-h-11 rounded-full px-3 py-2 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2",
                       selected
                         ? "bg-action-primary text-action-on-primary"
-                        : "bg-surface-soft text-text-sub hover:bg-accent-warm-soft",
+                        : "bg-surface-soft text-text-sub hover:bg-accent-warm/20",
                       tagDisabled && "cursor-not-allowed opacity-50"
                     )}
                   >
