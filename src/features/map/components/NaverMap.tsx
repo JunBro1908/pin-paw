@@ -167,6 +167,14 @@ export function NaverMap({
       })
     );
   }, [cachedLostPosts, initialLostPostId]);
+  // Guests cannot use unseen/bookmark; restore public clusters after logout.
+  if (!isAuthLoading) {
+    const nextLayer = resolveMapLayerForSession(mapLayer, isAuthenticated);
+    if (nextLayer !== mapLayer) {
+      setMapLayer(nextLayer);
+    }
+  }
+
   /** fetchClusters가 mapLayer에 의존하지 않도록 ref 사용 → 레이어 변경 시 지도 인스턴스/불필요 재요청 방지 */
   const mapLayerRef = useRef<MapLayer>(mapLayer);
   const prevMapLayerRef = useRef<MapLayer>(mapLayer);
@@ -174,15 +182,6 @@ export function NaverMap({
     mapLayerRef.current = mapLayer;
     writeStoredMapLayer(mapLayer);
   }, [mapLayer]);
-
-  // Guests cannot use unseen/bookmark; restore public clusters after logout.
-  useEffect(() => {
-    if (isAuthLoading) return;
-    const nextLayer = resolveMapLayerForSession(mapLayer, isAuthenticated);
-    if (nextLayer !== mapLayer) {
-      setMapLayer(nextLayer);
-    }
-  }, [isAuthLoading, isAuthenticated, mapLayer]);
 
   /** 유실글 마커 터치 시 카드용 (제보 카드와 별도) */
   const [selectedLostPostForCard, setSelectedLostPostForCard] =
@@ -483,7 +482,9 @@ export function NaverMap({
   // idle/geolocation callbacks change identity (which would otherwise race
   // Strict Mode remounts and leave isLoaded stuck on false).
   const initMapRef = useRef(initMap);
-  initMapRef.current = initMap;
+  useEffect(() => {
+    initMapRef.current = initMap;
+  }, [initMap]);
 
   // Script may already be cached after tab navigation, so onLoad might not
   // re-fire. Retry until the Maps API + container are ready, then dispose once.

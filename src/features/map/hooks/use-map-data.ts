@@ -293,10 +293,7 @@ export function useMapData({
   }, [requestGuard]);
 
   const patchFeedback = useCallback(
-    (
-      sightingId: string,
-      patch: { claimed?: boolean; seen?: boolean }
-    ) => {
+    (sightingId: string, patch: { claimed?: boolean; seen?: boolean }) => {
       dispatch({
         type: "patch-feedback",
         sightingId,
