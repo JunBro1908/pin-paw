@@ -3,16 +3,32 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 test("auth markers always emit owner pins separately from other clusters", async () => {
-  const sql = await readFile(
-    "supabase/migrations/20260726040000_auth_map_always_include_owner_pins.sql",
-    "utf8"
-  );
+  const [legacy, next] = await Promise.all([
+    readFile(
+      "supabase/migrations/20260726040000_auth_map_always_include_owner_pins.sql",
+      "utf8"
+    ),
+    readFile(
+      "supabase/migrations/20260802020000_auth_map_privileged_pins_out_of_clusters.sql",
+      "utf8"
+    ),
+  ]);
 
-  assert.match(sql, /owner_points as/);
-  assert.match(sql, /other_points as/);
-  assert.match(sql, /where user_id = v_user_id/);
-  assert.match(sql, /user_id is distinct from v_user_id/);
-  assert.match(sql, /'location_precision',\s*'precise'/);
+  assert.match(legacy, /owner_points as/);
+  assert.match(legacy, /other_points as/);
+  assert.match(legacy, /where user_id = v_user_id/);
+  assert.match(legacy, /user_id is distinct from v_user_id/);
+  assert.match(legacy, /'location_precision',\s*'precise'/);
+
+  assert.match(next, /privileged_points as/);
+  assert.match(next, /claimed_ids as/);
+  assert.match(next, /lost_post_sighting_claims/);
+  assert.match(next, /p_zoom_level >= 15/);
+  assert.match(next, /v_grid_size := 0\.001/);
+  assert.match(
+    next,
+    /Owner pins \+ bookmark endpoints stay out of ordinary clusters/
+  );
 });
 
 test("NaverMap restores and writes map layer preference", async () => {

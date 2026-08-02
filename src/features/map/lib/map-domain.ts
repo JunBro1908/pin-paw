@@ -114,13 +114,19 @@ export function getFilteredItems(
   });
 }
 
+/**
+ * Cluster grid policy (auth ALL layer):
+ * - zoom ≥15: near-individual pins (tiny grid); clusters rare.
+ * - mid zoom: only ordinary sightings cluster; owner + claimed/bookmark
+ *   endpoints stay as points (RPC), lost-post pins + trails render separately.
+ * - low zoom: same privilege split; keep lost-post/trail overlays visible.
+ * Guests stay on a coarser public grid (zoom capped at 14).
+ */
 export function getGridSize(zoom: number, authenticated: boolean): number {
   const effectiveZoom = authenticated ? zoom : Math.min(zoom, 14);
 
-  if (effectiveZoom >= 17) return 0.001;
-  if (effectiveZoom >= 16) return 0.003;
-  if (effectiveZoom >= 15) return 0.006;
-  if (effectiveZoom >= 14) return 0.01;
+  if (effectiveZoom >= 15) return 0.001;
+  if (effectiveZoom >= 14) return 0.006;
   if (effectiveZoom >= 13) return 0.03;
   if (effectiveZoom >= 11) return 0.05;
   if (effectiveZoom >= 9) return 0.1;

@@ -34,10 +34,10 @@ test("normalizes IDs and preserves the existing layer filtering rules", () => {
 });
 
 test("keeps the public zoom cap and established grid thresholds", () => {
-  assert.equal(mapDomain.getGridSize?.(17, false), 0.01);
+  assert.equal(mapDomain.getGridSize?.(17, false), 0.006);
   assert.equal(mapDomain.getGridSize?.(17, true), 0.001);
-  assert.equal(mapDomain.getGridSize?.(16, true), 0.003);
-  assert.equal(mapDomain.getGridSize?.(15, true), 0.006);
+  assert.equal(mapDomain.getGridSize?.(15, true), 0.001);
+  assert.equal(mapDomain.getGridSize?.(14, true), 0.006);
   assert.equal(mapDomain.getGridSize?.(13, true), 0.03);
   assert.equal(mapDomain.getGridSize?.(10, true), 0.1);
   assert.equal(mapDomain.getGridSize?.(8, true), 0.5);

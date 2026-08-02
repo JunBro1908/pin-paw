@@ -21,9 +21,10 @@ test("paw icon is a filled symmetric mark and confirm tab uses it", async () => 
 });
 
 test("default map layer renders own lost posts with sightings", async () => {
-  const [map, data] = await Promise.all([
+  const [map, data, renderer] = await Promise.all([
     readFile("src/features/map/components/NaverMap.tsx", "utf8"),
     readFile("src/features/map/hooks/use-map-data.ts", "utf8"),
+    readFile("src/features/map/lib/map-layer-renderer.ts", "utf8"),
   ]);
 
   assert.match(
@@ -43,6 +44,11 @@ test("default map layer renders own lost posts with sightings", async () => {
     /enabled: mapLayer === "bookmark" \|\| mapLayer === "default"/
   );
   assert.match(map, /mapLayer !== "bookmark" && mapLayer !== "default"/);
+  assert.match(renderer, /zIndex: 200/);
+  assert.match(
+    renderer,
+    /Above ordinary sighting clusters so ALL keeps owner lost pins visible/
+  );
 });
 
 test("bookmark trails use action-primary green on all layers", async () => {

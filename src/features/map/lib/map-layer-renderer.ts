@@ -253,6 +253,7 @@ export function createMapLayerRenderer({
       const marker = adapter.createMarker({
         position: toLatLng(item),
         map,
+        zIndex: item.type === "cluster" ? 50 : 100,
         icon: {
           content: createSightingContent(item, feedback, getImageUrl),
           anchor: toPoint(
@@ -305,6 +306,7 @@ export function createMapLayerRenderer({
       const marker = adapter.createMarker({
         position: toLatLng(item),
         map,
+        zIndex: 120,
         icon: {
           content: createSightingContent(item, feedback, getImageUrl),
           anchor: toPoint(
@@ -338,6 +340,8 @@ export function createMapLayerRenderer({
         const marker = adapter.createMarker({
           position: toLatLng(lostPost),
           map,
+          // Above ordinary sighting clusters so ALL keeps owner lost pins visible.
+          zIndex: 200,
           icon: {
             content: createLostPostContent(thumbnailUrl),
             anchor: toPoint(22, 44),
@@ -367,7 +371,7 @@ export function createMapLayerRenderer({
         path: coordinates.map(toLatLng),
         strokeColor: PATH_TRAIL_STATIC,
         strokeWeight: 4,
-        zIndex: 0,
+        zIndex: 80,
       })
     );
     animationPolylines = animationCoordinates.map((coordinates) =>
@@ -376,7 +380,7 @@ export function createMapLayerRenderer({
         path: [toLatLng(coordinates[0])],
         strokeColor: PATH_TRAIL_ANIMATION,
         strokeWeight: 5,
-        zIndex: 1,
+        zIndex: 90,
       })
     );
     adapter.replacePolylines(staticPolylines, "paths");
