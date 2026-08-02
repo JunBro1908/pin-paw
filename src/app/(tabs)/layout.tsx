@@ -2,12 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { Icon, type IconName } from "@/shared/ui/Icon";
 
-const tabs = [
-  { href: "/", label: "홈", icon: "🏠" },
-  { href: "/map", label: "지도", icon: "🗺️" },
-  { href: "/recommend", label: "추천", icon: "⭐" },
-  { href: "/my", label: "내정보", icon: "👤" },
+const tabs: ReadonlyArray<{
+  href: string;
+  label: string;
+  icon: IconName;
+}> = [
+  { href: "/", label: "제보", icon: "report" },
+  { href: "/map", label: "지도", icon: "map" },
+  { href: "/recommend", label: "확인", icon: "check" },
+  { href: "/my", label: "내 활동", icon: "activity" },
 ];
 
 export default function TabsLayout({
@@ -47,15 +52,13 @@ export default function TabsLayout({
                 key={tab.href}
                 href={tab.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`flex flex-col items-center gap-1 px-4 py-3 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 ${
+                className={`flex min-h-14 min-w-14 flex-col items-center justify-center gap-1 px-4 py-2 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary ${
                   isActive
-                    ? "text-blue-600 dark:text-blue-400"
-                    : "text-gray-600 dark:text-gray-400"
+                    ? "text-action-primary"
+                    : "text-text-caption"
                 }`}
               >
-                <span className="text-2xl" aria-hidden="true">
-                  {tab.icon}
-                </span>
+                <Icon name={tab.icon} size={24} />
                 <span className="text-xs font-medium">{tab.label}</span>
               </Link>
             );

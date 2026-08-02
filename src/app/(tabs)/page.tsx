@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { SightingForm } from "@/features/sightings/components/SightingForm";
@@ -11,8 +12,8 @@ export default function HomePage() {
   return (
     <Container className="py-8">
       <header className="mb-8">
-        <Text variant="title" className="text-2xl">
-          목격 제보
+        <Text as="h1" variant="title" className="text-2xl">
+          방금 본 동물을 알려주세요
         </Text>
         <Text variant="body" className="mt-1 opacity-70">
           방금 유실된 반려동물을 보셨나요? 빠르게 알려주세요.
@@ -24,6 +25,13 @@ export default function HomePage() {
       </Suspense>
 
       <SightingForm />
+
+      <Link
+        href="/my/lost-posts/new"
+        className="mt-6 block text-center text-sm font-medium text-action-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-action-primary"
+      >
+        반려동물을 잃어버렸나요? 유실 등록하기
+      </Link>
 
       <footer className="mt-12 pb-8 text-center">
         <Text variant="caption" className="text-text-caption">

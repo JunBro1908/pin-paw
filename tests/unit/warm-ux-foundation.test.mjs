@@ -48,3 +48,19 @@ test("secondary buttons use semantic high-contrast colors", async () => {
     /border border-border-subtle bg-surface-soft text-text-main hover:bg-border-subtle/
   );
 });
+
+test("bottom navigation uses product labels and outline icons", async () => {
+  const layout = await read("src/app/(tabs)/layout.tsx");
+  for (const label of ["제보", "지도", "확인", "내 활동"])
+    assert.match(layout, new RegExp(`label: "${label}"`));
+  assert.match(layout, /<Icon name=\{tab\.icon\}/);
+  assert.match(layout, /aria-current=\{isActive \? "page"/);
+  assert.doesNotMatch(layout, /🏠|🗺️|⭐|👤|text-blue/u);
+});
+
+test("home has a real h1 and secondary lost-registration link", async () => {
+  const page = await read("src/app/(tabs)/page.tsx");
+  assert.match(page, /<Text[^>]+as="h1"/);
+  assert.match(page, /반려동물을 잃어버렸나요\?/);
+  assert.match(page, /href="\/my\/lost-posts\/new"/);
+});
