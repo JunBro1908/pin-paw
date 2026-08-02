@@ -14,6 +14,8 @@ import {
 } from "../lib/lost-post-cover";
 import type { LostPostItem } from "../model/types";
 import { cn } from "@/shared/lib/cn";
+import { normalizeSize, SIZE_LABELS } from "@/shared/constants/traitSizes";
+import { SPECIES_UNKNOWN } from "@/features/sightings/constants/breeds";
 
 interface ActiveLostCaseCardProps {
   item: LostPostItem;
@@ -25,6 +27,33 @@ interface ActiveLostCaseCardProps {
   primaryAction?: "recommend" | "detail";
   /** When set, primary CTA runs in place instead of navigating. */
   onPrimaryAction?: (item: LostPostItem) => void;
+}
+
+const traitChipClass =
+  "bg-surface-soft text-text-sub rounded-lg px-2.5 py-1 text-xs font-medium";
+
+function buildLostCaseTraitTags(item: LostPostItem): string[] {
+  const tags: string[] = [];
+
+  const species = item.trait_species?.trim();
+  if (species && species !== SPECIES_UNKNOWN && species !== "모름") {
+    tags.push(species);
+  }
+
+  const sizeRaw = item.trait_size?.trim();
+  if (sizeRaw) {
+    const normalized = normalizeSize(sizeRaw);
+    if (normalized && normalized !== "unknown") {
+      tags.push(SIZE_LABELS[normalized]);
+    }
+  }
+
+  const color = item.trait_color?.trim();
+  if (color && color !== "unknown" && color !== "모름") {
+    tags.push(color);
+  }
+
+  return tags;
 }
 
 export function ActiveLostCaseCard({
@@ -42,7 +71,8 @@ export function ActiveLostCaseCard({
   } | null>(null);
   const coverUrl = getLostPostCoverUrl(item.cover_photo_key);
   const lostAt = formatLostCaseDateTime(item.lost_at);
-  const lastChecked = formatLostCaseDateTime(item.updated_at);
+  const traitTags = buildLostCaseTraitTags(item);
+  const note = item.note?.trim() || "";
   const detailHref = `/my/lost-posts/${item.id}`;
   const recommendHref = `/recommend?lostPostId=${item.id}`;
   const primaryHref =
@@ -98,6 +128,7 @@ export function ActiveLostCaseCard({
           {item.status === "searching" ? (
             <ShareLostPostButton
               lostPostId={item.id}
+              petName={item.pet_name}
               onCopied={() =>
                 setToast({
                   message: "공유 링크를 복사했습니다.",
@@ -119,12 +150,21 @@ export function ActiveLostCaseCard({
           </Text>
           {lostAt ? (
             <Text variant="body" color="sub" className="mt-1 block text-sm">
-              유실 시각 {lostAt}
+              유실 시각 : {lostAt}
             </Text>
           ) : null}
-          {lastChecked ? (
-            <Text variant="caption" color="caption" className="mt-0.5 block">
-              마지막 확인 {lastChecked}
+          {traitTags.length > 0 ? (
+            <ul className="mt-2 flex flex-wrap gap-1.5">
+              {traitTags.map((label) => (
+                <li key={label} className={traitChipClass}>
+                  {label}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {note ? (
+            <Text variant="caption" color="caption" className="mt-2 block">
+              특이사항 : {note}
             </Text>
           ) : null}
         </div>
