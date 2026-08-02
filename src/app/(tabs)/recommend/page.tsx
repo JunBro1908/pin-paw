@@ -7,6 +7,7 @@ import { Suspense, useEffect, useState } from "react";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
+import { BackLink } from "@/shared/ui/BackLink";
 import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { LostCaseCarousel } from "@/features/lost-posts/components/LostCaseCarousel";
@@ -155,12 +156,7 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
 
   return (
     <Container className="py-8">
-      <Link
-        href="/recommend"
-        className="text-action-primary mb-6 inline-flex min-h-11 items-center text-sm font-medium underline-offset-4 hover:underline"
-      >
-        ← 다른 유실글 선택
-      </Link>
+      <BackLink href="/recommend">다른 유실글 선택</BackLink>
 
       <header className="mb-6">
         <Text as="h1" variant="title" className="text-2xl">

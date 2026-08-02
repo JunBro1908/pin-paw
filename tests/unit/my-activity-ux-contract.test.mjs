@@ -7,7 +7,7 @@ test("my activity leads with an active case carousel without next actions", asyn
   assert.match(page, /<LostCaseCarousel/);
   assert.doesNotMatch(page, /LostCaseNextActions/);
   assert.doesNotMatch(page, /다음으로 할 일/);
-  assert.match(page, /내 활동/);
+  assert.match(page, /내 정보/);
   assert.match(page, /aria-label="유실글 올리기"/);
   assert.doesNotMatch(page, /유실 사건 등록/);
   assert.doesNotMatch(page, /지난 유실글/);

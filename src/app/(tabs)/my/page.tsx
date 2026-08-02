@@ -34,7 +34,7 @@ function NewLostPostButton({ className }: { className?: string }) {
       href="/my/lost-posts/new"
       aria-label="유실글 올리기"
       className={cn(
-        "border-border-subtle bg-action-primary text-action-on-primary hover:bg-action-primary/90 focus-visible:outline-action-primary inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border text-2xl font-light leading-none shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
+        "text-text-main hover:text-action-primary focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center text-2xl font-light leading-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
         className
       )}
     >
@@ -69,8 +69,8 @@ function MyPageContent() {
   return (
     <Container className="py-8">
       <header className="mb-8">
-        <Text as="h1" variant="title" className="text-2xl">
-          내 활동
+        <Text as="h1" variant="title" color="main">
+          내 정보
         </Text>
         <Text variant="body" color="sub" className="mt-1">
           올린 유실글과 제보를 이어서 관리하세요.
@@ -103,7 +103,7 @@ function MyPageContent() {
       {!loading && !error && carouselItems.length === 0 ? (
         <div className="mb-6 py-2">
           <header className="mb-6 text-center sm:text-left">
-            <Text as="h2" variant="title" className="text-xl">
+            <Text as="h2" variant="title" color="main">
               아직 올린 유실글이 없어요
             </Text>
             <Text variant="body" color="sub" className="mt-1">
@@ -132,17 +132,17 @@ function MyPageContent() {
         <button
           type="button"
           onClick={() => setSightingsOpen((o) => !o)}
-          className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-gray-50 dark:hover:bg-gray-800/50"
+          className="hover:bg-surface-soft flex w-full items-center justify-between px-5 py-4 text-left transition-colors"
           aria-expanded={sightingsOpen}
           aria-controls="my-sightings-content"
           id="my-sightings-heading"
         >
-          <Text variant="title" className="font-semibold">
+          <Text variant="title" color="main">
             내 제보
           </Text>
           <span
             className={cn(
-              "inline-block text-gray-500 transition-transform",
+              "text-text-caption inline-block transition-transform",
               !sightingsOpen && "rotate-90"
             )}
             aria-hidden
@@ -155,7 +155,7 @@ function MyPageContent() {
           role="region"
           aria-labelledby="my-sightings-heading"
           className={cn(
-            "border-t border-gray-100 dark:border-gray-800",
+            "border-border-subtle border-t",
             !sightingsOpen && "hidden"
           )}
         >
@@ -187,7 +187,7 @@ function AccountSurface({
       <div className="flex items-center gap-4">
         <div className="bg-primary-soft h-14 w-14 shrink-0 rounded-full" />
         <div className="min-w-0 flex-1">
-          <Text variant="body" className="font-bold">
+          <Text variant="body" color="main" className="font-semibold">
             {displayName}님
           </Text>
           {displayEmail ? (

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
+import { BackLink } from "@/shared/ui/BackLink";
 
 type LegalSection = {
   title: string;
@@ -31,13 +32,8 @@ export function LegalDocument({
   return (
     <Container className="py-10">
       <header className="mb-8">
-        <Link
-          href="/my"
-          className="text-action-primary focus-visible:outline-action-primary mb-4 inline-flex min-h-11 items-center text-sm font-medium underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-        >
-          ← 내 활동으로
-        </Link>
-        <Text as="h1" variant="title" className="block text-2xl">
+        <BackLink href="/my">내 정보</BackLink>
+        <Text as="h1" variant="title" color="main" className="block">
           {title}
         </Text>
         <Text variant="caption" color="caption" className="mt-2 block">

@@ -1,8 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
+import { BackLink } from "@/shared/ui/BackLink";
 import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { MySightingList } from "@/features/sightings/components/MySightingList";
 
@@ -12,13 +12,8 @@ import { MySightingList } from "@/features/sightings/components/MySightingList";
 function MySightingsContent() {
   return (
     <Container className="py-10">
-      <Link
-        href="/my"
-        className="text-primary mb-6 inline-block text-sm font-medium hover:underline"
-      >
-        ← 내 정보
-      </Link>
-      <Text variant="title" className="mb-4">
+      <BackLink href="/my">내 정보</BackLink>
+      <Text as="h1" variant="title" color="main" className="mb-4">
         내 제보
       </Text>
       <MySightingList />

@@ -74,9 +74,10 @@ test("secondary buttons expose the semantic high-contrast boundary", async () =>
 
 test("bottom navigation uses product labels and outline icons", async () => {
   const layout = await read("src/app/(tabs)/layout.tsx");
-  for (const label of ["제보", "지도", "찾기", "내 활동"])
+  for (const label of ["제보", "지도", "찾기", "내 정보"])
     assert.match(layout, new RegExp(`label: "${label}"`));
   assert.match(layout, /icon: "paw"/);
+  assert.match(layout, /icon: "user"/);
   assert.match(layout, /<Icon name=\{tab\.icon\}/);
   assert.match(layout, /aria-current=\{isActive \? "page"/);
   assert.doesNotMatch(layout, /🏠|🗺️|⭐|👤|text-blue/u);
@@ -85,10 +86,17 @@ test("bottom navigation uses product labels and outline icons", async () => {
 test("home has a real h1 and secondary lost-registration link", async () => {
   const page = await read("src/app/(tabs)/page.tsx");
   assert.match(page, /<Text[^>]+as="h1"/);
-  assert.match(page, /반려동물을 잃어버렸나요\?/);
+  assert.match(page, /쉽고 빠른 제보들이 모여, 유실견을 따듯한 가족의 품으로 안내해줍니다/);
   assert.match(page, /href="\/my\/lost-posts\/new"/);
+  assert.match(page, /flex-col items-center/);
+  assert.match(page, /반려동물을 잃어버렸나요\?/);
+  assert.match(page, /유실 등록하기/);
   assert.match(page, /<Text variant="body" color="sub" className="mt-1">/);
   assert.doesNotMatch(page, /opacity-70/);
+  assert.doesNotMatch(
+    page,
+    /짧은 제보 하나가 PinPaw에서 가족을 찾는 따뜻한 실마리가 됩니다/
+  );
 });
 
 test("global typography uses the approved Korean system font stack", async () => {
@@ -104,7 +112,7 @@ test("lost-registration link exposes a 44px target", async () => {
   const page = await read("src/app/(tabs)/page.tsx");
   assert.match(
     page,
-    /href="\/my\/lost-posts\/new"[\s\S]*?className="[^"]*inline-flex min-h-11 min-w-11 items-center justify-center/
+    /href="\/my\/lost-posts\/new"[\s\S]*?className="[^"]*inline-flex min-h-11 min-w-11 flex-col items-center justify-center/
   );
 });
 

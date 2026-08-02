@@ -12,7 +12,7 @@ const tabs: ReadonlyArray<{
   { href: "/", label: "제보", icon: "report" },
   { href: "/map", label: "지도", icon: "map" },
   { href: "/recommend", label: "찾기", icon: "paw" },
-  { href: "/my", label: "내 활동", icon: "activity" },
+  { href: "/my", label: "내 정보", icon: "user" },
 ];
 
 export default function TabsLayout({
