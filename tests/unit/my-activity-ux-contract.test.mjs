@@ -6,7 +6,6 @@ test("my activity leads with an active case and next actions", async () => {
   const page = await readFile("src/app/(tabs)/my/page.tsx", "utf8");
   assert.match(page, /<ActiveLostCaseCard/);
   assert.match(page, /<LostCaseNextActions/);
-  assert.ok(page.indexOf("<ActiveLostCaseCard") < page.indexOf("displayEmail"));
   assert.match(page, /내 활동/);
 });
 
@@ -49,8 +48,21 @@ test("login prompt states the purpose and links policies", async () => {
     "src/features/auth/components/LoginPrompt.tsx",
     "utf8"
   );
-  assert.match(prompt, /유실 사건을 이어서 관리하려면 로그인해 주세요/);
+  assert.match(prompt, /로그인이 필요합니다/);
+  assert.match(prompt, /유실글 등록, 내 제보 확인/);
   assert.match(prompt, /href="\/terms"/);
   assert.match(prompt, /href="\/privacy"/);
   assert.doesNotMatch(prompt, /동의하는 것으로 간주됩니다/);
+});
+
+test("my activity leads with user profile before active case", async () => {
+  const page = await readFile("src/app/(tabs)/my/page.tsx", "utf8");
+  assert.match(page, /<AccountSurface/);
+  assert.match(page, /<ActiveLostCaseCard/);
+  assert.ok(
+    page.indexOf("<AccountSurface") < page.indexOf("<ActiveLostCaseCard"),
+    "user profile should appear before the active case card"
+  );
+  assert.match(page, /max-h-72 overflow-y-auto/);
+  assert.match(page, /useMySightings\(\)/);
 });

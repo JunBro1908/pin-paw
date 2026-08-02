@@ -15,12 +15,15 @@ import { LostPostList } from "@/features/lost-posts/components/LostPostList";
 import { selectActiveLostCase } from "@/features/lost-posts/lib/active-lost-case";
 import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
 import { MySightingList } from "@/features/sightings/components/MySightingList";
+import { useMySightings } from "@/features/sightings/hooks/useMySightings";
 import { cn } from "@/shared/lib/cn";
 
 function MyPageContent() {
   const router = useRouter();
   const { user, signOut } = useAuth();
   const { items, loading, refreshing, error, reload } = useMyLostPosts();
+  // Warm sightings cache on auth so expanding the section feels instant.
+  useMySightings();
   const [lostPostsOpen, setLostPostsOpen] = useState(false);
   const [sightingsOpen, setSightingsOpen] = useState(false);
 
@@ -36,6 +39,8 @@ function MyPageContent() {
       <Text as="h1" variant="title" className="mb-6">
         내 활동
       </Text>
+
+      <AccountSurface user={user} onSignOut={handleSignOut} />
 
       {loading && !activeCase ? (
         <div className="mb-6 space-y-3">
@@ -80,8 +85,6 @@ function MyPageContent() {
         </>
       ) : null}
 
-      <AccountSurface user={user} onSignOut={handleSignOut} />
-
       <section className="border-border-subtle bg-surface mb-4 overflow-hidden rounded-2xl border shadow-sm">
         <button
           type="button"
@@ -121,7 +124,7 @@ function MyPageContent() {
               + 등록
             </Link>
           </div>
-          <div className="px-5 pb-5">
+          <div className="max-h-72 overflow-y-auto px-5 pb-5">
             {lostPostsOpen ? (
               <LostPostList
                 items={items}
@@ -165,7 +168,7 @@ function MyPageContent() {
             !sightingsOpen && "hidden"
           )}
         >
-          <div className="px-5 pt-3 pb-5">
+          <div className="max-h-72 overflow-y-auto px-5 pt-3 pb-5">
             {sightingsOpen ? <MySightingList /> : null}
           </div>
         </div>
