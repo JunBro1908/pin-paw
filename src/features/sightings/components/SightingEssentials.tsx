@@ -14,6 +14,7 @@ import {
 export interface SightingEssentialsProps {
   photoUrl: string | null;
   occurredAt: string;
+  photoLabel?: string;
   photoError?: string;
   locationError?: string;
   timeError?: string;
@@ -57,6 +58,7 @@ function FieldTitle({
 export function SightingEssentials({
   photoUrl,
   occurredAt,
+  photoLabel = "사진 추가",
   photoError,
   locationError,
   timeError,
@@ -79,7 +81,7 @@ export function SightingEssentials({
       <div className="space-y-3">
         <FieldTitle
           icon="camera"
-          label="사진 추가"
+          label={photoLabel}
           required
           error={photoError}
         />
