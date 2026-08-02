@@ -13,7 +13,10 @@ import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
 import { SightingDetailCard } from "@/features/sightings/components/SightingDetailCard";
 import type { SightingDetailData } from "@/features/sightings/components/SightingDetailCard";
-import { SightingDetailSheet } from "@/features/sightings/components/SightingDetailSheet";
+import { MapDetailSheet } from "./MapDetailSheet";
+import { MapLegend } from "./MapLegend";
+import { MapToolbar } from "./MapToolbar";
+import type { LostPostMapItem } from "../lib/map-data-state";
 import {
   DEFAULT_MAP_CENTER,
   DEFAULT_MAP_WARM_ZOOM,
@@ -107,7 +110,9 @@ export function NaverMap({
     >(null);
 
   /** 지도 마커 레이어 필터 (전체 / 안 본 것 / 북마크) — localStorage로 유지 */
-  const [mapLayer, setMapLayer] = useState<MapLayer>(() => readStoredMapLayer());
+  const [mapLayer, setMapLayer] = useState<MapLayer>(() =>
+    readStoredMapLayer()
+  );
   const {
     items: itemsInView,
     feedback: sightingFeedbackMap,
@@ -155,8 +160,6 @@ export function NaverMap({
       })
     );
   }, [cachedLostPosts, initialLostPostId]);
-  /** 레이어 선택 메뉴 열림 */
-  const [layerMenuOpen, setLayerMenuOpen] = useState(false);
   /** fetchClusters가 mapLayer에 의존하지 않도록 ref 사용 → 레이어 변경 시 지도 인스턴스/불필요 재요청 방지 */
   const mapLayerRef = useRef<MapLayer>(mapLayer);
   const prevMapLayerRef = useRef<MapLayer>(mapLayer);
@@ -175,18 +178,8 @@ export function NaverMap({
   }, [isAuthLoading, isAuthenticated, mapLayer]);
 
   /** 유실글 마커 터치 시 카드용 (제보 카드와 별도) */
-  const [selectedLostPostForCard, setSelectedLostPostForCard] = useState<{
-    id: string;
-    pet_name?: string;
-    lost_at?: string;
-    cover_photo_key?: string;
-    trait_color?: string;
-    trait_size?: string;
-    trait_species?: string;
-    note?: string;
-    lat: number;
-    lng: number;
-  } | null>(null);
+  const [selectedLostPostForCard, setSelectedLostPostForCard] =
+    useState<LostPostMapItem | null>(null);
 
   /** 7-5: 지도에서 제보(마커) 클릭 시 "본 적 있음" 기록 */
   const recordSeen = useCallback(
@@ -762,6 +755,7 @@ export function NaverMap({
 
       <div className="bg-surface relative h-full w-full">
         <div ref={mapRef} className="h-full w-full" />
+        <MapLegend />
 
         {/* 상세 카드 열렸을 때 지도 영역 음영 (클릭 시 카드 닫기) */}
         {(selectedSighting?.type === "point" || selectedLostPostForCard) && (
@@ -776,143 +770,27 @@ export function NaverMap({
           />
         )}
 
-        {/* 유실글 카드 (제보 카드와 동일 레이아웃: 사진 + 정보) */}
-        {selectedLostPostForCard && (
-          <div
-            className="animate-in slide-in-from-bottom-6 absolute inset-x-0 bottom-[104px] z-50 flex justify-center px-4 duration-300 sm:px-6"
-            onMouseDown={stopPropagation}
-            onMouseUp={stopPropagation}
-            onMouseMove={stopPropagation}
-            onTouchStart={stopPropagation}
-            onTouchMove={stopPropagation}
-            onTouchEnd={stopPropagation}
-            onWheel={stopPropagation}
-          >
-            <div className="bg-surface relative mx-auto w-full max-w-md overflow-hidden rounded-[28px] shadow-[0_8px_40px_rgba(0,0,0,0.15)] ring-1 ring-black/5 dark:ring-white/10">
-              <button
-                onClick={() => setSelectedLostPostForCard(null)}
-                className="absolute top-3 right-3 z-30 rounded-full bg-black/25 p-2 text-white backdrop-blur-md transition-colors hover:bg-black/40"
-                aria-label="닫기"
-              >
-                <svg
-                  width="20"
-                  height="20"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <line x1="18" y1="6" x2="6" y2="18"></line>
-                  <line x1="6" y1="6" x2="18" y2="18"></line>
-                </svg>
-              </button>
-              <div className="max-h-[min(70vh,640px)] overflow-y-auto">
-                <div className="flex flex-col">
-                  {/* 유실글 대표 사진 영역 — 항상 표시(없으면 플레이스홀더) */}
-                  <div className="relative aspect-[4/3] w-full max-h-56 overflow-hidden bg-gray-100 sm:max-h-64 dark:bg-gray-800">
-                    {selectedLostPostForCard.cover_photo_key ? (
-                      <>
-                        <Image
-                          src={getLostPostImageUrl(
-                            selectedLostPostForCard.cover_photo_key
-                          )}
-                          alt="유실글 대표 사진"
-                          fill
-                          sizes="(max-width: 768px) 100vw, 28rem"
-                          className="object-cover"
-                          priority
-                        />
-                        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-                      </>
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center text-gray-400 dark:text-gray-500">
-                        <svg
-                          className="h-16 w-16"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={1.5}
-                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                          />
-                        </svg>
-                        <span className="sr-only">대표 사진 없음</span>
-                      </div>
-                    )}
-                  </div>
-                  <div className="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
-                    <div>
-                      <Text
-                        variant="title"
-                        className="text-lg font-bold text-amber-600 sm:text-xl dark:text-amber-400"
-                      >
-                        유실글
-                      </Text>
-                      <p className="mt-2 text-lg font-semibold text-gray-900 dark:text-white">
-                        {selectedLostPostForCard.pet_name?.trim() ||
-                          "이름 없음"}
-                      </p>
-                      {selectedLostPostForCard.lost_at && (
-                        <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                          유실일:{" "}
-                          {new Date(
-                            selectedLostPostForCard.lost_at
-                          ).toLocaleString("ko-KR", {
-                            timeZone: "Asia/Seoul",
-                            year: "numeric",
-                            month: "long",
-                            day: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
-                      )}
-                    </div>
-                    {(selectedLostPostForCard.trait_color ||
-                      selectedLostPostForCard.trait_size ||
-                      selectedLostPostForCard.trait_species) && (
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedLostPostForCard.trait_color && (
-                          <span className="rounded-lg bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-800 dark:bg-amber-900/30 dark:text-amber-200">
-                            {selectedLostPostForCard.trait_color}
-                          </span>
-                        )}
-                        {selectedLostPostForCard.trait_size && (
-                          <span className="rounded-lg bg-gray-100 px-2 py-0.5 text-xs font-bold text-gray-700 dark:bg-gray-800 dark:text-gray-300">
-                            {selectedLostPostForCard.trait_size}
-                          </span>
-                        )}
-                        {selectedLostPostForCard.trait_species && (
-                          <span className="rounded-lg bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200">
-                            {selectedLostPostForCard.trait_species}
-                          </span>
-                        )}
-                      </div>
-                    )}
-                    {selectedLostPostForCard.note?.trim() && (
-                      <p className="text-sm break-words text-gray-600 dark:text-gray-400">
-                        {selectedLostPostForCard.note}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* 제보 상세 정보 카드 (공통 SightingDetailSheet + SightingDetailCard) */}
-        {selectedSighting && selectedSighting.type === "point" && (
-          <SightingDetailSheet bottomOffset={104}>
+        <MapDetailSheet
+          selection={
+            selectedLostPostForCard
+              ? { kind: "lost", item: selectedLostPostForCard }
+              : selectedSighting?.type === "point"
+                ? { kind: "sighting", item: selectedSighting }
+                : null
+          }
+          onClose={() => {
+            setSelectedSighting(null);
+            setSelectedLostPostForCard(null);
+          }}
+          getLostPostImageUrl={getLostPostImageUrl}
+        >
+          {selectedSighting?.type === "point" && (
             <SightingDetailCard
               sighting={selectedSighting as SightingDetailData}
               getImageUrl={getImageUrl}
               onClose={() => setSelectedSighting(null)}
+              showCloseButton={false}
+              className="!rounded-2xl !shadow-none !ring-0"
               rightSlot={
                 isAuthenticated &&
                 accessToken &&
@@ -938,14 +816,14 @@ export function NaverMap({
                             },
                           }
                         )
-                          .then((r) => r.json())
-                          .then((res) => {
+                          .then((response) => response.json())
+                          .then((result) => {
                             if (
-                              res?.success &&
-                              Array.isArray(res.data?.lostPosts)
+                              result?.success &&
+                              Array.isArray(result.data?.lostPosts)
                             ) {
                               setClaimedLostPostsForSighting(
-                                res.data.lostPosts
+                                result.data.lostPosts
                               );
                             } else {
                               setClaimedLostPostsForSighting([]);
@@ -958,7 +836,7 @@ export function NaverMap({
                         setBookmarkModalOpen(true);
                       }
                     }}
-                    className="shrink-0 rounded-full p-2 transition-transform active:scale-95"
+                    className="hover:bg-surface-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors"
                     aria-label={
                       sightingFeedbackMap[
                         normalizeSightingId(selectedSighting.id as string)
@@ -974,6 +852,7 @@ export function NaverMap({
                         className="h-8 w-8 text-yellow-500"
                         viewBox="0 0 24 24"
                         fill="currentColor"
+                        aria-hidden="true"
                       >
                         <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                       </svg>
@@ -986,6 +865,7 @@ export function NaverMap({
                         strokeWidth="1.5"
                         strokeLinecap="round"
                         strokeLinejoin="round"
+                        aria-hidden="true"
                       >
                         <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 20.27 12 17.77 5.82 20.27 7 14.14 2 9.27 8.91 8.26 12 2" />
                       </svg>
@@ -994,8 +874,8 @@ export function NaverMap({
                 ) : undefined
               }
             />
-          </SightingDetailSheet>
-        )}
+          )}
+        </MapDetailSheet>
 
         {/* 7-5: 북마크 등록/해제 — 유실글 선택 모달 */}
         {bookmarkModalOpen &&
@@ -1110,7 +990,9 @@ export function NaverMap({
                                         },
                                       }
                                     );
-                                    const data = await res.json().catch(() => null);
+                                    const data = await res
+                                      .json()
+                                      .catch(() => null);
                                     if (!res.ok || !data?.success) {
                                       patchFeedback(sid, {
                                         claimed: previousClaimed,
@@ -1463,136 +1345,15 @@ export function NaverMap({
           </div>
         )}
 
-        {/* 하단 컨트롤러 */}
-        <div className="absolute right-5 bottom-24 z-10 flex flex-col gap-3">
-          {/* 레이어 필터 (로그인 시에만) */}
-          {isAuthenticated && (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setLayerMenuOpen((o) => !o)}
-                className={`flex h-12 w-12 items-center justify-center rounded-2xl shadow-xl transition-transform active:scale-95 ${
-                  mapLayer !== "default"
-                    ? "bg-primary text-white"
-                    : "bg-white dark:bg-gray-800"
-                }`}
-                aria-expanded={layerMenuOpen}
-                aria-haspopup="true"
-                aria-label="표시 레이어 선택"
-              >
-                <svg
-                  width="22"
-                  height="22"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
-                  <polyline points="2 17 12 22 22 17"></polyline>
-                </svg>
-              </button>
-              {layerMenuOpen && (
-                <>
-                  <div
-                    className="fixed inset-0 z-[5]"
-                    aria-hidden="true"
-                    onClick={() => setLayerMenuOpen(false)}
-                  />
-                  <div
-                    className="absolute right-0 bottom-full z-10 mb-2 w-52 rounded-2xl border border-gray-200 bg-white py-2 shadow-xl dark:border-gray-700 dark:bg-gray-800"
-                    role="menu"
-                  >
-                    {(
-                      [
-                        { value: "default" as MapLayer, label: "전체" },
-                        { value: "unseen" as MapLayer, label: "안 본 제보" },
-                        {
-                          value: "bookmark" as MapLayer,
-                          label: "내 유실글 + 이동 경로",
-                        },
-                      ] as const
-                    ).map(({ value, label }) => (
-                      <button
-                        key={value}
-                        type="button"
-                        role="menuitemradio"
-                        aria-checked={mapLayer === value}
-                        onClick={() => {
-                          setMapLayer(value);
-                          setLayerMenuOpen(false);
-                        }}
-                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
-                      >
-                        {mapLayer === value && (
-                          <span className="text-primary">●</span>
-                        )}
-                        <span
-                          className={
-                            mapLayer === value
-                              ? "font-semibold text-gray-900 dark:text-white"
-                              : "text-gray-600 dark:text-gray-300"
-                          }
-                        >
-                          {label}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* 목록 보기 버튼 — 로그인 사용자만 (게스트는 point 상세가 없음) */}
-          {isAuthenticated && (
-            <button
-              onClick={() => setIsListViewOpen(true)}
-              className="bg-primary flex h-12 w-12 items-center justify-center rounded-2xl text-white shadow-xl transition-transform active:scale-95"
-              aria-label="제보 목록 보기"
-            >
-              <svg
-                width="22"
-                height="22"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="8" y1="6" x2="21" y2="6"></line>
-                <line x1="8" y1="12" x2="21" y2="12"></line>
-                <line x1="8" y1="18" x2="21" y2="18"></line>
-                <line x1="3" y1="6" x2="3.01" y2="6"></line>
-                <line x1="3" y1="12" x2="3.01" y2="12"></line>
-                <line x1="3" y1="18" x2="3.01" y2="18"></line>
-              </svg>
-            </button>
-          )}
-
-          {/* 현재 위치 버튼 */}
-          <button
-            onClick={handleCurrentLocation}
-            disabled={isLocating}
-            className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white shadow-xl transition-transform active:scale-95 disabled:opacity-50 dark:bg-gray-800"
-          >
-            {isLocating ? (
-              <div className="border-primary h-5 w-5 animate-spin rounded-full border-2 border-t-transparent" />
-            ) : (
-              <div className="relative h-1/2 w-1/2">
-                <Image
-                  src="/icons/my_location.svg"
-                  alt="Location"
-                  fill
-                  className="object-contain"
-                />
-              </div>
-            )}
-          </button>
-        </div>
+        <MapToolbar
+          layer={mapLayer}
+          authenticated={isAuthenticated}
+          listOpen={isListViewOpen}
+          locating={isLocating}
+          onLayerChange={setMapLayer}
+          onLocate={handleCurrentLocation}
+          onToggleList={() => setIsListViewOpen((open) => !open)}
+        />
 
         {/* 로딩 오버레이 */}
         {!isLoaded && (
