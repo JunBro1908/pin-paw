@@ -8,7 +8,8 @@ export type IconName =
   | "camera"
   | "location"
   | "clock"
-  | "paw";
+  | "paw"
+  | "star";
 
 interface IconProps {
   name: IconName;
@@ -38,9 +39,56 @@ export function Icon({ name, size = 24, className }: IconProps) {
         return <path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z" />;
       case "clock":
         return <path d="M12 7v5l3 2m6-2a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" />;
-      case "paw":
+      case "star":
         return (
-          <path d="M12 13.5c-2.9-3.4-6.5-1.9-6.5 1.5 0 2.2 2.1 3.8 6.5 5.5 4.4-1.7 6.5-3.3 6.5-5.5 0-3.4-3.6-4.9-6.5-1.5ZM6.5 9a1.5 2 0 1 0 0-4 1.5 2 0 0 0 0 4Zm4-2A1.5 2 0 1 0 10.5 3a1.5 2 0 0 0 0 4Zm7 2A1.5 2 0 1 0 17.5 5a1.5 2 0 0 0 0 4Z" />
+          <path
+            d="M12 3.6 14.4 9l5.8.5-4.4 3.8 1.3 5.6L12 16.2 6.9 18.9l1.3-5.6L3.8 9.5 9.6 9 12 3.6Z"
+            fill="currentColor"
+            stroke="none"
+          />
+        );
+      case "paw":
+        // Symmetric filled paw: 4 toes + main pad, mirrored on the vertical axis.
+        return (
+          <>
+            <ellipse
+              cx="7"
+              cy="7.2"
+              rx="2.15"
+              ry="2.7"
+              fill="currentColor"
+              stroke="none"
+            />
+            <ellipse
+              cx="17"
+              cy="7.2"
+              rx="2.15"
+              ry="2.7"
+              fill="currentColor"
+              stroke="none"
+            />
+            <ellipse
+              cx="9.6"
+              cy="4.6"
+              rx="2.05"
+              ry="2.55"
+              fill="currentColor"
+              stroke="none"
+            />
+            <ellipse
+              cx="14.4"
+              cy="4.6"
+              rx="2.05"
+              ry="2.55"
+              fill="currentColor"
+              stroke="none"
+            />
+            <path
+              d="M12 21.2c-3.55 0-6.1-2.2-6.1-4.85 0-2.45 2.05-4.05 6.1-4.05s6.1 1.6 6.1 4.05c0 2.65-2.55 4.85-6.1 4.85Z"
+              fill="currentColor"
+              stroke="none"
+            />
+          </>
         );
     }
   })();

@@ -76,6 +76,7 @@ test("bottom navigation uses product labels and outline icons", async () => {
   const layout = await read("src/app/(tabs)/layout.tsx");
   for (const label of ["제보", "지도", "확인", "내 활동"])
     assert.match(layout, new RegExp(`label: "${label}"`));
+  assert.match(layout, /icon: "paw"/);
   assert.match(layout, /<Icon name=\{tab\.icon\}/);
   assert.match(layout, /aria-current=\{isActive \? "page"/);
   assert.doesNotMatch(layout, /🏠|🗺️|⭐|👤|text-blue/u);
