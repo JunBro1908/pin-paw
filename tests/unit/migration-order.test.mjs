@@ -28,6 +28,38 @@ function events(sql, pattern, type) {
   }));
 }
 
+test("migration version prefixes are unique", async () => {
+  const names = (await readdir(migrationsDirectory))
+    .filter((name) => name.endsWith(".sql"))
+    .sort();
+
+  const versions = names.map((name) => {
+    const version = name.split("_")[0];
+    assert.match(
+      version,
+      /^\d{14}$/,
+      `${name} must start with a 14-digit migration version`
+    );
+    return version;
+  });
+
+  const duplicates = [
+    ...new Set(
+      versions.filter(
+        (version, index) => versions.indexOf(version) !== index
+      )
+    ),
+  ];
+
+  assert.deepEqual(
+    duplicates,
+    [],
+    `duplicate migration versions: ${duplicates.join(", ")} (files: ${names
+      .filter((name) => duplicates.includes(name.split("_")[0]))
+      .join(", ")})`
+  );
+});
+
 test("every altered public table is created by an earlier migration", async () => {
   const createdTables = new Set();
 

@@ -33,7 +33,7 @@
 - `src/features/map/components/MapToolbar.tsx`: 보기 기준과 위치/list action.
 - `src/features/map/components/MapDetailSheet.tsx`: 선택 항목 detail surface.
 - `src/features/map/components/NaverMap.tsx`: 위 컴포넌트를 조립하는 controller.
-- `supabase/migrations/20260802020000_recommendation_evidence.sql`: 추천 거리·시간·특징 payload.
+- `supabase/migrations/20260802020100_recommendation_evidence.sql`: 추천 거리·시간·특징 payload.
 - `tests/unit/recommendation-evidence-contract.test.mjs`: SQL/API/UI 비노출 및 근거 계약.
 - `src/app/api/v1/recommendations/route.ts`: cache v2, band/evidence mapper.
 - `src/features/recommendations/model/types.ts`: client-safe 추천 type.
@@ -306,7 +306,7 @@ git commit -m "feat: simplify map exploration surfaces"
 
 **Files:**
 
-- Create: `supabase/migrations/20260802020000_recommendation_evidence.sql`
+- Create: `supabase/migrations/20260802020100_recommendation_evidence.sql`
 - Create: `tests/unit/recommendation-evidence-contract.test.mjs`
 - Modify: `tests/unit/data-plane-permissions.test.mjs`
 
@@ -325,7 +325,7 @@ import test from "node:test";
 
 test("recommendation RPC returns explainable evidence inputs", async () => {
   const sql = await readFile(
-    "supabase/migrations/20260802020000_recommendation_evidence.sql",
+    "supabase/migrations/20260802020100_recommendation_evidence.sql",
     "utf8"
   );
   assert.match(
@@ -391,7 +391,7 @@ Expected: all tests PASS.
 - [ ] **Step 5: Commit recommendation evidence SQL**
 
 ```bash
-git add supabase/migrations/20260802020000_recommendation_evidence.sql tests/unit/recommendation-evidence-contract.test.mjs tests/unit/data-plane-permissions.test.mjs
+git add supabase/migrations/20260802020100_recommendation_evidence.sql tests/unit/recommendation-evidence-contract.test.mjs tests/unit/data-plane-permissions.test.mjs
 git commit -m "feat: add recommendation evidence inputs"
 ```
 

@@ -6,7 +6,7 @@ import { toPublicRecommendationItem } from "../../src/features/recommendations/l
 import { protectRecommendationLocations } from "../../src/shared/lib/privacy-location.ts";
 
 const migrationUrl = new URL(
-  "../../supabase/migrations/20260802020000_recommendation_evidence.sql",
+  "../../supabase/migrations/20260802020100_recommendation_evidence.sql",
   import.meta.url
 );
 
