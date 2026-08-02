@@ -40,9 +40,41 @@ test("NaverMap restores and writes map layer preference", async () => {
   assert.match(source, /readStoredMapLayer/);
   assert.match(source, /writeStoredMapLayer/);
   assert.match(source, /resolveMapLayerForSession/);
+  assert.match(source, /readStoredMapLayer\(\)/);
   assert.match(
     source,
-    /useState<MapLayer>\(\s*\(\)\s*=>\s*readStoredMapLayer\(\)\s*\)/
+    /if \(initialFocusSightingId\) \{\s*writeStoredMapLayer\("default"\);\s*return "default";/
+  );
+});
+
+test("recommend map deep link forces ALL layer before focus", async () => {
+  const [map, page, card] = await Promise.all([
+    readFile("src/features/map/components/NaverMap.tsx", "utf8"),
+    readFile("src/app/(tabs)/map/page.tsx", "utf8"),
+    readFile(
+      "src/features/recommendations/components/RecommendationCard.tsx",
+      "utf8"
+    ),
+  ]);
+
+  assert.match(page, /initialFocusSightingId=\{initialFocusSightingId\}/);
+  assert.match(page, /initialCenter=\{initialCenter/);
+  assert.match(
+    page,
+    /key=\{\s*initialFocusSightingId\s*\?\s*`focus:\$\{initialFocusSightingId\}`\s*:\s*"map"\s*\}/
+  );
+  assert.match(card, /\/map\?lat=\$\{item\.lat\}&lng=\$\{item\.lng\}&sightingId=/);
+  assert.match(
+    map,
+    /if \(initialFocusSightingId\) \{\s*writeStoredMapLayer\("default"\);\s*return "default";/
+  );
+  assert.match(
+    map,
+    /추천 "지도에서 보기" 진입 시\(initialCenter\+initialFocusSightingId\)/
+  );
+  assert.match(
+    map,
+    /\/api\/v1\/auth\/sightings\/\$\{encodeURIComponent\(initialFocusSightingId\)\}/
   );
 });
 

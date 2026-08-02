@@ -37,6 +37,11 @@ function MapPageContent() {
         </div>
       ) : (
         <NaverMap
+          key={
+            initialFocusSightingId
+              ? `focus:${initialFocusSightingId}`
+              : "map"
+          }
           clientId={clientId}
           initialCenter={initialCenter ?? undefined}
           initialCenterSightingId={
