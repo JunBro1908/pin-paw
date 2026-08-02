@@ -8,6 +8,12 @@ import { parseRecommendationQuery } from "@/shared/lib/api-input";
 import { createRequestLogger } from "@/shared/lib/structured-log";
 import { protectRecommendationLocations } from "@/shared/lib/privacy-location";
 import { toPublicRecommendationItem } from "@/features/recommendations/lib/recommendation-presentation";
+import {
+  enrichRecommendationEvidence,
+  needsRecommendationEvidenceEnrichment,
+  type SparseRecommendationItem,
+} from "@/features/recommendations/lib/recommendation-evidence-enrich";
+import { triggerEmbeddingsProcess } from "@/shared/lib/embeddings-worker";
 
 const CACHE_TTL_SECONDS = 180;
 
@@ -50,7 +56,7 @@ export async function GET(request: Request) {
 
   const { data: lostPost, error: lostError } = await supabaseAuth
     .from("lost_posts")
-    .select("id")
+    .select("id, lost_at, embedding_status")
     .eq("id", lostPostId)
     .eq("owner_id", user.id)
     .maybeSingle();
@@ -67,6 +73,26 @@ export async function GET(request: Request) {
   }
 
   const supabaseAdmin = createServiceRoleSupabase();
+  // Best-effort: nudge the embeddings worker when vectors are still pending.
+  if (lostPost.embedding_status === "pending") {
+    triggerEmbeddingsProcess(logger);
+  }
+
+  const { data: locationRow } = await supabaseAuth.rpc(
+    "get_my_lost_posts_with_location",
+    { limit_count: 50 }
+  );
+  const locationMatch = Array.isArray(locationRow)
+    ? locationRow.find(
+        (row: { id?: string }) =>
+          typeof row?.id === "string" && row.id === lostPostId
+      )
+    : null;
+  const anchorLat =
+    typeof locationMatch?.lat === "number" ? locationMatch.lat : null;
+  const anchorLng =
+    typeof locationMatch?.lng === "number" ? locationMatch.lng : null;
+
   const cacheKey = buildCacheKey(radiusKm, days, topK);
   const now = new Date();
   const expiresAt = new Date(now.getTime() + CACHE_TTL_SECONDS * 1000);
@@ -96,29 +122,60 @@ export async function GET(request: Request) {
     locationPrecision: "approximate";
     claimedAsMyDog: boolean;
   };
+  const normalizeItems = (rawItems: SparseRecommendationItem[]): RecoItem[] => {
+    if (!needsRecommendationEvidenceEnrichment(rawItems)) {
+      return rawItems.map((item) => ({
+        sightingId: item.sightingId,
+        similarity: item.similarity,
+        distanceKm: item.distanceKm ?? 0,
+        timeDeltaHours: item.timeDeltaHours ?? 0,
+        matchedTraits: item.matchedTraits ?? [],
+        photoKeys: item.photoKeys,
+        occurredAt: item.occurredAt,
+        lat: item.lat,
+        lng: item.lng,
+      }));
+    }
+    return enrichRecommendationEvidence(rawItems, {
+      lostAt: lostPost.lost_at ?? null,
+      lat: anchorLat,
+      lng: anchorLng,
+    }).map((item) => ({
+      sightingId: item.sightingId,
+      similarity: item.similarity,
+      distanceKm: item.distanceKm ?? 0,
+      timeDeltaHours: item.timeDeltaHours ?? 0,
+      matchedTraits: item.matchedTraits ?? [],
+      photoKeys: item.photoKeys,
+      occurredAt: item.occurredAt,
+      lat: item.lat,
+      lng: item.lng,
+    }));
+  };
+
   const applyFeedback = async (
-    rawItems: RecoItem[]
+    sparseItems: SparseRecommendationItem[]
   ): Promise<ReturnType<typeof toPublicRecommendationItem>[]> => {
+    const rawItems = normalizeItems(sparseItems);
     if (rawItems.length === 0) return [];
     const { data: visibleIds, error: visibilityError } = await supabaseAuth.rpc(
       "filter_blocked_sighting_ids",
       { p_sighting_ids: rawItems.map((item) => item.sightingId) }
     );
+    // Missing block-filter RPC must not wipe an otherwise valid recommendation set.
+    let visibleItems = rawItems;
     if (visibilityError) {
-      logger.error("recommendation.block_filter_failed", {
+      logger.warn("recommendation.block_filter_unavailable", {
         error: visibilityError,
-        status: 500,
       });
-      return [];
+    } else {
+      const visibleSet = new Set(
+        Array.isArray(visibleIds)
+          ? visibleIds.filter((id): id is string => typeof id === "string")
+          : []
+      );
+      visibleItems = rawItems.filter((item) => visibleSet.has(item.sightingId));
     }
-    const visibleSet = new Set(
-      Array.isArray(visibleIds)
-        ? visibleIds.filter((id): id is string => typeof id === "string")
-        : []
-    );
-    const visibleItems = rawItems.filter((item) =>
-      visibleSet.has(item.sightingId)
-    );
     if (visibleItems.length === 0) return [];
 
     const { data: claimsRows } = await supabaseAuth
@@ -143,7 +200,7 @@ export async function GET(request: Request) {
   };
 
   if (!cacheError && cached?.result) {
-    const rawItems = cached.result as RecoItem[];
+    const rawItems = cached.result as SparseRecommendationItem[];
     const items = await applyFeedback(rawItems);
     return ok({
       status: "ready" as const,
@@ -174,9 +231,9 @@ export async function GET(request: Request) {
     return ok({ status: "pending" as const, items: [] });
   }
 
-  const result = Array.isArray(items)
-    ? items
-    : (items as unknown[] as RecoItem[]);
+  const result = (
+    Array.isArray(items) ? items : (items as unknown[] as SparseRecommendationItem[])
+  ) as SparseRecommendationItem[];
 
   const { error: cacheWriteError } = await supabaseAdmin
     .from("recommendation_cache")

@@ -73,11 +73,14 @@ export function toRecommendationPresentation(
     .filter((trait) => matchedTraitSet.has(trait))
     .map((trait) => `${TRAIT_LABELS[trait]} 일치`);
 
+  const distanceEvidence =
+    distanceKm > 0 ? [`${distanceKm}km 거리`] : (["근처 목격"] as string[]);
+
   return {
     priority: toPriority(similarity),
     distanceKm,
     timeDeltaHours,
-    evidence: [`${distanceKm}km 거리`, timeEvidence, ...traitEvidence],
+    evidence: [...distanceEvidence, timeEvidence, ...traitEvidence],
   };
 }
 

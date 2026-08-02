@@ -108,6 +108,6 @@ test("sanitizes non-finite and negative numeric evidence inputs", () => {
     priority: "within-range",
     distanceKm: 0,
     timeDeltaHours: 0,
-    evidence: ["0km 거리", "1시간 이내 목격", "색상 일치"],
+    evidence: ["근처 목격", "1시간 이내 목격", "색상 일치"],
   });
 });
