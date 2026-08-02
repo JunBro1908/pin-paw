@@ -15,6 +15,7 @@ import {
   toLocalDateTimeInputValue,
   type SightingLocationStatus,
 } from "../lib/sighting-form-presentation";
+import { parseSeoulDateTimeLocal } from "@/shared/lib/date";
 import { SightingEssentials } from "./SightingEssentials";
 import { SightingOptionalDetails } from "./SightingOptionalDetails";
 import {
@@ -182,7 +183,13 @@ export function SightingForm() {
     const photo = formData.photo;
     const domainPayload = {
       location: { lat: formData.lat, lng: formData.lng },
-      occurredAt: new Date(formData.time).toISOString(),
+      occurredAt: (() => {
+        const occurredAt = parseSeoulDateTimeLocal(formData.time);
+        if (!occurredAt) {
+          throw new Error("invalid_sighting_time");
+        }
+        return occurredAt.toISOString();
+      })(),
       traitColor: formData.traitColor?.trim() || null,
       traitSize: formData.traitSize,
       traitSpecies: formData.traitSpecies,

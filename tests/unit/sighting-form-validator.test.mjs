@@ -16,7 +16,8 @@ const validForm = {
   description: "",
 };
 
-const now = new Date(2026, 7, 2, 10, 0);
+const now = new Date("2026-08-02T01:00:00.000Z"); // 10:00 Asia/Seoul
+
 
 test("blank sighting time is rejected with localized feedback", () => {
   assert.deepEqual(validateSightingForm({ ...validForm, time: "" }, now), {

@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { cn } from "@/shared/lib/cn";
-import { toLocalDatetimeLocalString } from "@/shared/lib/date";
+import { parseSeoulDateTimeLocal, toLocalDatetimeLocalString } from "@/shared/lib/date";
 import { Toast } from "@/shared/ui/Toast";
 import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
@@ -200,7 +200,13 @@ export function LostPostForm() {
     try {
       const domainPayload = {
         petName: formData.petName.trim(),
-        lostAt: new Date(formData.lostAt).toISOString(),
+        lostAt: (() => {
+          const parsed = parseSeoulDateTimeLocal(formData.lostAt);
+          if (!parsed) {
+            throw new Error("invalid_lost_at");
+          }
+          return parsed.toISOString();
+        })(),
         lostLocation: { lat: formData.lat, lng: formData.lng },
         traitColor: formData.traitColor.trim() || undefined,
         traitSize: formData.traitSize,

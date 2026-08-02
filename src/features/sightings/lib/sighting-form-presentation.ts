@@ -1,11 +1,10 @@
+import { toLocalDatetimeLocalString } from "@/shared/lib/date";
+
 export type SightingLocationStatus = "locating" | "ready" | "denied" | "error";
 
-const pad = (value: number) => String(value).padStart(2, "0");
-
+/** datetime-local용 서울 벽시계 값. 서버/클라이언트 모두 Asia/Seoul. */
 export function toLocalDateTimeInputValue(date: Date): string {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(
-    date.getDate()
-  )}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  return toLocalDatetimeLocalString(date);
 }
 
 export function formatSightingLocationStatus(

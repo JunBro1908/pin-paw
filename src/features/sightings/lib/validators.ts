@@ -1,31 +1,61 @@
 import type { SightingFormData, SightingFormErrors } from "../model/types";
 
-function parseLocalDateTime(value: string): Date | null {
+const SEOUL_OFFSET = "+09:00";
+
+function pad2(value: number): string {
+  return String(value).padStart(2, "0");
+}
+
+function seoulParts(date: Date): {
+  year: string;
+  month: string;
+  day: string;
+  hour: string;
+  minute: string;
+} {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Seoul",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const read = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "00";
+  return {
+    year: read("year"),
+    month: read("month"),
+    day: read("day"),
+    hour: read("hour"),
+    minute: read("minute"),
+  };
+}
+
+/** datetime-local 서울 벽시계 → Instant (런타임 TZ 비의존) */
+function parseSeoulDateTimeLocal(value: string): Date | null {
   const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(
-    value
+    value.trim()
   );
   if (!match) return null;
 
-  const [, yearText, monthText, dayText, hourText, minuteText, secondText] =
-    match;
-  const year = Number(yearText);
-  const month = Number(monthText);
-  const day = Number(dayText);
-  const hour = Number(hourText);
-  const minute = Number(minuteText);
-  const second = secondText === undefined ? 0 : Number(secondText);
-  const parsed = new Date(0);
-  parsed.setFullYear(year, month - 1, day);
-  parsed.setHours(hour, minute, second, 0);
+  const [, year, month, day, hour, minute, second = "00"] = match;
+  const iso = `${year}-${month}-${day}T${hour}:${minute}:${pad2(Number(second))}${SEOUL_OFFSET}`;
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return null;
 
-  return parsed.getFullYear() === year &&
-    parsed.getMonth() === month - 1 &&
-    parsed.getDate() === day &&
-    parsed.getHours() === hour &&
-    parsed.getMinutes() === minute &&
-    parsed.getSeconds() === second
-    ? parsed
-    : null;
+  const roundTrip = seoulParts(parsed);
+  if (
+    roundTrip.year !== year ||
+    roundTrip.month !== month ||
+    roundTrip.day !== day ||
+    roundTrip.hour !== hour ||
+    roundTrip.minute !== minute
+  ) {
+    return null;
+  }
+  return parsed;
 }
 
 /**
@@ -50,7 +80,7 @@ export function validateSightingForm(
   if (!data.time.trim()) {
     errors.time = "목격 시각을 입력해주세요.";
   } else {
-    const occurredAt = parseLocalDateTime(data.time);
+    const occurredAt = parseSeoulDateTimeLocal(data.time);
     if (!occurredAt) {
       errors.time = "올바른 목격 시각을 입력해주세요.";
     } else if (occurredAt.getTime() > now.getTime()) {
