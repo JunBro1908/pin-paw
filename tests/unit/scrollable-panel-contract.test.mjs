@@ -7,6 +7,7 @@ test("shared ScrollablePanel variants constrain mobile expandable surfaces", asy
   assert.match(panel, /max-h-\[min\(40vh,16rem\)\]/);
   assert.match(panel, /max-h-\[min\(60vh,20rem\)\]/);
   assert.match(panel, /max-h-\[min\(50vh,18rem\)\]/);
+  assert.match(panel, /max-h-\[min\(60vh,28rem\)\]/);
   assert.match(panel, /overscroll-contain/);
   assert.match(panel, /\[-webkit-overflow-scrolling:touch\]/);
   assert.match(panel, /safe-area-inset-bottom/);

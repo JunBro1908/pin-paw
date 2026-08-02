@@ -101,7 +101,7 @@ test("my activity leads with user profile before case carousel", async () => {
     "user profile should appear before the case carousel"
   );
   assert.match(page, /ScrollablePanel/);
-  assert.match(page, /variant="list"/);
+  assert.match(page, /variant="results"/);
   assert.match(page, /useMySightings\(\)/);
   assert.match(page, /headingAction=/);
   assert.match(page, /heading="내 유실글"/);

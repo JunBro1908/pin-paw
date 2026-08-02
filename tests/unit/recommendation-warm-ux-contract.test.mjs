@@ -7,6 +7,30 @@ const cardPath =
   "src/features/recommendations/components/RecommendationCard.tsx";
 const hookPath = "src/features/recommendations/hooks/useRecommendations.ts";
 
+test("recommendation result cards scroll in place under a fixed range header", async () => {
+  const page = await readFile(pagePath, "utf8");
+  const panel = await readFile("src/shared/ui/ScrollablePanel.tsx", "utf8");
+
+  assert.match(panel, /results:[\s\S]*?max-h-\[min\(60vh,28rem\)\]/);
+  assert.match(panel, /overflow-y-auto overscroll-contain/);
+
+  // Range summary + refresh stay outside the results scroller.
+  const readyList = page.match(
+    /aria-label="새로고침"[\s\S]*?ScrollablePanel variant="results"[\s\S]*?RecommendationCard[\s\S]*?<\/ScrollablePanel>/
+  );
+  assert.ok(readyList, "refresh control should sit above the scrollable card list");
+
+  // Loading / empty branches must not force the results max-height wrapper.
+  assert.doesNotMatch(
+    page,
+    /ScrollablePanel variant="results"[\s\S]*?비슷한 제보를 정리하고 있습니다/
+  );
+  assert.doesNotMatch(
+    page,
+    /ScrollablePanel variant="results"[\s\S]*?이 탐색 범위에는 아직 볼 목격 제보가 없습니다/
+  );
+});
+
 test("confirmation page presents a review workflow without model or result-count controls", async () => {
   const page = await readFile(pagePath, "utf8");
 

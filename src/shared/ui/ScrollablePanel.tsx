@@ -15,6 +15,9 @@ export const scrollablePanelClass = {
   /** Inline lists under accordion sections (e.g. /my 내 제보) */
   list:
     "max-h-[min(50vh,18rem)] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]",
+  /** Long result card lists (e.g. /recommend 제보 카드) — header stays outside */
+  results:
+    "max-h-[min(60vh,28rem)] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch]",
   /** Fixed/modal sheets above bottom nav + home indicator */
   sheet:
     "max-h-[min(calc(85vh-var(--bottom-nav-height)-env(safe-area-inset-bottom,0px)),36rem)] overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] pb-[max(0.75rem,env(safe-area-inset-bottom))]",

@@ -333,7 +333,7 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
               </Text>
             </div>
           ) : (
-            <div className="flex flex-col gap-4">
+            <ScrollablePanel variant="results" className="flex flex-col gap-4">
               {recommendations?.items?.map((item) => (
                 <RecommendationCard
                   key={item.sightingId}
@@ -343,7 +343,7 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
                   accessToken={session?.access_token}
                 />
               ))}
-            </div>
+            </ScrollablePanel>
           )}
         </>
       )}

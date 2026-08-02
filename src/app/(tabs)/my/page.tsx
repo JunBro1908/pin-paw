@@ -169,7 +169,7 @@ function MyPageContent() {
             !sightingsOpen && "hidden"
           )}
         >
-          <ScrollablePanel variant="list" className="px-5 pt-3 pb-5">
+          <ScrollablePanel variant="results" className="px-5 pt-3 pb-5">
             {sightingsOpen ? <MySightingList /> : null}
           </ScrollablePanel>
         </div>
