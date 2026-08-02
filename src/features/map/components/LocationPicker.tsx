@@ -437,7 +437,7 @@ export function LocationPicker({
         role="dialog"
         aria-modal="true"
         aria-labelledby={titleId}
-        className="bg-surface text-text-main relative flex h-[90vh] w-full flex-col overflow-hidden rounded-t-[32px] shadow-2xl transition-all"
+        className="bg-surface text-text-main relative flex h-[min(90dvh,100%)] max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-[32px] shadow-2xl transition-all"
       >
         <Script
           src={`https://openapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${clientId}&submodules=geocoder`}
@@ -533,7 +533,7 @@ export function LocationPicker({
               </div>
             </div>
             {/* 현재 위치 버튼 (지도 맵뷰와 동일·오른쪽 하단) */}
-            <div className="absolute right-4 bottom-24">
+            <div className="absolute right-4 bottom-[5.5rem]">
               <button
                 type="button"
                 onClick={handleCurrentLocation}

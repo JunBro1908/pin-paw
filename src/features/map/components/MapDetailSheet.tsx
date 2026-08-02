@@ -158,7 +158,7 @@ export function MapDetailSheetSurface({
       inert={keyboardActive ? undefined : true}
       tabIndex={-1}
       aria-label="선택한 지도 정보"
-      className="absolute inset-x-0 bottom-[104px] z-50 flex justify-center px-4 sm:px-6"
+      className="absolute inset-x-0 bottom-3 z-50 flex justify-center px-4 sm:px-6"
       onMouseDown={stopPropagation}
       onMouseUp={stopPropagation}
       onMouseMove={stopPropagation}

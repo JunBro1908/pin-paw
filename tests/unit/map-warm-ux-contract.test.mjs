@@ -29,7 +29,7 @@ test("legend restores top-left title with pin status colors", async () => {
   assert.match(legend, /aria-label="지도 제목"/);
   assert.match(legend, /aria-label="지도 범례"/);
   assert.match(legend, /top-3 left-3/);
-  assert.match(legend, /bottom-24 left-3/);
+  assert.match(legend, /bottom-3 left-3/);
   assert.match(legend, /안 본 제보/);
   assert.match(legend, /본 제보/);
   assert.match(legend, /북마크/);
@@ -73,6 +73,8 @@ test("toolbar keeps layer semantics explicit and guest-safe", async () => {
   assert.doesNotMatch(toolbar, />저장한 흔적</);
   assert.match(toolbar, /authenticated/);
   assert.match(toolbar, /min-h-11|min-h-\[44px\]|h-11|h-12/);
+  assert.match(toolbar, /right-3 bottom-3/);
+  assert.doesNotMatch(toolbar, /bottom-24/);
 });
 
 test("detail sheet explains source type for lost posts", async () => {

@@ -415,7 +415,7 @@ export function LostPostForm() {
             value={formData.lostAt}
             max={toLocalDatetimeLocalString()}
             onChange={handleChange}
-            className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-4 outline-none focus:ring-2"
+            className="border-border-subtle focus:border-primary focus:ring-primary/20 min-h-12 w-full appearance-none rounded-xl border bg-white px-4 py-3 text-base leading-normal outline-none [color-scheme:light] focus:ring-2 [&::-webkit-calendar-picker-indicator]:h-5 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-datetime-edit]:m-0 [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0"
           />
         </section>
 

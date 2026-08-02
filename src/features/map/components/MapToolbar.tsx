@@ -38,7 +38,7 @@ export function MapToolbar({
   const showListToggle = authenticated && layer !== "bookmark";
 
   return (
-    <div className="absolute right-4 bottom-24 z-10 flex max-w-[calc(100%-2rem)] flex-col items-end gap-2">
+    <div className="absolute right-3 bottom-3 z-10 flex max-w-[calc(100%-2rem)] flex-col items-end gap-2">
       {authenticated && (
         <div
           className="border-border-subtle bg-surface grid w-14 max-w-full grid-cols-1 gap-1 rounded-2xl border p-1 shadow-sm"

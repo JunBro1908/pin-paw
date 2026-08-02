@@ -1356,7 +1356,7 @@ export function NaverMap({
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto overscroll-contain px-6 pb-10 [-webkit-overflow-scrolling:touch]">
+              <div className="scrollable-sheet flex-1 overflow-y-auto overscroll-contain px-6 pb-10 [-webkit-overflow-scrolling:touch]">
                 {itemsInView.filter((i) => i.type === "point").length === 0 ? (
                   <div className="flex h-60 flex-col items-center justify-center space-y-4 text-center">
                     <div className="rounded-full bg-gray-100 p-6 dark:bg-gray-800">

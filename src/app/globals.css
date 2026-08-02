@@ -109,6 +109,35 @@ body {
 .scrollable-sheet {
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  /* Override global scrollbar hide so drag-scroll affordance is visible. */
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--text-caption) 55%, transparent)
+    transparent;
+  -ms-overflow-style: auto;
+}
+
+.scrollable-panel::-webkit-scrollbar,
+.scrollable-dropdown::-webkit-scrollbar,
+.scrollable-list::-webkit-scrollbar,
+.scrollable-sheet::-webkit-scrollbar {
+  display: block;
+  width: 4px;
+  height: 4px;
+}
+
+.scrollable-panel::-webkit-scrollbar-track,
+.scrollable-dropdown::-webkit-scrollbar-track,
+.scrollable-list::-webkit-scrollbar-track,
+.scrollable-sheet::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable-panel::-webkit-scrollbar-thumb,
+.scrollable-dropdown::-webkit-scrollbar-thumb,
+.scrollable-list::-webkit-scrollbar-thumb,
+.scrollable-sheet::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--text-caption) 55%, transparent);
+  border-radius: 999px;
 }
 
 /**

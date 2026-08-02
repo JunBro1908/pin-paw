@@ -34,7 +34,7 @@ export function MapLegend() {
 
       <section
         aria-label="지도 범례"
-        className="border-border-subtle bg-surface pointer-events-none absolute bottom-24 left-3 z-10 max-w-[min(calc(100%-5.5rem),17rem)] rounded-2xl border px-3 py-2.5 shadow-sm"
+        className="border-border-subtle bg-surface pointer-events-none absolute bottom-3 left-3 z-10 max-w-[min(calc(100%-5.5rem),17rem)] rounded-2xl border px-3 py-2.5 shadow-sm"
       >
         <ul className="text-text-sub flex flex-col gap-1.5 text-xs font-medium">
           {STATUS_LEGEND.map(({ label, color }) => (

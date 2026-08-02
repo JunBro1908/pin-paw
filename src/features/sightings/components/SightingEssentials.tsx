@@ -204,7 +204,13 @@ export function SightingEssentials({
           aria-describedby={timeError ? "sighting-time-error" : undefined}
           disabled={disabled}
           onChange={(event) => onOccurredAtChange(event.target.value)}
-          className={cn(inputBase, "py-4", timeError && "border-error")}
+          className={cn(
+            inputBase,
+            "min-h-12 appearance-none py-3 text-base leading-normal [color-scheme:light_dark]",
+            "[&::-webkit-calendar-picker-indicator]:h-5 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-calendar-picker-indicator]:opacity-70",
+            "[&::-webkit-datetime-edit]:m-0 [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0",
+            timeError && "border-error"
+          )}
         />
       </div>
     </section>
