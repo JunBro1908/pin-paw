@@ -29,8 +29,11 @@ test("photo control is semantic and optional section stays in-page", async () =>
   assert.match(essentials, /aria-live="polite"/);
   assert.match(optional, /<details/);
   assert.match(optional, /추가 정보 입력하기 \(선택\)/);
-  assert.match(optional, /htmlFor="sighting-trait-size"/);
-  assert.match(optional, /htmlFor="sighting-trait-species"/);
+  assert.match(optional, /idPrefix = "sighting"/);
+  assert.match(optional, /const sizeId = `\$\{idPrefix\}-trait-size`/);
+  assert.match(optional, /const speciesId = `\$\{idPrefix\}-trait-species`/);
+  assert.match(optional, /htmlFor=\{sizeId\}/);
+  assert.match(optional, /htmlFor=\{speciesId\}/);
   assert.match(optional, />\s*크기\s*</);
   assert.match(optional, />\s*종\s*</);
   assert.match(optional, /space-y-5/);
@@ -53,11 +56,12 @@ test("optional color input has an associated label", async () => {
     "utf8"
   );
 
+  assert.match(optional, /const colorId = `\$\{idPrefix\}-trait-color`/);
   assert.match(
     optional,
-    /<label[^>]+htmlFor="sighting-trait-color"[^>]*>[^<]*색상[^<]*<\/label>/s
+    /<label[^>]+htmlFor=\{colorId\}[^>]*>[^<]*색상[^<]*<\/label>/s
   );
-  assert.match(optional, /<input[^>]+id="sighting-trait-color"/s);
+  assert.match(optional, /id=\{colorId\}/);
   assert.match(optional, /name="traitColor"/);
 });
 

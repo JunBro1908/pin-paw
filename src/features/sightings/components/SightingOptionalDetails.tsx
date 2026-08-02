@@ -18,6 +18,8 @@ const inputBase =
 const selectBase =
   "w-full cursor-pointer appearance-none rounded-xl border border-border-subtle bg-surface bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat px-4 py-3 pr-10 text-[15px] text-text-main shadow-sm outline-none transition-all focus:border-action-primary focus:ring-2 focus:ring-action-primary/20 disabled:cursor-not-allowed disabled:opacity-60";
 const fieldLabelClass = "text-text-main mb-1.5 block text-sm font-semibold";
+const SELECT_CHEVRON =
+  "bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]";
 
 type OptionalFieldChangeEvent = React.ChangeEvent<
   HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -30,6 +32,10 @@ export interface SightingOptionalDetailsProps {
   traitTags: string[];
   description: string;
   disabled: boolean;
+  /** Defaults to sighting create/edit limit (5). Lost-post edit uses 8. */
+  maxTags?: number;
+  /** Prefix for field ids to avoid collisions when reused. */
+  idPrefix?: string;
   onFieldChange(event: OptionalFieldChangeEvent): void;
   onTraitTagToggle(tagId: string): void;
 }
@@ -41,9 +47,16 @@ export function SightingOptionalDetails({
   traitTags,
   description,
   disabled,
+  maxTags = MAX_TAG_SELECT_SIGHTING,
+  idPrefix = "sighting",
   onFieldChange,
   onTraitTagToggle,
 }: SightingOptionalDetailsProps) {
+  const colorId = `${idPrefix}-trait-color`;
+  const sizeId = `${idPrefix}-trait-size`;
+  const speciesId = `${idPrefix}-trait-species`;
+  const descriptionId = `${idPrefix}-description`;
+
   return (
     <details className="group border-border-subtle bg-surface rounded-2xl border shadow-sm">
       <summary className="text-text-main focus-visible:outline-action-primary flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 text-base font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 [&::-webkit-details-marker]:hidden">
@@ -63,14 +76,11 @@ export function SightingOptionalDetails({
         <ScrollablePanel variant="panel" className="space-y-5">
           <div className="space-y-3">
             <div>
-              <label
-                htmlFor="sighting-trait-color"
-                className={fieldLabelClass}
-              >
+              <label htmlFor={colorId} className={fieldLabelClass}>
                 색상
               </label>
               <input
-                id="sighting-trait-color"
+                id={colorId}
                 type="text"
                 name="traitColor"
                 value={traitColor}
@@ -83,23 +93,17 @@ export function SightingOptionalDetails({
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label
-                  htmlFor="sighting-trait-size"
-                  className={fieldLabelClass}
-                >
+                <label htmlFor={sizeId} className={fieldLabelClass}>
                   크기
                 </label>
                 <div className="relative">
                   <select
-                    id="sighting-trait-size"
+                    id={sizeId}
                     name="traitSize"
                     value={traitSize}
                     onChange={onFieldChange}
                     disabled={disabled}
-                    className={cn(
-                      selectBase,
-                      "bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]"
-                    )}
+                    className={cn(selectBase, SELECT_CHEVRON)}
                   >
                     {SIZE_VALUES.map((value) => (
                       <option key={value} value={value}>
@@ -110,23 +114,17 @@ export function SightingOptionalDetails({
                 </div>
               </div>
               <div>
-                <label
-                  htmlFor="sighting-trait-species"
-                  className={fieldLabelClass}
-                >
+                <label htmlFor={speciesId} className={fieldLabelClass}>
                   종
                 </label>
                 <div className="relative">
                   <select
-                    id="sighting-trait-species"
+                    id={speciesId}
                     name="traitSpecies"
                     value={traitSpecies}
                     onChange={onFieldChange}
                     disabled={disabled}
-                    className={cn(
-                      selectBase,
-                      "bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]"
-                    )}
+                    className={cn(selectBase, SELECT_CHEVRON)}
                   >
                     {DOG_BREEDS.map((breed) => (
                       <option key={breed} value={breed}>
@@ -139,14 +137,13 @@ export function SightingOptionalDetails({
             </div>
             <div className="space-y-2">
               <Text variant="caption" color="caption">
-                특이사항 (최대 {MAX_TAG_SELECT_SIGHTING}개)
+                특이사항 (최대 {maxTags}개)
               </Text>
               <div className="flex flex-wrap gap-2">
                 {TRAIT_TAGS.map((tag) => {
                   const selected = traitTags.includes(tag.id);
                   const tagDisabled =
-                    disabled ||
-                    (!selected && traitTags.length >= MAX_TAG_SELECT_SIGHTING);
+                    disabled || (!selected && traitTags.length >= maxTags);
 
                   return (
                     <button
@@ -173,13 +170,13 @@ export function SightingOptionalDetails({
 
           <div className="space-y-2 pt-1">
             <label
-              htmlFor="sighting-description"
+              htmlFor={descriptionId}
               className="text-text-main block font-semibold"
             >
               추가 설명
             </label>
             <textarea
-              id="sighting-description"
+              id={descriptionId}
               name="description"
               value={description}
               onChange={onFieldChange}

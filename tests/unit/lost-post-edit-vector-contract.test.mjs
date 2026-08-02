@@ -15,42 +15,84 @@ test("lost post PATCH requeues embeddings and clears recommendation cache", asyn
   assert.match(route, /triggerEmbeddingsProcess/);
 });
 
-test("detail page opens edit modal from query and prevents re-entry", async () => {
+test("detail page routes edit to full-page form like sighting edit", async () => {
   const page = await readFile(
     "src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx",
     "utf8"
   );
+  const editPage = await readFile(
+    "src/app/(tabs)/my/lost-posts/[lostPostId]/edit/page.tsx",
+    "utf8"
+  );
+
   assert.match(page, /searchParams\.get\("edit"\) === "1"/);
-  assert.match(page, /editSubmitting/);
-  assert.match(page, /invalidateMyLostPostsCache/);
+  assert.match(page, /router\.replace\(`\/my\/lost-posts\/\$\{lostPostId\}\/edit`\)/);
   assert.match(page, /aria-label="수정"/);
+  assert.match(page, /\/my\/lost-posts\/\$\{item\.id\}\/edit/);
   assert.match(page, /surface-light/);
   assert.match(page, /text-text-main/);
-  assert.match(page, /placeholder:text-text-caption/);
-  assert.match(page, /bg-action-primary text-action-on-primary/);
   assert.match(page, /추천 제보 보기/);
   assert.match(page, /<BackLink/);
+  assert.doesNotMatch(page, /showEditModal/);
+  assert.doesNotMatch(page, /editSubmitting/);
+  assert.doesNotMatch(page, /유실글 수정/);
+  assert.doesNotMatch(page, /aria-label="대표 사진 변경"/);
+
+  assert.match(editPage, /<BackLink href="\/my">내 정보<\/BackLink>/);
+  assert.match(editPage, /유실글 수정/);
+  assert.match(editPage, /<LostPostEditForm/);
 });
 
-test("lost post edit modal supports cover photo replace via existing upload lifecycle", async () => {
-  const page = await readFile(
-    "src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx",
-    "utf8"
-  );
+test("lost post edit form mirrors sighting edit surface and keeps cover replace", async () => {
+  const [editForm, sightingEdit, optional] = await Promise.all([
+    readFile(
+      "src/features/lost-posts/components/LostPostEditForm.tsx",
+      "utf8"
+    ),
+    readFile(
+      "src/features/sightings/components/SightingEditForm.tsx",
+      "utf8"
+    ),
+    readFile(
+      "src/features/sightings/components/SightingOptionalDetails.tsx",
+      "utf8"
+    ),
+  ]);
   const route = await readFile(
     "src/app/api/v1/lost-posts/[lostPostId]/route.ts",
     "utf8"
   );
 
-  assert.match(page, /대표 사진/);
-  assert.match(page, /aria-label="대표 사진 변경"/);
-  assert.match(page, /prepareSubmission/);
-  assert.match(page, /fingerprintUploadFile/);
-  assert.match(page, /rememberUploadIntent/);
-  assert.match(page, /markUploadCompleted/);
-  assert.match(page, /purpose:\s*"lost_cover"/);
-  assert.match(page, /coverPhotoKey/);
-  assert.match(page, /editSubmitting/);
+  assert.match(editForm, /<SightingOptionalDetails/);
+  assert.match(editForm, /maxTags=\{MAX_EDIT_TAGS\}/);
+  assert.match(editForm, /idPrefix="lost-edit"/);
+  assert.match(editForm, /사진 \(1장\)/);
+  assert.match(editForm, /aria-label="대표 사진 변경"/);
+  assert.match(editForm, /prepareSubmission/);
+  assert.match(editForm, /fingerprintUploadFile/);
+  assert.match(editForm, /rememberUploadIntent/);
+  assert.match(editForm, /markUploadCompleted/);
+  assert.match(editForm, /purpose:\s*"lost_cover"/);
+  assert.match(editForm, /coverPhotoKey/);
+  assert.match(editForm, /saving/);
+  assert.match(editForm, /수정 저장/);
+  assert.match(editForm, />\s*취소\s*</);
+  assert.match(
+    editForm,
+    /sticky bottom-\[calc\(var\(--bottom-nav-height\)\+env\(safe-area-inset-bottom\)\+0\.75rem\)\]/
+  );
+  assert.match(editForm, /min-h-12 flex-1 rounded-2xl/);
+  assert.match(editForm, /min-h-12 flex-\[1\.4\] rounded-2xl/);
+  assert.match(editForm, /aspect-4\/3 max-h-80/);
+  assert.match(editForm, /border-2 border-dashed/);
+  assert.match(editForm, /선택한 사진 제거/);
+  assert.match(editForm, /<option value="searching">찾는 중<\/option>/);
+  assert.match(editForm, /<option value="found">찾았어요<\/option>/);
+  assert.doesNotMatch(editForm, /<option value="closed">마감<\/option>/);
+
+  assert.match(sightingEdit, /수정 저장/);
+  assert.match(optional, /maxTags/);
+  assert.match(optional, /idPrefix/);
 
   assert.match(route, /coverPhotoKey/);
   assert.match(route, /verifyUploadIntents/);
@@ -79,6 +121,7 @@ test("shared BackLink keeps 44px targets across my chrome", async () => {
     "src/app/(tabs)/my/settings/page.tsx",
     "src/app/(tabs)/my/sightings/page.tsx",
     "src/app/(tabs)/my/lost-posts/new/page.tsx",
+    "src/app/(tabs)/my/lost-posts/[lostPostId]/edit/page.tsx",
   ]) {
     const source = await readFile(path, "utf8");
     assert.match(source, /<BackLink href="\/my">내 정보<\/BackLink>/);
@@ -96,7 +139,4 @@ test("lost post detail uses share icon and omits status history UI", async () =>
   assert.doesNotMatch(page, /LostPostStatusHistory/);
   assert.doesNotMatch(page, /상태 이력/);
   assert.doesNotMatch(page, />\s*공유\s*</);
-  assert.match(page, /<option value="searching">찾는 중<\/option>/);
-  assert.match(page, /<option value="found">찾았어요<\/option>/);
-  assert.doesNotMatch(page, /<option value="closed">마감<\/option>/);
 });
