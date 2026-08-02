@@ -34,12 +34,12 @@
 2. 실브라우저 viewport/keyboard/axe/10초 제보 타이밍은 서버 env 승인·Browser
    세션 부재로 미실행이다. 증거는
    [warm-ux browser evidence](./verification/2026-08-02-warm-ux-browser-evidence.md).
-3. LoginPrompt는 `/terms`·`/privacy`를 링크하지만 공개 페이지가 없어 404다.
+3. `/terms`·`/privacy` 공개 페이지는 추가됐으나, 실브라우저 viewport/keyboard/
+   axe/10초 제보 타이밍과 Docker/`psql` DB matrix는 아직 미충족이다.
 4. Docker와 `psql`이 없어 빈 Supabase DB migration replay, 실제 권한 행렬,
    동시성 검증을 이 노트북에서 실행하지 못했다.
 5. npm 보안 감사는 네트워크 제한으로 실행되지 않았다. 외부 npm registry에
    의존성 메타데이터를 보내는 작업은 사용자 명시 승인을 받은 뒤 재실행해야 한다.
-6. map-confirmation·activity-release 구현 커밋은 사용자 요청 전까지 pending이다.
 
 ## 3. 저장소 규모
 
@@ -132,7 +132,7 @@ flowchart LR
 | 브라우저 E2E               | 서버 env 승인·Browser 탭 없음            | NOT RUN |
 | axe-core 페이지 스캔       | axe 4.11.0 존재, DOM 주입 세션 없음      | NOT RUN |
 | 10초 제보 중앙값           | 실측 없음                                | NOT RUN |
-| `/terms`·`/privacy`        | 링크만 존재, 페이지 없음                 | GAP     |
+| `/terms`·`/privacy`        | App Router 페이지·계약 테스트 추가       | PASS    |
 | DB replay/권한/동시성      | Docker·`psql` 없음                       | NOT RUN |
 | production `npm audit`     | 외부 registry 승인 필요                  | NOT RUN |
 
@@ -146,9 +146,8 @@ flowchart LR
 ### 남은 Goal COMPLETE blocker
 
 1. 실브라우저 viewport/keyboard/axe/10초 타이밍 증거
-2. `/terms`·`/privacy` 공개 페이지(또는 링크 정책 재정의)
-3. Docker/`psql` migration reset·permission matrix(사용자 승인 후)
-4. map-confirmation·activity-release 커밋 및(필요 시) production SQL 적용 승인
+2. Docker/`psql` migration reset·permission matrix(사용자 승인 후)
+3. 배포 사이트에서의 UX 피드백(제보 옵티미스틱·지도 필터·내 활동) 수동 확인
 
 ## 7. 새 노트북 의존성 검토
 

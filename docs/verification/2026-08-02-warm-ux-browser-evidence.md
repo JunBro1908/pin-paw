@@ -15,7 +15,7 @@
 | 브라우저 viewport/keyboard  | NOT RUN  | 로컬 `next start`가 sandbox `uv_interface_addresses` 오류로 중단, 이후 env 로드 서버 기동이 승인 게이트에 차단됨. Browser MCP 탭도 없음 |
 | axe-core 4.11.0 페이지 스캔 | NOT RUN  | 패키지는 `node_modules`에 존재하나 실행 중 페이지 DOM에 주입할 브라우저 세션 없음. 신규 a11y runner 설치 금지                           |
 | 비회원 10초 제보 중앙값     | NOT RUN  | 실제 폼 조작·사진/위치 준비 환경 없음                                                                                                   |
-| `/terms`, `/privacy`        | FAIL/GAP | LoginPrompt는 링크하나 App Router 페이지 미구현(404)                                                                                    |
+| `/terms`, `/privacy`        | PASS     | App Router 페이지·LoginPrompt 링크·legal-pages 계약 추가. 배포 재확인 권장                                                              |
 
 ## 시나리오 표
 
@@ -63,8 +63,7 @@ npm run test:integration
 
 ## 남은 브라우저/운영 승인 항목
 
-1. worktree에 `.env.local` 연결 또는 승인된 env로 `npm run start` 기동
-2. Browser/Chrome에서 `/`, `/map`, `/recommend`, `/my` viewport·keyboard·axe 스캔
-3. 비회원 제보 5회 타이밍
-4. `/terms`, `/privacy` 공개 페이지 추가(또는 링크 대상 확정)
-5. Docker/`psql` 환경에서 migration reset·permission matrix (사용자 승인 후)
+1. 배포 URL 또는 승인된 env로 `npm run start` 기동 후 Browser viewport·keyboard·axe 스캔
+2. 비회원 제보 5회 타이밍(10초 중앙값)
+3. Docker/`psql` 환경에서 migration reset·permission matrix (사용자 승인 후)
+4. UX 피드백 배포 확인: 확인 탭 paw, 제보 검증/옵티미스틱, 지도 필터·상세 출처, `/my` 프로필 우선

@@ -1,7 +1,7 @@
 # PinPaw 따뜻한 UX 개편 실행 가이드
 
 > 기준일: 2026-08-02  
-> 상태: 구현 IN PROGRESS — Goal COMPLETE 금지(브라우저·정책 페이지·DB 환경 gate 미충족)  
+> 상태: 구현 IN PROGRESS — Goal COMPLETE 금지(브라우저·10초 타이밍·DB 환경 gate 미충족)  
 > 기준 설계: [PinPaw 따뜻한 현장 구조 도구 UX 설계](./superpowers/specs/2026-08-02-pinpaw-warm-field-ux-design.md)  
 > 증거: [브라우저 검증 증거](./verification/2026-08-02-warm-ux-browser-evidence.md)
 
@@ -55,7 +55,7 @@ AI 서비스가 아니라 긴급한 상황에서 신뢰할 수 있는 **현장 �
 | UX-3 지도    | 보호소 출처 RPC, marker, legend, 단일 detail sheet  | 코드·SQL 계약 완료 (DB apply·브라우저 미실행) |
 | UX-4 확인    | 거리·시간·특징 근거, similarity/topK 비노출         | 코드·단위 완료 (로그인 E2E 미실행)            |
 | UX-5 내 활동 | 최신 `searching` 사건과 다음 action 우선            | 코드·단위 완료 (로그인 E2E 미실행)            |
-| UX-6 출시    | format/type/lint/test/build/browser gate 통과       | 부분 — browser/axe/정책 페이지/DB 미충족      |
+| UX-6 출시    | format/type/lint/test/build/browser gate 통과       | 부분 — browser/axe/10초/DB 미충족             |
 
 ## 5. 운영 안전 기준
 
