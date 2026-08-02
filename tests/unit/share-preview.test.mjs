@@ -124,10 +124,11 @@ test("share page keeps public teaser CTAs without auth-only detail fields", asyn
   );
   assert.match(page, /get_public_lost_post_share_preview/);
   assert.match(page, /buildShareTraitLabels/);
-  assert.match(page, /지도에서 주변 보기/);
+  assert.match(page, /목격 제보하기/);
   assert.match(page, /로그인하고 함께 찾기/);
   assert.match(page, /ShareUnavailable|공유할 수 없는 유실글/);
   assert.match(page, /정확한 위치와 비공개 메모는 공유되지 않습니다/);
+  assert.doesNotMatch(page, /지도에서 주변 보기/);
   assert.doesNotMatch(page, /\bowner_id\b|\.note\b|정밀 위치/);
   assert.doesNotMatch(page, /notFound\(/);
 });

@@ -152,9 +152,6 @@ export default async function ShareLostPostPage({ params }: PageProps) {
   const traits = buildShareTraitLabels(preview);
   const coverUrl = coverPublicUrl(preview.coverPhotoKey);
   const petName = preview.petName ?? "강아지";
-  const mapHref = preview.approximateArea
-    ? `/map?lat=${preview.approximateArea.lat}&lng=${preview.approximateArea.lng}&lostPostId=${preview.id}`
-    : "/map";
 
   return (
     <Container className="flex min-h-[100dvh] flex-col gap-6 py-10">
@@ -186,10 +183,7 @@ export default async function ShareLostPostPage({ params }: PageProps) {
       )}
 
       <div>
-        <Text variant="caption" color="caption" className="block">
-          찾는 중 · 공개 미리보기
-        </Text>
-        <Text variant="title" className="mt-2 block">
+        <Text variant="title" className="block">
           {petName}를 찾고 있습니다
         </Text>
         {traits.length > 0 ? (
@@ -212,22 +206,16 @@ export default async function ShareLostPostPage({ params }: PageProps) {
 
       <div className="mt-auto flex flex-col gap-3">
         <Link
-          href={mapHref}
+          href="/"
           className="bg-action-primary text-action-on-primary inline-flex min-h-12 items-center justify-center rounded-xl px-4 py-3 text-center font-semibold"
         >
-          지도에서 주변 보기
+          목격 제보하기
         </Link>
         <Link
           href="/my"
           className="border-border-subtle bg-surface text-text-main inline-flex min-h-12 items-center justify-center rounded-xl border px-4 py-3 text-center font-semibold"
         >
           로그인하고 함께 찾기
-        </Link>
-        <Link
-          href="/"
-          className="text-action-primary inline-flex min-h-11 items-center justify-center text-sm font-medium underline-offset-2 hover:underline"
-        >
-          PinPaw에 목격 제보하기
         </Link>
       </div>
     </Container>

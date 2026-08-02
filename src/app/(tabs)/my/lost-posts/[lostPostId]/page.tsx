@@ -229,6 +229,7 @@ function LostPostDetailContent() {
             {item.status === "searching" ? (
               <ShareLostPostButton
                 lostPostId={item.id}
+                petName={item.pet_name}
                 onCopied={() =>
                   setToast({
                     message: "공유 링크를 복사했습니다.",

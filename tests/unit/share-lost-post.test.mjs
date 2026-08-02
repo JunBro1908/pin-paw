@@ -11,7 +11,12 @@ test("shareLostPost builds public share URL and prefers Web Share API", async ()
   assert.match(source, /navigator\.share/);
   assert.match(source, /navigator\.clipboard\.writeText/);
   assert.match(source, /PinPaw 실종 제보/);
-  assert.match(source, /정확한 위치와 메모는 포함되지 않습니다/);
+  assert.match(source, /buildLostPostShareText/);
+  assert.match(
+    source,
+    /를 찾고 있습니다\. PinPaw에 접속해서 함께해주세요\./
+  );
+  assert.doesNotMatch(source, /정확한 위치와 메모는 포함되지 않습니다/);
 });
 
 test("ShareLostPostButton exposes 공유하기 control with send icon", async () => {
@@ -22,6 +27,7 @@ test("ShareLostPostButton exposes 공유하기 control with send icon", async ()
   assert.match(button, /aria-label="공유하기"/);
   assert.match(button, /name="send"/);
   assert.match(button, /shareLostPost/);
+  assert.match(button, /petName/);
   assert.match(button, /stopPropagation/);
   assert.doesNotMatch(button, />\s*공유\s*</);
 });
@@ -32,6 +38,7 @@ test("active lost case card reuses share control on searching badge row", async 
     "utf8"
   );
   assert.match(card, /ShareLostPostButton/);
+  assert.match(card, /petName=\{item\.pet_name\}/);
   assert.match(card, /item\.status === "searching"/);
   assert.match(card, /justify-between/);
   assert.match(card, /공유 링크를 복사했습니다/);
@@ -45,5 +52,6 @@ test("lost post detail reuses ShareLostPostButton", async () => {
   );
   assert.match(page, /ShareLostPostButton/);
   assert.match(page, /lostPostId=\{item\.id\}/);
+  assert.match(page, /petName=\{item\.pet_name\}/);
   assert.doesNotMatch(page, /navigator\.share/);
 });

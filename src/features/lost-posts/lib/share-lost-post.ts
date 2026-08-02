@@ -9,23 +9,30 @@ export function buildLostPostShareUrl(
   return `${origin}/share/lost-posts/${lostPostId}`;
 }
 
+export function buildLostPostShareText(petName?: string | null): string {
+  const name = petName?.trim() || "강아지";
+  return `${name}를 찾고 있습니다. PinPaw에 접속해서 함께해주세요.`;
+}
+
 /**
  * Web Share API when available; otherwise clipboard copy of the public share URL.
  */
 export async function shareLostPost(
-  lostPostId: string
+  lostPostId: string,
+  options: { petName?: string | null } = {}
 ): Promise<ShareLostPostResult> {
   const shareUrl = buildLostPostShareUrl(lostPostId);
+  const text = buildLostPostShareText(options.petName);
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
       await navigator.share({
         title: "PinPaw 실종 제보",
-        text: "정확한 위치와 메모는 포함되지 않습니다.",
+        text,
         url: shareUrl,
       });
       return { ok: true, method: "native" };
     }
-    await navigator.clipboard.writeText(shareUrl);
+    await navigator.clipboard.writeText(`${text}\n${shareUrl}`);
     return { ok: true, method: "clipboard" };
   } catch {
     return { ok: false };

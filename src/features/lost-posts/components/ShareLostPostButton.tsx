@@ -8,6 +8,7 @@ import { shareLostPost } from "../lib/share-lost-post";
 
 interface ShareLostPostButtonProps {
   lostPostId: string;
+  petName?: string | null;
   className?: string;
   onCopied?: () => void;
   onError?: () => void;
@@ -15,6 +16,7 @@ interface ShareLostPostButtonProps {
 
 export function ShareLostPostButton({
   lostPostId,
+  petName,
   className,
   onCopied,
   onError,
@@ -22,7 +24,7 @@ export function ShareLostPostButton({
   const handleClick = async (event: MouseEvent<HTMLButtonElement>) => {
     event.preventDefault();
     event.stopPropagation();
-    const result = await shareLostPost(lostPostId);
+    const result = await shareLostPost(lostPostId, { petName });
     if (!result.ok) {
       onError?.();
       return;
