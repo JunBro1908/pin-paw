@@ -13,10 +13,10 @@ export default function HomePage() {
     <Container className="py-8">
       <header className="mb-8">
         <Text as="h1" variant="title" className="text-2xl">
-          방금 본 동물을 알려주세요
+          길 잃은 반려동물을 보셨나요?
         </Text>
         <Text variant="body" color="sub" className="mt-1">
-          방금 유실된 반려동물을 보셨나요? 빠르게 알려주세요.
+          짧은 제보 하나가 PinPaw에서 가족을 찾는 따뜻한 실마리가 됩니다.
         </Text>
       </header>
 
