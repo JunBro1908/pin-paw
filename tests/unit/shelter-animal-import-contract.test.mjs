@@ -51,4 +51,5 @@ test("weekly cron and cron-auth route are wired", async () => {
         cron.schedule === "0 4 * * 1"
     )
   );
+  assert.deepEqual(vercel.regions, ["icn1"]);
 });

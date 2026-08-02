@@ -4,6 +4,9 @@ import { SITE_COPY } from "@/shared/constants/site-copy";
 import { parseAppOrigin } from "@/shared/lib/app-origin";
 import "./globals.css";
 
+/** Keep serverless routes in Seoul to cut Korea↔US round trips. */
+export const preferredRegion = "icn1";
+
 const originResult = parseAppOrigin(process.env.APP_ORIGIN);
 const metadataBase = originResult.ok ? new URL(originResult.origin) : undefined;
 
