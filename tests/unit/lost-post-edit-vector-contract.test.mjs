@@ -63,8 +63,9 @@ test("lost post detail uses share icon and omits status history UI", async () =>
     "src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx",
     "utf8"
   );
-  assert.match(page, /aria-label="공유하기"/);
-  assert.match(page, /name="send"/);
+  assert.match(page, /ShareLostPostButton/);
+  assert.match(page, /lostPostId=\{item\.id\}/);
+  assert.doesNotMatch(page, /navigator\.share/);
   assert.doesNotMatch(page, /LostPostStatusHistory/);
   assert.doesNotMatch(page, /상태 이력/);
   assert.doesNotMatch(page, />\s*공유\s*</);

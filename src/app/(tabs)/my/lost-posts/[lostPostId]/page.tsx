@@ -30,7 +30,7 @@ import { cn } from "@/shared/lib/cn";
 import { trackFunnelEvent } from "@/shared/lib/funnel-client";
 import { ReportBlockSheet } from "@/features/moderation/components/ReportBlockSheet";
 import { invalidateMyLostPostsCache } from "@/features/lost-posts/hooks/useMyLostPosts";
-import { Icon } from "@/shared/ui/Icon";
+import { ShareLostPostButton } from "@/features/lost-posts/components/ShareLostPostButton";
 
 const MAX_TAG_EDIT = 8;
 
@@ -361,37 +361,21 @@ function LostPostDetailContent() {
           <div className="flex items-center justify-between gap-3">
             <StatusBadge status={item.status} size="md" />
             {item.status === "searching" ? (
-              <Button
-                type="button"
-                variant="quiet"
-                className="shrink-0"
-                aria-label="공유하기"
-                onClick={async () => {
-                  const shareUrl = `${window.location.origin}/share/lost-posts/${item.id}`;
-                  try {
-                    if (navigator.share) {
-                      await navigator.share({
-                        title: "PinPaw 실종 제보",
-                        text: "정확한 위치와 메모는 포함되지 않습니다.",
-                        url: shareUrl,
-                      });
-                    } else {
-                      await navigator.clipboard.writeText(shareUrl);
-                      setToast({
-                        message: "공유 링크를 복사했습니다.",
-                        type: "success",
-                      });
-                    }
-                  } catch {
-                    setToast({
-                      message: "공유에 실패했습니다.",
-                      type: "error",
-                    });
-                  }
-                }}
-              >
-                <Icon name="send" size={20} />
-              </Button>
+              <ShareLostPostButton
+                lostPostId={item.id}
+                onCopied={() =>
+                  setToast({
+                    message: "공유 링크를 복사했습니다.",
+                    type: "success",
+                  })
+                }
+                onError={() =>
+                  setToast({
+                    message: "공유에 실패했습니다.",
+                    type: "error",
+                  })
+                }
+              />
             ) : null}
           </div>
 

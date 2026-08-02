@@ -2,9 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { useState } from "react";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
+import { Toast } from "@/shared/ui/Toast";
 import { StatusBadge } from "./StatusBadge";
+import { ShareLostPostButton } from "./ShareLostPostButton";
 import {
   formatLostCaseDateTime,
   getLostPostCoverUrl,
@@ -33,6 +36,10 @@ export function ActiveLostCaseCard({
   onPrimaryAction,
 }: ActiveLostCaseCardProps) {
   void _compact;
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const coverUrl = getLostPostCoverUrl(item.cover_photo_key);
   const lostAt = formatLostCaseDateTime(item.lost_at);
   const lastChecked = formatLostCaseDateTime(item.updated_at);
@@ -86,8 +93,25 @@ export function ActiveLostCaseCard({
       ) : null}
 
       <div className="space-y-3 bg-white p-4">
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex items-center justify-between gap-3">
           <StatusBadge status={item.status} size="sm" />
+          {item.status === "searching" ? (
+            <ShareLostPostButton
+              lostPostId={item.id}
+              onCopied={() =>
+                setToast({
+                  message: "공유 링크를 복사했습니다.",
+                  type: "success",
+                })
+              }
+              onError={() =>
+                setToast({
+                  message: "공유에 실패했습니다.",
+                  type: "error",
+                })
+              }
+            />
+          ) : null}
         </div>
         <div>
           <Text as="h2" variant="title" color="main" className="font-semibold">
@@ -124,6 +148,13 @@ export function ActiveLostCaseCard({
           </Link>
         )}
       </div>
+      {toast ? (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      ) : null}
     </article>
   );
 }
