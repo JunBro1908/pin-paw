@@ -547,6 +547,7 @@ export function NaverMap({
             lat: initialCenter.lat,
             lng: initialCenter.lng,
             type: "point",
+            source_type: "sighting",
             photo_keys: d.photo_keys as string[] | undefined,
             occurred_at: d.occurred_at as string | undefined,
             author_type: d.author_type as "anon" | "user" | undefined,

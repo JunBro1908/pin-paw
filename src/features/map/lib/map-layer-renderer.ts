@@ -1,6 +1,8 @@
 import type { BookmarkPath, Coordinate } from "./map-domain";
 import type { LostPostMapItem } from "./map-data-state";
 import type { NaverMapAdapter } from "./naver-map-adapter";
+// @ts-expect-error -- Node's direct TypeScript test runner requires the explicit .ts extension.
+import { getMapMarkerPresentation } from "./map-marker-presentation.ts";
 import type {
   MapItem,
   NaverLatLng,
@@ -12,6 +14,15 @@ import type {
 
 const PATH_DURATION_MS = 1800;
 const PATH_REPLAY_PAUSE_MS = 1000;
+
+function escapeHtmlAttribute(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;");
+}
 
 export interface AnimationScheduler {
   now(): number;
@@ -108,12 +119,15 @@ export function createMapLayerRenderer({
     feedback: Record<string, { seen: boolean; claimed: boolean }>,
     getImageUrl: (key: string) => string
   ) => {
+    const presentation = getMapMarkerPresentation(item.source_type, item.type);
+    const ariaLabel = escapeHtmlAttribute(presentation.label);
+
     if (item.type === "cluster") {
       const size = 32 + Math.min(item.count * 1.5, 20);
-      return `<div style="
+      return `<div role="img" aria-label="${ariaLabel}" style="
         width: ${size}px;
         height: ${size}px;
-        background: #00C73C;
+        background: ${presentation.color};
         border: 2px solid white;
         border-radius: 50%;
         display: flex;
@@ -125,32 +139,40 @@ export function createMapLayerRenderer({
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         cursor: pointer;
         transition: all 0.2s ease-out;
-      " onmouseover="this.style.transform='scale(1.05)'; this.style.backgroundColor='#00B336'"
-         onmouseout="this.style.transform='scale(1)'; this.style.backgroundColor='#00C73C'">${item.count}</div>`;
+      " onmouseover="this.style.transform='scale(1.05)'"
+         onmouseout="this.style.transform='scale(1)'">${item.count}</div>`;
     }
 
     const itemFeedback = feedback[normalizeId(item.id)];
-    const borderColor = itemFeedback?.claimed
+    const statusRingColor = itemFeedback?.claimed
       ? "#22c55e"
       : itemFeedback?.seen
         ? "#6b7280"
-        : "#FF4D4D";
+        : null;
     const thumbnailUrl = item.photo_keys?.[0]
       ? getImageUrl(item.photo_keys[0])
       : "/icons/marker.png";
+    const isPin = presentation.shape === "pin";
+    const markerRadius = isPin ? "50% 50% 50% 0" : "12px";
+    const markerTransform = isPin ? "rotate(-45deg)" : "none";
+    const thumbnailTransform = isPin ? "rotate(45deg)" : "none";
+    const statusRing = statusRingColor
+      ? `box-shadow: inset 0 0 0 3px ${statusRingColor};`
+      : "";
 
-    return `<div style="cursor: pointer; position: relative; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+    return `<div role="img" aria-label="${ariaLabel}" style="cursor: pointer; position: relative; display: flex; flex-direction: column; align-items: center; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
       <div style="
         width: 44px;
         height: 44px;
         background: white;
-        border: 2.5px solid ${borderColor};
-        border-radius: 50% 50% 50% 0;
-        transform: rotate(-45deg);
+        border: 2.5px solid ${presentation.color};
+        border-radius: ${markerRadius};
+        transform: ${markerTransform};
         display: flex;
         align-items: center;
         justify-content: center;
         overflow: hidden;
+        ${statusRing}
       ">
         <div style="
           width: 34px;
@@ -159,16 +181,16 @@ export function createMapLayerRenderer({
           background-image: url('${thumbnailUrl}');
           background-size: cover;
           background-position: center;
-          transform: rotate(45deg);
+          transform: ${thumbnailTransform};
           border: 1px solid rgba(0,0,0,0.1);
         "></div>
       </div>
-      <div style="width: 2px; height: 6px; background: ${borderColor}; margin-top: -2px;"></div>
+      ${isPin ? `<div style="width: 2px; height: 6px; background: ${presentation.color}; margin-top: -2px;"></div>` : ""}
     </div>`;
   };
 
   const createLostPostContent = (thumbnailUrl: string) =>
-    `<div style="cursor: pointer; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
+    `<div role="img" aria-label="유실 동물" style="cursor: pointer; filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));">
       <div style="
         width: 44px;
         height: 44px;
@@ -254,6 +276,7 @@ export function createMapLayerRenderer({
         )
         .map((point) => ({
           type: "point" as const,
+          source_type: "sighting" as const,
           id: point.sighting_id,
           lat: point.lat,
           lng: point.lng,

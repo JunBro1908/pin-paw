@@ -219,7 +219,7 @@ test("does not allocate animation resources for disabled or short paths", () => 
   assert.equal(clock.frames.size, 0);
 });
 
-test("renders existing cluster and feedback marker styles with click callbacks", () => {
+test("keeps source identity outside feedback state and exposes accessible marker labels", () => {
   const clock = createFakeScheduler();
   const fake = createFakeAdapter();
   const clicked = [];
@@ -234,6 +234,7 @@ test("renders existing cluster and feedback marker styles with click callbacks",
   });
   const cluster = {
     type: "cluster",
+    source_type: "shelter",
     id: "grid",
     lat: 37.5,
     lng: 127,
@@ -241,36 +242,80 @@ test("renders existing cluster and feedback marker styles with click callbacks",
   };
   const sighting = {
     type: "point",
+    source_type: "sighting",
     id: "sighting-1",
     lat: 37.6,
     lng: 127.1,
     note: "제보",
     photo_keys: ["photo.jpg"],
   };
+  const shelter = {
+    type: "point",
+    source_type: "shelter",
+    id: "shelter-1",
+    lat: 37.7,
+    lng: 127.2,
+    note: "보호소 입소",
+  };
 
   renderer.renderSightings({
     map: {},
-    items: [cluster, sighting],
+    items: [cluster, sighting, shelter],
     feedback: {
       "sighting-1": { seen: false, claimed: true },
+      "shelter-1": { seen: true, claimed: false },
     },
     getImageUrl: (key) => `https://images.test/${key}`,
     onItemClick: (item) => clicked.push(item.id),
   });
 
-  assert.equal(fake.markerGroups.get("sightings").length, 2);
+  assert.equal(fake.markerGroups.get("sightings").length, 3);
+  assert.match(
+    fake.markers[0].options.icon.content,
+    /role="img" aria-label="보호소 묶음"/
+  );
+  assert.match(fake.markers[0].options.icon.content, /#28736F/);
   assert.match(fake.markers[0].options.icon.content, />3</);
-  assert.match(fake.markers[1].options.icon.content, /#22c55e/);
+  assert.match(
+    fake.markers[1].options.icon.content,
+    /role="img" aria-label="목격"/
+  );
+  assert.match(
+    fake.markers[1].options.icon.content,
+    /border: 2\.5px solid #087A3E/
+  );
+  assert.match(
+    fake.markers[1].options.icon.content,
+    /box-shadow: inset 0 0 0 3px #22c55e/
+  );
+  assert.match(
+    fake.markers[1].options.icon.content,
+    /border-radius: 50% 50% 50% 0/
+  );
   assert.match(
     fake.markers[1].options.icon.content,
     /https:\/\/images\.test\/photo\.jpg/
   );
   assert.deepEqual(fake.markers[1].options.icon.anchor, { x: 22, y: 50 });
+  assert.match(
+    fake.markers[2].options.icon.content,
+    /role="img" aria-label="보호소"/
+  );
+  assert.match(
+    fake.markers[2].options.icon.content,
+    /border: 2\.5px solid #28736F/
+  );
+  assert.match(fake.markers[2].options.icon.content, /border-radius: 12px/);
+  assert.match(
+    fake.markers[2].options.icon.content,
+    /box-shadow: inset 0 0 0 3px #6b7280/
+  );
 
   fake.listeners[0].handler();
   fake.listeners[1].handler();
+  fake.listeners[2].handler();
 
-  assert.deepEqual(clicked, ["grid", "sighting-1"]);
+  assert.deepEqual(clicked, ["grid", "sighting-1", "shelter-1"]);
 });
 
 test("renders bookmark sightings and lost posts in independent groups", () => {
@@ -309,7 +354,14 @@ test("renders bookmark sightings and lost posts in independent groups", () => {
 
   assert.equal(fake.markerGroups.get("sightings").length, 1);
   assert.equal(fake.markerGroups.get("lost-posts").length, 1);
-  assert.match(fake.markers[0].options.icon.content, /#22c55e/);
+  assert.match(
+    fake.markers[0].options.icon.content,
+    /border: 2\.5px solid #087A3E/
+  );
+  assert.match(
+    fake.markers[0].options.icon.content,
+    /box-shadow: inset 0 0 0 3px #22c55e/
+  );
   assert.match(fake.markers[1].options.icon.content, /#f59e0b/);
   assert.deepEqual(fake.markers[1].options.icon.anchor, { x: 22, y: 44 });
 });

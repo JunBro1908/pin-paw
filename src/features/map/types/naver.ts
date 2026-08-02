@@ -105,11 +105,14 @@ export interface NaverMapOptions {
   zoom: number;
 }
 
+export type MapSourceType = "sighting" | "shelter";
+
 export interface ClusterPoint {
   id: string;
   lat: number;
   lng: number;
   type: "point";
+  source_type: MapSourceType;
   note?: string;
   photo_keys?: string[];
   occurred_at?: string;
@@ -126,6 +129,7 @@ export interface ClusterData {
   lng: number;
   count: number;
   type: "cluster";
+  source_type: MapSourceType;
   note?: never;
   photo_keys?: never;
   occurred_at?: never;
