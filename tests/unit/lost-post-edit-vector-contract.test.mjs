@@ -32,6 +32,33 @@ test("detail page opens edit modal from query and prevents re-entry", async () =
   assert.match(page, /<BackLink/);
 });
 
+test("lost post edit modal supports cover photo replace via existing upload lifecycle", async () => {
+  const page = await readFile(
+    "src/app/(tabs)/my/lost-posts/[lostPostId]/page.tsx",
+    "utf8"
+  );
+  const route = await readFile(
+    "src/app/api/v1/lost-posts/[lostPostId]/route.ts",
+    "utf8"
+  );
+
+  assert.match(page, /대표 사진/);
+  assert.match(page, /aria-label="대표 사진 변경"/);
+  assert.match(page, /prepareSubmission/);
+  assert.match(page, /fingerprintUploadFile/);
+  assert.match(page, /rememberUploadIntent/);
+  assert.match(page, /markUploadCompleted/);
+  assert.match(page, /purpose:\s*"lost_cover"/);
+  assert.match(page, /coverPhotoKey/);
+  assert.match(page, /editSubmitting/);
+
+  assert.match(route, /coverPhotoKey/);
+  assert.match(route, /verifyUploadIntents/);
+  assert.match(route, /purpose:\s*"lost_cover"/);
+  assert.match(route, /cover_photo_key/);
+  assert.match(route, /consumed_by_type:\s*"lost_post"/);
+});
+
 test("recommend picker uses carousel without edit affordance", async () => {
   const page = await readFile("src/app/(tabs)/recommend/page.tsx", "utf8");
   assert.match(page, /<LostCaseCarousel/);

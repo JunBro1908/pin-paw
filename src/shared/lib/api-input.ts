@@ -454,6 +454,7 @@ export interface LostPostUpdateInput {
   traitSpecies?: string | null;
   traitTags?: string[];
   note?: string | null;
+  coverPhotoKey?: string;
 }
 
 export function parseLostPostUpdateRequest(
@@ -498,6 +499,16 @@ export function parseLostPostUpdateRequest(
     const traitTags = tags(input.traitTags, 8);
     if (!traitTags) return { ok: false, reason: "invalid_trait_tags" };
     result.traitTags = traitTags;
+  }
+
+  if (owns(input, "coverPhotoKey")) {
+    if (
+      typeof input.coverPhotoKey !== "string" ||
+      !LOST_COVER_KEY.test(input.coverPhotoKey)
+    ) {
+      return { ok: false, reason: "invalid_cover_photo_key" };
+    }
+    result.coverPhotoKey = input.coverPhotoKey;
   }
 
   return { ok: true, value: result };

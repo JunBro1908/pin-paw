@@ -3,7 +3,7 @@
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { Container } from "@/shared/ui/Container";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
@@ -14,7 +14,7 @@ import { AuthGuard } from "@/features/auth/components/AuthGuard";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { useLostPost } from "@/features/lost-posts/hooks/useLostPost";
 import { StatusBadge } from "@/features/lost-posts/components/StatusBadge";
-import { createClient } from "@/shared/supabase/client";
+import { getLostPostCoverUrl } from "@/features/lost-posts/lib/lost-post-cover";
 import {
   DOG_BREEDS,
   getBreedLabel,
@@ -31,6 +31,14 @@ import { trackFunnelEvent } from "@/shared/lib/funnel-client";
 import { ReportBlockSheet } from "@/features/moderation/components/ReportBlockSheet";
 import { invalidateMyLostPostsCache } from "@/features/lost-posts/hooks/useMyLostPosts";
 import { ShareLostPostButton } from "@/features/lost-posts/components/ShareLostPostButton";
+import {
+  completeSubmission,
+  fingerprintUploadFile,
+  markUploadCompleted,
+  prepareSubmission,
+  rememberUploadIntent,
+  type FormSubmissionAttempt,
+} from "@/shared/lib/form-submission-lifecycle";
 
 const MAX_TAG_EDIT = 8;
 
@@ -45,6 +53,12 @@ const fieldSelectClass = cn(
   "cursor-pointer appearance-none bg-no-repeat bg-[length:1.25rem] bg-[right_0.75rem_center] pr-10",
   SELECT_CHEVRON
 );
+
+type EditPhotoDraft = {
+  key: string | null;
+  file: File | null;
+  url: string;
+};
 
 function DetailField({
   label,
@@ -99,33 +113,63 @@ function LostPostDetailContent() {
     note: "",
     status: "searching" as "searching" | "found" | "closed",
   });
+  const [editPhoto, setEditPhoto] = useState<EditPhotoDraft | null>(null);
+  const editFileInputRef = useRef<HTMLInputElement>(null);
+  const submissionAttemptRef = useRef<FormSubmissionAttempt | null>(null);
   const openEditRequested = searchParams.get("edit") === "1";
+
+  const buildEditFormFromItem = (source: NonNullable<typeof item>) => ({
+    petName: source.pet_name ?? "",
+    traitColor: source.trait_color ?? "",
+    traitSize:
+      source.trait_size &&
+      ["small", "medium", "large", "unknown"].includes(source.trait_size)
+        ? source.trait_size
+        : source.trait_size === "소"
+          ? "small"
+          : source.trait_size === "중"
+            ? "medium"
+            : source.trait_size === "대"
+              ? "large"
+              : "unknown",
+    traitSpecies: source.trait_species ?? SPECIES_UNKNOWN,
+    traitTags: Array.isArray((source as { trait_tags?: string[] }).trait_tags)
+      ? (source as { trait_tags: string[] }).trait_tags
+      : [],
+    note: source.note ?? "",
+    status: source.status,
+  });
+
+  const resetEditPhotoDraft = (coverKey: string | null | undefined) => {
+    setEditPhoto((prev) => {
+      if (prev?.file && prev.url.startsWith("blob:")) {
+        URL.revokeObjectURL(prev.url);
+      }
+      const url = getLostPostCoverUrl(coverKey);
+      return {
+        key: coverKey?.trim() || null,
+        file: null,
+        url,
+      };
+    });
+    submissionAttemptRef.current = null;
+    if (editFileInputRef.current) editFileInputRef.current.value = "";
+  };
 
   useEffect(() => {
     if (!openEditRequested || !item || showEditModal) return;
-    setEditForm({
-      petName: item.pet_name ?? "",
-      traitColor: item.trait_color ?? "",
-      traitSize:
-        item.trait_size &&
-        ["small", "medium", "large", "unknown"].includes(item.trait_size)
-          ? item.trait_size
-          : item.trait_size === "소"
-            ? "small"
-            : item.trait_size === "중"
-              ? "medium"
-              : item.trait_size === "대"
-                ? "large"
-                : "unknown",
-      traitSpecies: item.trait_species ?? SPECIES_UNKNOWN,
-      traitTags: Array.isArray((item as { trait_tags?: string[] }).trait_tags)
-        ? (item as { trait_tags: string[] }).trait_tags
-        : [],
-      note: item.note ?? "",
-      status: item.status,
-    });
+    setEditForm(buildEditFormFromItem(item));
+    resetEditPhotoDraft(item.cover_photo_key);
     setShowEditModal(true);
   }, [openEditRequested, item, showEditModal]);
+
+  useEffect(() => {
+    return () => {
+      if (editPhoto?.file && editPhoto.url.startsWith("blob:")) {
+        URL.revokeObjectURL(editPhoto.url);
+      }
+    };
+  }, [editPhoto]);
 
   const updateStatus = async (newStatus: "found" | "closed") => {
     if (!lostPostId || !session?.access_token) return;
@@ -218,28 +262,76 @@ function LostPostDetailContent() {
 
   const openEditModal = () => {
     if (!item) return;
-    setEditForm({
-      petName: item.pet_name ?? "",
-      traitColor: item.trait_color ?? "",
-      traitSize:
-        item.trait_size &&
-        ["small", "medium", "large", "unknown"].includes(item.trait_size)
-          ? item.trait_size
-          : item.trait_size === "소"
-            ? "small"
-            : item.trait_size === "중"
-              ? "medium"
-              : item.trait_size === "대"
-                ? "large"
-                : "unknown",
-      traitSpecies: item.trait_species ?? SPECIES_UNKNOWN,
-      traitTags: Array.isArray((item as { trait_tags?: string[] }).trait_tags)
-        ? (item as { trait_tags: string[] }).trait_tags
-        : [],
-      note: item.note ?? "",
-      status: item.status,
-    });
+    setEditForm(buildEditFormFromItem(item));
+    resetEditPhotoDraft(item.cover_photo_key);
     setShowEditModal(true);
+  };
+
+  const closeEditModal = () => {
+    resetEditPhotoDraft(item?.cover_photo_key);
+    setShowEditModal(false);
+  };
+
+  const handleEditPhotoChange = (file: File | null) => {
+    if (!file) return;
+    submissionAttemptRef.current = null;
+    setEditPhoto((prev) => {
+      if (prev?.file && prev.url.startsWith("blob:")) {
+        URL.revokeObjectURL(prev.url);
+      }
+      return {
+        key: null,
+        file,
+        url: URL.createObjectURL(file),
+      };
+    });
+  };
+
+  const uploadCover = async (
+    file: File,
+    initialAttempt: FormSubmissionAttempt
+  ): Promise<string> => {
+    const token = session?.access_token;
+    let attempt = initialAttempt;
+
+    if (!attempt.uploadIntent) {
+      const presignRes = await fetch("/api/v1/uploads/presign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": attempt.uploadIdempotencyKey,
+          ...(token && { Authorization: `Bearer ${token}` }),
+        },
+        body: JSON.stringify({
+          purpose: "lost_cover",
+          files: [{ contentType: file.type, sizeBytes: file.size }],
+        }),
+      });
+      if (!presignRes.ok) {
+        const err = await presignRes.json();
+        throw new Error(err.error?.message || "이미지 업로드에 실패했습니다.");
+      }
+      const { data } = await presignRes.json();
+      if (!data?.uploads?.[0]) throw new Error("이미지 업로드에 실패했습니다.");
+      attempt = rememberUploadIntent(attempt, data.uploads[0]);
+      submissionAttemptRef.current = attempt;
+    }
+
+    const uploadIntent = attempt.uploadIntent;
+    if (!uploadIntent) throw new Error("이미지 업로드에 실패했습니다.");
+
+    if (!uploadIntent.uploaded) {
+      const uploadRes = await fetch(uploadIntent.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error("이미지 업로드에 실패했습니다.");
+      attempt = markUploadCompleted(attempt);
+      submissionAttemptRef.current = attempt;
+    }
+
+    return uploadIntent.fileKey;
   };
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -247,21 +339,47 @@ function LostPostDetailContent() {
     if (!lostPostId || !session?.access_token || editSubmitting) return;
     setEditSubmitting(true);
     try {
+      const domainPayload = {
+        petName: editForm.petName.trim(),
+        traitColor: editForm.traitColor.trim() || undefined,
+        traitSize: editForm.traitSize,
+        traitSpecies: editForm.traitSpecies,
+        traitTags: editForm.traitTags.length ? editForm.traitTags : undefined,
+        note: editForm.note.trim() || undefined,
+        status: editForm.status,
+      };
+
+      let coverPhotoKey: string | undefined;
+      if (editPhoto?.file) {
+        const payloadFingerprint = JSON.stringify({
+          file: await fingerprintUploadFile(editPhoto.file),
+          domainPayload,
+        });
+        const attempt = prepareSubmission(
+          submissionAttemptRef.current,
+          payloadFingerprint,
+          () => crypto.randomUUID()
+        );
+        submissionAttemptRef.current = attempt;
+        coverPhotoKey = await uploadCover(editPhoto.file, attempt);
+      }
+
       const res = await fetch(`/api/v1/lost-posts/${lostPostId}`, {
         method: "PATCH",
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${session.access_token}`,
+          ...(submissionAttemptRef.current
+            ? {
+                "Idempotency-Key":
+                  submissionAttemptRef.current.submissionIdempotencyKey,
+              }
+            : {}),
         },
         body: JSON.stringify({
-          petName: editForm.petName.trim(),
-          traitColor: editForm.traitColor.trim() || undefined,
-          traitSize: editForm.traitSize,
-          traitSpecies: editForm.traitSpecies,
-          traitTags: editForm.traitTags.length ? editForm.traitTags : undefined,
-          note: editForm.note.trim() || undefined,
-          status: editForm.status,
+          ...domainPayload,
+          ...(coverPhotoKey ? { coverPhotoKey } : {}),
         }),
       });
       const payload = await res.json().catch(() => null);
@@ -270,6 +388,7 @@ function LostPostDetailContent() {
           payload?.error?.message ?? "수정에 실패했습니다."
         );
       }
+      submissionAttemptRef.current = completeSubmission();
       setToast({ message: "수정되었습니다.", type: "success" });
       setShowEditModal(false);
       invalidateMyLostPostsCache();
@@ -287,11 +406,7 @@ function LostPostDetailContent() {
     }
   };
 
-  const client = createClient();
-  const ref = client?.storage?.from("lost");
-  const coverUrl = ref
-    ? ref.getPublicUrl(item.cover_photo_key).data.publicUrl
-    : "";
+  const coverUrl = getLostPostCoverUrl(item.cover_photo_key);
   const lostAt = item.lost_at
     ? new Date(item.lost_at).toLocaleString("ko-KR", {
         timeZone: "Asia/Seoul",
@@ -498,6 +613,68 @@ function LostPostDetailContent() {
               >
                 <div className="space-y-1.5">
                   <label className="text-text-main block text-sm font-semibold">
+                    대표 사진
+                  </label>
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    onClick={() => {
+                      if (editSubmitting) return;
+                      editFileInputRef.current?.click();
+                    }}
+                    onKeyDown={(event) => {
+                      if (editSubmitting) return;
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        editFileInputRef.current?.click();
+                      }
+                    }}
+                    className={cn(
+                      "border-border-subtle bg-surface-soft relative aspect-[4/3] w-full cursor-pointer overflow-hidden rounded-xl border",
+                      "focus-visible:outline-action-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2",
+                      editSubmitting && "pointer-events-none opacity-60"
+                    )}
+                    aria-label="대표 사진 변경"
+                  >
+                    {editPhoto?.url ? (
+                      <Image
+                        src={editPhoto.url}
+                        alt="대표 사진 미리보기"
+                        fill
+                        sizes="(max-width: 768px) 100vw, 384px"
+                        unoptimized={Boolean(editPhoto.file)}
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="from-accent-warm/25 via-surface-soft to-primary-soft/40 absolute inset-0 bg-gradient-to-br"
+                        aria-hidden
+                      />
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/55 to-transparent px-3 py-2.5">
+                      <Text
+                        variant="caption"
+                        className="block text-center text-sm font-medium text-white"
+                      >
+                        {editPhoto?.file ? "새 사진 선택됨 · 다시 선택" : "사진 변경"}
+                      </Text>
+                    </div>
+                    <input
+                      ref={editFileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png"
+                      hidden
+                      disabled={editSubmitting}
+                      onChange={(event) =>
+                        handleEditPhotoChange(
+                          event.currentTarget.files?.[0] ?? null
+                        )
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-text-main block text-sm font-semibold">
                     상태
                   </label>
                   <select
@@ -670,7 +847,8 @@ function LostPostDetailContent() {
                   type="button"
                   variant="secondary"
                   className="min-h-11 flex-1"
-                  onClick={() => setShowEditModal(false)}
+                  onClick={closeEditModal}
+                  disabled={editSubmitting}
                 >
                   취소
                 </Button>

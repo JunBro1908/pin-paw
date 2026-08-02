@@ -202,6 +202,12 @@ test("lost-post update schema rejects coercion and unbounded mutable fields", ()
     false
   );
   assert.equal(parseLostPostUpdateRequest?.({ status: "deleted" }).ok, false);
+  assert.equal(
+    parseLostPostUpdateRequest?.({
+      coverPhotoKey: "sighting_photo/other.jpg",
+    }).ok,
+    false
+  );
 
   assert.deepEqual(
     parseLostPostUpdateRequest?.({
@@ -209,6 +215,8 @@ test("lost-post update schema rejects coercion and unbounded mutable fields", ()
       traitColor: "",
       traitTags: ["collar", "collar"],
       status: "found",
+      coverPhotoKey:
+        "lost_cover/20260725/123e4567-e89b-42d3-a456-426614174000.png",
     }),
     {
       ok: true,
@@ -217,6 +225,8 @@ test("lost-post update schema rejects coercion and unbounded mutable fields", ()
         traitColor: null,
         traitTags: ["collar"],
         status: "found",
+        coverPhotoKey:
+          "lost_cover/20260725/123e4567-e89b-42d3-a456-426614174000.png",
       },
     }
   );

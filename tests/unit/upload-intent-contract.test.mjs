@@ -90,6 +90,9 @@ test("create routes verify storage bytes and use intent-consuming RPCs", async (
   const verifier = await source("src/shared/lib/upload-intents.ts");
   const sighting = await source("src/app/api/v1/sightings/route.ts");
   const lostPost = await source("src/app/api/v1/lost-posts/route.ts");
+  const lostPostUpdate = await source(
+    "src/app/api/v1/lost-posts/[lostPostId]/route.ts"
+  );
 
   assert.match(verifier, /download\(/);
   assert.match(verifier, /expected_size_bytes/);
@@ -100,6 +103,9 @@ test("create routes verify storage bytes and use intent-consuming RPCs", async (
   assert.match(lostPost, /verifyUploadIntents/);
   assert.match(lostPost, /\.rpc\(\s*"create_lost_post_with_upload"/);
   assert.doesNotMatch(lostPost, /\.from\("lost_posts"\)\s*\.insert/);
+  assert.match(lostPostUpdate, /verifyUploadIntents/);
+  assert.match(lostPostUpdate, /purpose:\s*"lost_cover"/);
+  assert.match(lostPostUpdate, /cover_photo_key/);
 });
 
 test("a fail-closed cron removes expired orphan objects through Storage API", async () => {

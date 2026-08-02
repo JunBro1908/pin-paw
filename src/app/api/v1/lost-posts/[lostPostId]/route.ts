@@ -14,6 +14,9 @@ import {
 } from "@/shared/lib/api-input";
 import { readJsonBody } from "@/shared/lib/api-request";
 import { createRequestLogger } from "@/shared/lib/structured-log";
+import { verifyUploadIntents } from "@/shared/lib/upload-intents";
+import { getClientIp } from "@/shared/lib/ip";
+import { sha256 } from "@/shared/lib/hash";
 
 const TRAIT_TAGS_MAX_LOST_POST = 8;
 type RouteContext = { params: Promise<{ lostPostId: string }> };
@@ -63,8 +66,8 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 /**
- * PATCH /api/v1/lost-posts/[lostPostId] — 상태·특징 수정 (본인 소유만)
- * Body: { status?, traitColor?, traitSize?, traitSpecies?, note? }
+ * PATCH /api/v1/lost-posts/[lostPostId] — 상태·특징·대표사진 수정 (본인 소유만)
+ * Body: { status?, petName?, traitColor?, traitSize?, traitSpecies?, traitTags?, note?, coverPhotoKey? }
  */
 export async function PATCH(request: Request, context: RouteContext) {
   const logger = createRequestLogger(
@@ -110,7 +113,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const { data: existing } = await supabaseAuth
     .from("lost_posts")
-    .select("id")
+    .select("id, cover_photo_key")
     .eq("id", lostPostId)
     .maybeSingle();
 
@@ -120,6 +123,9 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const body = parsed.value;
   const updates: Record<string, unknown> = {};
+  const coverPhotoChanging =
+    body.coverPhotoKey !== undefined &&
+    body.coverPhotoKey !== existing.cover_photo_key;
 
   if (body.status !== undefined) {
     updates.status = body.status;
@@ -145,6 +151,32 @@ export async function PATCH(request: Request, context: RouteContext) {
     updates.trait_tags = arr.length ? arr : null;
   }
   if (body.note !== undefined) updates.note = body.note;
+
+  if (coverPhotoChanging && body.coverPhotoKey) {
+    const supabaseAdmin = createServiceRoleSupabase();
+    const uploadVerification = await verifyUploadIntents(supabaseAdmin, {
+      keys: [body.coverPhotoKey],
+      purpose: "lost_cover",
+      userId: user.id,
+      ipHash: sha256(await getClientIp()),
+    });
+    if (!uploadVerification.ok) {
+      const unavailable =
+        uploadVerification.reason === "verification_unavailable" ||
+        uploadVerification.reason === "object_unavailable";
+      return fail(
+        unavailable
+          ? ApiErrorCode.SERVICE_UNAVAILABLE
+          : ApiErrorCode.VALIDATION_ERROR,
+        unavailable
+          ? "업로드 파일을 확인할 수 없습니다."
+          : "업로드 파일이 발급 정보와 일치하지 않습니다.",
+        unavailable ? 503 : 400
+      );
+    }
+    updates.cover_photo_key = body.coverPhotoKey;
+  }
+
   if (Object.keys(updates).length === 0) {
     const { data: current } = await supabaseAuth
       .from("lost_posts")
@@ -171,6 +203,25 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
     logger.error("lost_post.update_failed", { error, status: 500 });
     return fail(ApiErrorCode.INTERNAL_ERROR, "수정에 실패했습니다.", 500);
+  }
+
+  if (coverPhotoChanging && body.coverPhotoKey) {
+    const supabaseAdmin = createServiceRoleSupabase();
+    const { error: consumeError } = await supabaseAdmin
+      .from("upload_intents")
+      .update({
+        consumed_at: new Date().toISOString(),
+        consumed_by_type: "lost_post",
+        consumed_by_id: lostPostId,
+      })
+      .eq("object_key", body.coverPhotoKey)
+      .is("consumed_at", null);
+    if (consumeError) {
+      logger.error("lost_post.cover_intent_consume_failed", {
+        error: consumeError,
+        status: 500,
+      });
+    }
   }
 
   // 특징/메모 수정 시 임베딩 재생성: 1행 pending upsert 후 worker 호출
