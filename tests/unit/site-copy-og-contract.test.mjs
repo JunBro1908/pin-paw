@@ -7,8 +7,8 @@ test("site copy exposes metadata fields for OG and layout", async () => {
 
   assert.equal(SITE_COPY.brandName, "PinPaw");
   assert.match(SITE_COPY.description, /가족의 품/);
-  assert.equal(SITE_COPY.tagline, "함께 이어져, 다시 집으로");
-  assert.match(SITE_COPY.ogTitle, /PinPaw/);
+  assert.equal(SITE_COPY.tagline, "작은 제보들이 만든 발자취");
+  assert.equal(SITE_COPY.ogTitle, "PinPaw 작은 제보들이 만든 발자취");
   assert.ok(SITE_COPY.ogImageAlt.length > 4);
 });
 

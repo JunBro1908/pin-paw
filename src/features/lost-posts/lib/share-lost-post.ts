@@ -26,7 +26,7 @@ export async function shareLostPost(
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
       await navigator.share({
-        title: "PinPaw 실종 제보",
+        title: "PinPaw 작은 제보들이 만든 발자취",
         text,
         url: shareUrl,
       });

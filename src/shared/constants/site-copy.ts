@@ -12,8 +12,8 @@ export const SITE_COPY = {
   description:
     "작고 소중한 제보가 모여, 잃어버린 반려견이 다시 가족의 품으로 돌아오도록 돕는 플랫폼",
   /** OG 이미지에 넣는 짧은 한 줄 */
-  tagline: "함께 이어져, 다시 집으로",
+  tagline: "작은 제보들이 만든 발자취",
   /** OG 카드 제목 (브랜드 + 감성 한 줄) */
-  ogTitle: "PinPaw · 함께 이어져, 다시 집으로",
-  ogImageAlt: "PinPaw — 잃어버린 반려견이 다시 가족의 품에 닿도록",
+  ogTitle: "PinPaw 작은 제보들이 만든 발자취",
+  ogImageAlt: "PinPaw — 작은 제보들이 만든 발자취",
 } as const;

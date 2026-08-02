@@ -10,12 +10,13 @@ test("shareLostPost builds public share URL and prefers Web Share API", async ()
   assert.match(source, /\/share\/lost-posts\/\$\{lostPostId\}/);
   assert.match(source, /navigator\.share/);
   assert.match(source, /navigator\.clipboard\.writeText/);
-  assert.match(source, /PinPaw 실종 제보/);
+  assert.match(source, /PinPaw 작은 제보들이 만든 발자취/);
   assert.match(source, /buildLostPostShareText/);
   assert.match(
     source,
     /를 찾고 있습니다\. PinPaw에 접속해서 함께해주세요\./
   );
+  assert.doesNotMatch(source, /PinPaw 실종 제보/);
   assert.doesNotMatch(source, /정확한 위치와 메모는 포함되지 않습니다/);
 });
 
