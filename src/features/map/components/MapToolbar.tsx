@@ -59,9 +59,11 @@ export function MapToolbar({
                   "flex h-11 w-full items-center justify-center rounded-xl transition-colors",
                   selected
                     ? filter.layer === "bookmark"
-                      ? "bg-primary-soft text-orange-500"
+                      ? "bg-primary-soft text-yellow-400"
                       : "bg-primary-soft text-action-primary"
-                    : "text-text-sub hover:bg-surface-soft"
+                    : filter.layer === "bookmark"
+                      ? "text-yellow-400/70 hover:bg-surface-soft"
+                      : "text-text-sub hover:bg-surface-soft"
                 )}
               >
                 {filter.text ? (
@@ -69,7 +71,11 @@ export function MapToolbar({
                     {filter.text}
                   </span>
                 ) : (
-                  <Icon name="star" size={20} className="text-orange-500" />
+                  <Icon
+                    name="star"
+                    size={20}
+                    className={selected ? "text-yellow-400" : "text-yellow-400/70"}
+                  />
                 )}
               </button>
             );
