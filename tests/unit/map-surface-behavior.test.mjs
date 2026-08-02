@@ -121,17 +121,38 @@ test("authenticated toolbar exposes filter state and executes every callback", a
     (node) => node.props?.["aria-label"] === "저장한 흔적"
   );
   assert.equal(bookmark.props["aria-pressed"], true);
-  buttonByText("신규 제보").props.onClick();
+  buttonByText("New").props.onClick();
   nodes
     .find((node) => node.props?.["aria-label"] === "현재 위치로 이동")
     .props.onClick();
   const list = nodes.find(
     (node) => node.props?.["aria-label"] === "제보 목록 보기"
   );
-  assert.equal(list.props["aria-pressed"], true);
-  list.props.onClick();
+  assert.equal(list, undefined);
 
-  assert.deepEqual(calls, [["layer", "unseen"], ["locate"], ["list"]]);
+  assert.deepEqual(calls, [["layer", "unseen"], ["locate"]]);
+});
+
+test("authenticated toolbar shows list toggle only for ALL and New layers", async () => {
+  const { MapToolbar } = await loadTsx(
+    "src/features/map/components/MapToolbar.tsx"
+  );
+  const calls = [];
+  const tree = MapToolbar({
+    layer: "default",
+    authenticated: true,
+    listOpen: false,
+    onLayerChange: (layer) => calls.push(["layer", layer]),
+    onLocate: () => calls.push(["locate"]),
+    onToggleList: () => calls.push(["list"]),
+  });
+  const nodes = materialize(tree);
+  const list = nodes.find(
+    (node) => node.props?.["aria-label"] === "제보 목록 보기"
+  );
+  assert.equal(list.props["aria-pressed"], false);
+  list.props.onClick();
+  assert.deepEqual(calls, [["list"]]);
 });
 
 test("guest toolbar hides authenticated controls but keeps locate available", async () => {
@@ -149,7 +170,7 @@ test("guest toolbar hides authenticated controls but keeps locate available", as
   });
   const nodes = materialize(tree);
 
-  for (const label of ["전체", "신규 제보"]) {
+  for (const label of ["ALL", "New"]) {
     assert.equal(
       nodes.some(
         (node) => node.type === "button" && textContent(node) === label

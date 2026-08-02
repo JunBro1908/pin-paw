@@ -14,6 +14,24 @@ interface MapToolbarProps {
   onToggleList: () => void;
 }
 
+function BookmarkPinIcon({ active }: { active: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className="relative flex h-7 w-5 items-start justify-center"
+    >
+      <span
+        className={`absolute top-0 h-5 w-5 rotate-45 rounded-full rounded-bl-none shadow-sm ${
+          active ? "bg-amber-300" : "bg-amber-400"
+        }`}
+      />
+      <span className="relative z-10 mt-0.5 flex h-4 w-4 items-center justify-center text-amber-950">
+        <Icon name="star" size={12} />
+      </span>
+    </span>
+  );
+}
+
 export function MapToolbar({
   layer,
   authenticated,
@@ -23,11 +41,13 @@ export function MapToolbar({
   onLocate,
   onToggleList,
 }: MapToolbarProps) {
+  const showListToggle = authenticated && layer !== "bookmark";
+
   return (
     <div className="absolute right-4 bottom-24 z-10 flex max-w-[calc(100%-2rem)] flex-col items-end gap-2">
       {authenticated && (
         <div
-          className="border-border-subtle bg-surface flex max-w-full flex-col gap-1 rounded-2xl border p-1 shadow-sm"
+          className="border-border-subtle bg-surface grid w-14 max-w-full grid-cols-1 gap-1 rounded-2xl border p-1 shadow-sm"
           role="group"
           aria-label="지도 표시 범위"
         >
@@ -35,44 +55,44 @@ export function MapToolbar({
             type="button"
             aria-pressed={layer === "default"}
             onClick={() => onLayerChange("default")}
-            className={`min-h-11 shrink-0 rounded-xl px-3 text-sm font-semibold transition-colors ${
+            className={`flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold transition-colors ${
               layer === "default"
                 ? "bg-action-primary text-action-on-primary"
                 : "text-text-sub hover:bg-surface-soft"
             }`}
           >
-            전체
+            ALL
           </button>
           <button
             type="button"
             aria-pressed={layer === "unseen"}
             onClick={() => onLayerChange("unseen")}
-            className={`min-h-11 shrink-0 rounded-xl px-3 text-sm font-semibold transition-colors ${
+            className={`flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold transition-colors ${
               layer === "unseen"
                 ? "bg-action-primary text-action-on-primary"
                 : "text-text-sub hover:bg-surface-soft"
             }`}
           >
-            신규 제보
+            New
           </button>
           <button
             type="button"
             aria-label="저장한 흔적"
             aria-pressed={layer === "bookmark"}
             onClick={() => onLayerChange("bookmark")}
-            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors ${
+            className={`flex h-11 w-full items-center justify-center rounded-xl transition-colors ${
               layer === "bookmark"
-                ? "bg-action-primary text-amber-300"
-                : "text-amber-400 hover:bg-surface-soft"
+                ? "bg-action-primary"
+                : "hover:bg-surface-soft"
             }`}
           >
-            <Icon name="star" size={20} />
+            <BookmarkPinIcon active={layer === "bookmark"} />
           </button>
         </div>
       )}
 
       <div className="border-border-subtle bg-surface flex gap-1 rounded-2xl border p-1 shadow-sm">
-        {authenticated && (
+        {showListToggle ? (
           <button
             type="button"
             aria-label="제보 목록 보기"
@@ -99,7 +119,7 @@ export function MapToolbar({
               <line x1="3" y1="18" x2="3.01" y2="18" />
             </svg>
           </button>
-        )}
+        ) : null}
         <button
           type="button"
           aria-label="현재 위치로 이동"

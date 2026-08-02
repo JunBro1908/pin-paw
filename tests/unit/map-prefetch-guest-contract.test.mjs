@@ -30,10 +30,9 @@ test("NaverMap hides guest list entry points that cannot show points", async () 
     toolbar,
     /\{authenticated && \(\s*<div[\s\S]*?aria-label="지도 표시 범위"/
   );
-  assert.match(
-    toolbar,
-    /\{authenticated && \(\s*<button[\s\S]*?aria-label="제보 목록 보기"/
-  );
+  assert.match(toolbar, /showListToggle/);
+  assert.match(toolbar, /aria-label="제보 목록 보기"/);
+  assert.match(toolbar, /layer !== "bookmark"/);
 });
 
 test("useMapData reads and writes the shared viewport cache", async () => {
