@@ -184,32 +184,10 @@ function RecommendWithLostPost({ lostPostId }: { lostPostId: string }) {
           </Text>
         </div>
       ) : (
-        <div className="border-border-subtle bg-surface relative mb-6 rounded-2xl border p-4 shadow-sm">
-          <div className="mb-2 flex items-start justify-between gap-3">
-            <Text variant="caption" color="caption">
-              선택된 유실글
-            </Text>
-            <Link
-              href={`/my/lost-posts/${post.id}?edit=1`}
-              className="border-border-subtle text-text-main hover:bg-surface-soft inline-flex h-9 w-9 items-center justify-center rounded-full border"
-              aria-label="유실글 수정"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                <path d="m15 5 4 4" />
-              </svg>
-            </Link>
-          </div>
+        <div className="border-border-subtle relative mb-6 rounded-2xl border bg-white p-4 shadow-sm">
+          <Text variant="caption" color="caption" className="mb-2 block">
+            선택된 유실글
+          </Text>
           <Link
             href={`/my/lost-posts/${post.id}`}
             className="flex gap-4 rounded-xl focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"

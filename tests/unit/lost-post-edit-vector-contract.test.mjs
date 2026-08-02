@@ -26,9 +26,10 @@ test("detail page opens edit modal from query and prevents re-entry", async () =
   assert.match(page, /aria-label="수정"/);
 });
 
-test("recommend picker uses carousel and edit affordance", async () => {
+test("recommend picker uses carousel without edit affordance", async () => {
   const page = await readFile("src/app/(tabs)/recommend/page.tsx", "utf8");
   assert.match(page, /<LostCaseCarousel/);
-  assert.match(page, /\?edit=1/);
+  assert.doesNotMatch(page, /\?edit=1/);
+  assert.doesNotMatch(page, /aria-label="유실글 수정"/);
   assert.doesNotMatch(page, /<LostPostCard/);
 });
