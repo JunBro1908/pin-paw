@@ -15,7 +15,7 @@ import { cn } from "@/shared/lib/cn";
 interface ActiveLostCaseCardProps {
   item: LostPostItem;
   refreshing?: boolean;
-  /** Compact width for horizontal carousels */
+  /** @deprecated Full-width page-snap carousel only — ignored. */
   compact?: boolean;
   className?: string;
   /** Prefer detail over recommend for primary CTA (default: recommend) */
@@ -44,10 +44,11 @@ function EditIcon() {
 export function ActiveLostCaseCard({
   item,
   refreshing = false,
-  compact = false,
+  compact: _compact = false,
   className,
   primaryAction = "recommend",
 }: ActiveLostCaseCardProps) {
+  void _compact;
   const coverUrl = getLostPostCoverUrl(item.cover_photo_key);
   const lostAt = formatLostCaseDateTime(item.lost_at);
   const lastChecked = formatLostCaseDateTime(item.updated_at);
@@ -62,8 +63,7 @@ export function ActiveLostCaseCard({
   return (
     <article
       className={cn(
-        "border-border-subtle bg-surface relative overflow-hidden rounded-2xl border shadow-sm",
-        compact ? "w-[min(100%,18.5rem)] shrink-0" : "w-full",
+        "border-border-subtle bg-surface relative overflow-hidden rounded-2xl border shadow-sm w-full max-w-none",
         className
       )}
     >
@@ -72,18 +72,13 @@ export function ActiveLostCaseCard({
         className="focus-visible:outline-action-primary block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
         aria-label={`${item.pet_name?.trim() || "유실 사건"} 상세 보기`}
       >
-        <div
-          className={cn(
-            "bg-surface-soft relative overflow-hidden",
-            compact ? "aspect-[16/10]" : "aspect-[2/1] sm:aspect-[21/9]"
-          )}
-        >
+        <div className="bg-surface-soft relative aspect-[2/1] overflow-hidden sm:aspect-[21/9]">
           {coverUrl ? (
             <Image
               src={coverUrl}
               alt=""
               fill
-              sizes={compact ? "300px" : "(max-width: 768px) 100vw, 720px"}
+              sizes="(max-width: 768px) 100vw, 720px"
               className="object-cover"
             />
           ) : (

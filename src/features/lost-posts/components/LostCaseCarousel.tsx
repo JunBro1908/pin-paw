@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useId, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type ReactNode,
+  type UIEvent,
+} from "react";
 import { Text } from "@/shared/ui/Text";
 import { ActiveLostCaseCard } from "./ActiveLostCaseCard";
 import type { LostPostItem } from "../model/types";
@@ -17,6 +25,10 @@ interface LostCaseCarouselProps {
   className?: string;
 }
 
+/**
+ * Full-width horizontal page-snap carousel (CSS scroll-snap mandatory pager).
+ * One case card fills the track; swipe snaps the next page into frame.
+ */
 export function LostCaseCarousel({
   items,
   refreshing = false,
@@ -27,27 +39,60 @@ export function LostCaseCarousel({
   headingAction,
   className,
 }: LostCaseCarouselProps) {
-  const scrollerRef = useRef<HTMLUListElement>(null);
+  const scrollerRef = useRef<HTMLDivElement>(null);
   const headingId = useId();
-  const [activeId, setActiveId] = useState<string | null>(
-    selectedId ?? items[0]?.id ?? null
+  const [pageIndex, setPageIndex] = useState(0);
+
+  const resolveIndex = useCallback(
+    (id: string | null | undefined) => {
+      if (!id) return 0;
+      const index = items.findIndex((item) => item.id === id);
+      return index >= 0 ? index : 0;
+    },
+    [items]
   );
 
   useEffect(() => {
-    if (selectedId) setActiveId(selectedId);
-  }, [selectedId]);
+    setPageIndex(resolveIndex(selectedId ?? items[0]?.id));
+  }, [items, selectedId, resolveIndex]);
 
   useEffect(() => {
-    if (!items.length) {
-      setActiveId(null);
-      return;
+    const scroller = scrollerRef.current;
+    if (!scroller || items.length === 0) return;
+    const width = scroller.clientWidth;
+    if (width <= 0) return;
+    const targetLeft = pageIndex * width;
+    if (Math.abs(scroller.scrollLeft - targetLeft) > 2) {
+      scroller.scrollTo({ left: targetLeft, behavior: "auto" });
     }
-    if (!activeId || !items.some((item) => item.id === activeId)) {
-      setActiveId(items[0].id);
-    }
-  }, [items, activeId]);
+  }, [pageIndex, items.length]);
+
+  const selectIndex = useCallback(
+    (index: number) => {
+      const bounded = Math.max(0, Math.min(index, items.length - 1));
+      setPageIndex(bounded);
+      const item = items[bounded];
+      if (item) onSelect?.(item);
+    },
+    [items, onSelect]
+  );
+
+  const handleScroll = useCallback(
+    (event: UIEvent<HTMLDivElement>) => {
+      const scroller = event.currentTarget;
+      const width = scroller.clientWidth;
+      if (width <= 0) return;
+      const next = Math.round(scroller.scrollLeft / width);
+      if (next !== pageIndex && next >= 0 && next < items.length) {
+        selectIndex(next);
+      }
+    },
+    [items.length, pageIndex, selectIndex]
+  );
 
   if (items.length === 0) return null;
+
+  const activeItem = items[pageIndex] ?? items[0];
 
   return (
     <section
@@ -65,34 +110,39 @@ export function LostCaseCarousel({
             {heading}
           </Text>
           {headingAction ? (
-            <div className="min-w-0 shrink-0">{headingAction}</div>
+            <div className="shrink-0">{headingAction}</div>
           ) : null}
         </div>
         {items.length > 1 ? (
-          <Text variant="caption" color="caption" className="shrink-0">
-            좌우로 넘겨 선택
+          <Text
+            variant="caption"
+            color="caption"
+            className="shrink-0 tabular-nums"
+            aria-live="polite"
+          >
+            {pageIndex + 1}/{items.length}
           </Text>
         ) : null}
       </div>
-      <ul
+
+      <div
         ref={scrollerRef}
-        className="flex w-full snap-x snap-mandatory overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="page-snap-carousel"
         aria-label={heading}
+        aria-roledescription="carousel"
+        onScroll={handleScroll}
       >
-        {items.map((item) => {
-          const selected = item.id === activeId;
+        {items.map((item, index) => {
+          const selected = item.id === activeItem.id;
           return (
-            <li
+            <div
               key={item.id}
-              className="w-full min-w-full basis-full shrink-0 snap-center snap-always"
-              onFocusCapture={() => {
-                setActiveId(item.id);
-                onSelect?.(item);
-              }}
-              onClick={() => {
-                setActiveId(item.id);
-                onSelect?.(item);
-              }}
+              className="page-snap-slide"
+              role="group"
+              aria-roledescription="slide"
+              aria-label={`${index + 1} / ${items.length}`}
+              onFocusCapture={() => selectIndex(index)}
+              onClick={() => selectIndex(index)}
             >
               <ActiveLostCaseCard
                 item={item}
@@ -100,16 +150,50 @@ export function LostCaseCarousel({
                 compact={false}
                 primaryAction={primaryAction}
                 className={cn(
-                  "w-full transition-[box-shadow,ring] duration-200",
+                  "w-full max-w-none transition-[box-shadow,ring] duration-200",
                   selected
                     ? "ring-action-primary/40 ring-2 ring-offset-2"
                     : "opacity-95"
                 )}
               />
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </div>
+
+      {items.length > 1 ? (
+        <div
+          className="mt-3 flex items-center justify-center gap-1.5"
+          role="tablist"
+          aria-label="유실글 페이지"
+        >
+          {items.map((item, index) => (
+            <button
+              key={item.id}
+              type="button"
+              role="tab"
+              aria-selected={index === pageIndex}
+              aria-label={`${index + 1}번째 유실글`}
+              className={cn(
+                "h-2 rounded-full transition-[width,background-color]",
+                index === pageIndex
+                  ? "bg-action-primary w-5"
+                  : "bg-border-subtle w-2"
+              )}
+              onClick={() => {
+                const scroller = scrollerRef.current;
+                selectIndex(index);
+                if (scroller) {
+                  scroller.scrollTo({
+                    left: index * scroller.clientWidth,
+                    behavior: "smooth",
+                  });
+                }
+              }}
+            />
+          ))}
+        </div>
+      ) : null}
     </section>
   );
 }

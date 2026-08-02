@@ -102,6 +102,46 @@ body {
   }
 }
 
+/* Touch-friendly constrained panels (pair with ScrollablePanel / scrollablePanelClass). */
+.scrollable-panel,
+.scrollable-dropdown,
+.scrollable-list,
+.scrollable-sheet {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/**
+ * Full-width CSS page-snap carousel (horizontal pager).
+ * Each slide MUST be flex: 0 0 100% so only one card fills the frame.
+ */
+.page-snap-carousel {
+  display: flex;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.page-snap-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.page-snap-slide {
+  box-sizing: border-box;
+  flex: 0 0 100%;
+  width: 100%;
+  min-width: 100%;
+  max-width: 100%;
+  scroll-snap-align: start;
+  scroll-snap-stop: always;
+}
+
 :focus-visible {
   outline: 2px solid var(--action-primary);
   outline-offset: 2px;
