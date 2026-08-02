@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState } from "react";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { Text } from "@/shared/ui/Text";
@@ -27,11 +28,11 @@ export function LoginPrompt() {
     <div className="flex min-h-[60vh] flex-col items-center justify-center px-5 py-10">
       <div className="flex w-full max-w-sm flex-col items-center gap-6 text-center">
         <div className="flex flex-col items-center gap-2">
-          <Text variant="title" className="block">
-            로그인이 필요합니다
+          <Text as="h1" variant="title" className="block">
+            유실 사건을 이어서 관리하려면 로그인해 주세요
           </Text>
           <Text variant="caption" color="caption" className="block">
-            유실글 등록, 내 제보 확인 등 서비스를 이용하려면 로그인해 주세요.
+            내 유실 사건, 확인할 제보, 저장한 흔적을 안전하게 연결합니다.
           </Text>
         </div>
 
@@ -53,8 +54,15 @@ export function LoginPrompt() {
         </button>
 
         <Text variant="caption" color="caption" className="block text-xs">
-          로그인하시면 서비스 이용약관 및 개인정보 처리방침에 동의하는 것으로
-          간주됩니다.
+          로그인 전에{" "}
+          <Link href="/terms" className="underline underline-offset-2">
+            이용약관
+          </Link>
+          과{" "}
+          <Link href="/privacy" className="underline underline-offset-2">
+            개인정보 처리방침
+          </Link>
+          을 확인해 주세요.
         </Text>
       </div>
     </div>
