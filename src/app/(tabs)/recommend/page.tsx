@@ -88,7 +88,7 @@ function RecommendContent() {
           비슷한 제보 찾기
         </Text>
         <Text variant="body" color="sub" className="mt-1">
-          유실글을 고르면 가능성이 높은 목격 제보를 모아 보여드려요.
+          가능성이 높은 목격 제보를 모아 보여드려요.
         </Text>
       </header>
       {loading ? (

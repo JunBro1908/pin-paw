@@ -37,7 +37,7 @@ test("confirmation page presents a review workflow without model or result-count
   assert.match(page, /<Text as="h1"[^>]*>\s*비슷한 제보 찾기\s*<\/Text>/);
   assert.match(
     page,
-    /유실글을 고르면 가능성이 높은 목격 제보를 모아 보여드려요/
+    /가능성이 높은 목격 제보를 모아 보여드려요/
   );
   assert.match(page, /<summary[^>]*>[\s\S]*?탐색 범위[\s\S]*?<\/summary>/);
   assert.match(page, /반경[\s\S]*?기간[\s\S]*?적용/);
