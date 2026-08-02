@@ -56,7 +56,9 @@ export function MapToolbar({
                 className={cn(
                   "flex h-11 w-full items-center justify-center rounded-xl transition-colors",
                   selected
-                    ? "bg-primary-soft text-action-primary"
+                    ? filter.layer === "bookmark"
+                      ? "bg-primary-soft text-yellow-500"
+                      : "bg-primary-soft text-action-primary"
                     : "text-text-sub hover:bg-surface-soft"
                 )}
               >

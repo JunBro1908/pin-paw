@@ -31,18 +31,41 @@ test("default map layer renders own lost posts with sightings", async () => {
     /layer === "bookmark" \|\| layer === "default" \? view\.lostPosts/
   );
   assert.match(
+    data,
+    /layer === "bookmark" \|\| layer === "default" \? view\.paths/
+  );
+  assert.match(
     map,
     /mapLayer === "bookmark" \|\| mapLayer === "default"/
+  );
+  assert.match(
+    map,
+    /enabled: mapLayer === "bookmark" \|\| mapLayer === "default"/
   );
   assert.match(map, /mapLayer !== "bookmark" && mapLayer !== "default"/);
 });
 
-test("detail cards explain sighting and shelter sources", async () => {
+test("bookmark trails use action-primary green on all layers", async () => {
+  const renderer = await readFile(
+    "src/features/map/lib/map-layer-renderer.ts",
+    "utf8"
+  );
+  assert.match(renderer, /PATH_TRAIL_STATIC = "#86EFAC"/);
+  assert.match(renderer, /PATH_TRAIL_ANIMATION = "#087A3E"/);
+  assert.doesNotMatch(renderer, /#FDE68A|#EAB308/);
+});
+
+test("detail cards explain sighting and shelter sources via info tip", async () => {
   const card = await readFile(
     "src/features/sightings/components/SightingDetailCard.tsx",
     "utf8"
   );
-  assert.match(card, /목격 제보/);
+  assert.match(card, /비회원 제보/);
+  assert.match(card, /회원 제보/);
+  assert.match(card, /나의 제보/);
   assert.match(card, /보호소/);
+  assert.match(card, /SourceInfoTip/);
+  assert.match(card, /role="tooltip"/);
   assert.match(card, /source_type === "shelter"/);
+  assert.doesNotMatch(card, /사용자가 현장에서 올린 목격 기록입니다/);
 });

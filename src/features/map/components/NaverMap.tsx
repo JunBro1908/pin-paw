@@ -697,7 +697,7 @@ export function NaverMap({
     if (mapLayer !== "bookmark" && prev === "bookmark") fetchClusters();
   }, [mapLayer, isLoaded, fetchClusters]);
 
-  // Own lost posts load for "전체" and bookmark; paths only render on bookmark.
+  // Own lost posts + trail paths load for "전체" and bookmark.
   useEffect(() => {
     if (!isAuthenticated || !accessToken) return;
     if (mapLayer !== "bookmark" && mapLayer !== "default") return;
@@ -712,7 +712,7 @@ export function NaverMap({
     renderer.renderPaths({
       map: mapInstanceRef.current,
       paths: pathData,
-      enabled: mapLayer === "bookmark",
+      enabled: mapLayer === "bookmark" || mapLayer === "default",
     });
     return () => renderer.clearPaths();
   }, [isLoaded, mapLayer, pathData]);

@@ -55,6 +55,8 @@ test("toolbar keeps layer semantics explicit and guest-safe", async () => {
   assert.match(toolbar, /icon: "sparkle"/);
   assert.match(toolbar, /icon: "star"/);
   assert.match(toolbar, /bg-primary-soft text-action-primary/);
+  assert.match(toolbar, /text-yellow-500/);
+  assert.match(toolbar, /filter\.layer === "bookmark"/);
   assert.match(toolbar, /w-14/);
   assert.match(toolbar, /layer !== "bookmark"/);
   assert.match(toolbar, /grid/);

@@ -12,6 +12,10 @@ import type {
 
 const PATH_DURATION_MS = 1800;
 const PATH_REPLAY_PAUSE_MS = 1000;
+/** Soft trail underlay — action-primary family (map trail green). */
+const PATH_TRAIL_STATIC = "#86EFAC";
+/** Animated stroke — action-primary (#087A3E). */
+const PATH_TRAIL_ANIMATION = "#087A3E";
 
 function escapeHtmlAttribute(value: string) {
   return value
@@ -361,7 +365,7 @@ export function createMapLayerRenderer({
       adapter.createPolyline({
         map,
         path: coordinates.map(toLatLng),
-        strokeColor: "#FDE68A",
+        strokeColor: PATH_TRAIL_STATIC,
         strokeWeight: 4,
         zIndex: 0,
       })
@@ -370,7 +374,7 @@ export function createMapLayerRenderer({
       adapter.createPolyline({
         map,
         path: [toLatLng(coordinates[0])],
-        strokeColor: "#EAB308",
+        strokeColor: PATH_TRAIL_ANIMATION,
         strokeWeight: 5,
         zIndex: 1,
       })
