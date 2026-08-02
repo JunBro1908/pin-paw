@@ -233,7 +233,6 @@ git commit -m "feat: align navigation with rescue workflow"
 
 - Create: `src/features/sightings/lib/sighting-form-presentation.ts`
 - Create: `tests/unit/sighting-form-presentation.test.mjs`
-- Modify: `tests/unit/form-submission-lifecycle.test.mjs`
 
 **Interfaces:**
 
@@ -305,8 +304,6 @@ export function formatSightingLocationStatus(
 }
 ```
 
-Add a source assertion to `form-submission-lifecycle.test.mjs` that `SightingForm.tsx` no longer calls `new Date().toISOString().slice(0, 16)` after Task 4 integrates this helper.
-
 - [ ] **Step 4: Run the helper tests**
 
 Run: `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/unit/sighting-form-presentation.test.mjs`
@@ -316,7 +313,7 @@ Expected: 2 tests PASS.
 - [ ] **Step 5: Commit presentation helpers**
 
 ```bash
-git add src/features/sightings/lib/sighting-form-presentation.ts tests/unit/sighting-form-presentation.test.mjs tests/unit/form-submission-lifecycle.test.mjs
+git add src/features/sightings/lib/sighting-form-presentation.ts tests/unit/sighting-form-presentation.test.mjs
 git commit -m "test: define safe sighting presentation rules"
 ```
 
@@ -328,6 +325,7 @@ git commit -m "test: define safe sighting presentation rules"
 - Create: `src/features/sightings/components/SightingOptionalDetails.tsx`
 - Modify: `src/features/sightings/components/SightingForm.tsx`
 - Create: `tests/unit/sighting-form-ux-contract.test.mjs`
+- Modify: `tests/unit/form-submission-lifecycle.test.mjs`
 
 **Interfaces:**
 
@@ -398,6 +396,8 @@ export interface SightingEssentialsProps {
 
 In `SightingForm`, derive status as `lat !== null && lng !== null ? "ready" : geolocationErrorKind`, initialize and reset time with `toLocalDateTimeInputValue(new Date())`, and keep these existing objects/functions in the parent unchanged: upload intent ref, request fingerprint ref, idempotency key ref, `handleSubmit`, and submit retry behavior. Replace coordinate text with `formatSightingLocationStatus(locationStatus)`.
 
+Add a source assertion to `form-submission-lifecycle.test.mjs` that `SightingForm.tsx` no longer calls `new Date().toISOString().slice(0, 16)`.
+
 - [ ] **Step 4: Run sighting regression tests**
 
 Run: `node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON --test tests/unit/sighting-form-ux-contract.test.mjs tests/unit/sighting-form-presentation.test.mjs tests/unit/form-submission-lifecycle.test.mjs tests/unit/upload-intents.test.mjs`
@@ -407,7 +407,7 @@ Expected: all tests PASS and submission lifecycle assertions remain unchanged.
 - [ ] **Step 5: Commit the form refactor**
 
 ```bash
-git add src/features/sightings/components/SightingEssentials.tsx src/features/sightings/components/SightingOptionalDetails.tsx src/features/sightings/components/SightingForm.tsx tests/unit/sighting-form-ux-contract.test.mjs
+git add src/features/sightings/components/SightingEssentials.tsx src/features/sightings/components/SightingOptionalDetails.tsx src/features/sightings/components/SightingForm.tsx tests/unit/sighting-form-ux-contract.test.mjs tests/unit/form-submission-lifecycle.test.mjs
 git commit -m "feat: streamline anonymous sighting report"
 ```
 
