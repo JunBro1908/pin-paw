@@ -118,6 +118,14 @@ test("my header exposes settings gear and omits alerts entry", async () => {
   assert.match(header[0], /href="\/my\/settings"/);
   assert.match(header[0], /name="settings"/);
   assert.match(header[0], /내 정보/);
+  assert.match(
+    header[0],
+    /flex min-h-11 items-center justify-between/
+  );
+  assert.doesNotMatch(
+    header[0],
+    /올린 유실글과 제보를 이어서 관리하세요/
+  );
   assert.doesNotMatch(page, /\/my\/notifications/);
   assert.doesNotMatch(page, />\s*알림\s*</);
   assert.doesNotMatch(page, />\s*설정\s*</);

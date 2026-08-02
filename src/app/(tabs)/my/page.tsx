@@ -69,22 +69,17 @@ function MyPageContent() {
 
   return (
     <Container className="py-8">
-      <header className="mb-8">
-        <div className="flex items-center justify-between gap-3">
-          <Text as="h1" variant="title" color="main">
-            내 정보
-          </Text>
-          <Link
-            href="/my/settings"
-            aria-label="설정"
-            className="text-action-primary focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
-          >
-            <Icon name="settings" size={22} />
-          </Link>
-        </div>
-        <Text variant="body" color="sub" className="mt-1">
-          올린 유실글과 제보를 이어서 관리하세요.
+      <header className="mb-6 flex min-h-11 items-center justify-between gap-3">
+        <Text as="h1" variant="title" color="main">
+          내 정보
         </Text>
+        <Link
+          href="/my/settings"
+          aria-label="설정"
+          className="text-action-primary focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        >
+          <Icon name="settings" size={22} />
+        </Link>
       </header>
 
       <AccountSurface user={user} onSignOut={handleSignOut} />
