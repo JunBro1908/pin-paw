@@ -199,6 +199,28 @@ extraneous 패키지가 6개 표시되므로, 승인 후 `npm ci`로 깨끗한 �
 시각적 주인공으로 만들지 않고, 긴급한 현장 행동과 신뢰 가능한 증거를 앞세우는
 것이다.
 
+### 따뜻한 UX 기반 검증
+
+- [x] 의미 색상 토큰 및 dark mode
+- [x] emoji 없는 4개 하단 탐색
+- [x] 비회원 한 화면 제보와 원시 좌표 비노출
+- [x] 기존 upload intent/idempotency 회귀 없음
+- [ ] typecheck, lint, unit test, production build 통과
+
+2026-08-02 KST 검증에서 `npm run typecheck && npm run lint && npm test && npm run build`는
+`npm run lint`에서 중단됐다. `npm run typecheck`는 오류 없이 통과했지만, 첫 조치
+대상 오류는 `src/features/auth/components/AuthFeedbackBanner.tsx:19:5`의
+`react-hooks/set-state-in-effect`(effect 안의 동기 `setMessage`)였다. 같은 lint 실행에는
+`src/features/map/components/NaverMap.tsx:470:3`의 `react-hooks/refs` 오류와
+`src/app/(tabs)/recommend/page.tsx:24:11`의 미사용 `session` 경고도 남아 있다. 따라서
+`npm test`와 `npm run build`는 실행되지 않았으며, 새 test 수와 build 시각은 기록하지
+않는다.
+
+`npx prettier --check src/app/globals.css 'src/app/(tabs)/layout.tsx' 'src/app/(tabs)/page.tsx' src/shared/ui/Icon.tsx src/shared/ui/Text.tsx src/shared/ui/Button.tsx src/features/sightings tests/unit/warm-ux-foundation.test.mjs tests/unit/sighting-form-presentation.test.mjs tests/unit/sighting-form-ux-contract.test.mjs docs/PROJECT_STATUS_KO.md`도 종료 코드 1이었다. 첫 formatting 대상은
+`src/app/(tabs)/layout.tsx`이며, 총 6개 파일(`layout.tsx` 및 `src/features/sightings` 내
+5개 파일)이 formatting 차이로 보고됐다. 이 checkpoint에서는 기존 formatting/lint
+부채를 수정하지 않는다.
+
 ## 9. 진행도 추정
 
 제품 요구사항이 완전히 고정되지 않았으므로 범위로 표현한다.
