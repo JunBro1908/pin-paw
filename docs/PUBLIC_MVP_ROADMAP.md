@@ -1,5 +1,9 @@
 # PinPaw 공개 MVP 제품·기술 로드맵
 
+> **최신 상태 안내 (2026-08-02):** 이 문서의 과제 정의와 2026-07-25 진행
+> 기록은 유지한다. 현재 코드 규모, 최신 검증 결과, 의존성 설치 상태와 출시
+> 판정은 [현재 프로젝트 진행 현황](./PROJECT_STATUS_KO.md)을 우선한다.
+
 > 기준일: 2026-07-25  
 > 최우선 성과: **운영 안정성**  
 > 출시 대상: 불특정 사용자가 접근하는 공개 MVP
@@ -54,26 +58,26 @@ Gate 0은 선행 조건을 지키며 진행한다. `G0-03`과 `G0-04`, `G0-05`�
 
 ### 현재 진행 상황 — 2026-07-25
 
-| ID    | 상태        | 완료한 범위·증거                                                                   | 남은 완료 조건                                       |
-| ----- | ----------- | ---------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| G0-01 | In Progress | fail-closed 9건; service-role SKIP LOCKED lease; Vercel Cron GET 계약 6/6          | DB replay, 정상 Cron 200, 동시 호출·호출 제한 검증   |
-| G0-02 | In Progress | Babel 7.29.7 override·production audit 0; Next 16.2.11; Node 140/140·TS·Webpack 27/27 | 깨끗한 CI·핵심 E2E·staging image smoke            |
-| G0-03 | In Progress | 로컬 RLS/grant lock-down; 원격 3 table RLS OFF·browser 전체 grant 확인             | history 정합화·원격 적용·역할별 REST CRUD matrix     |
-| G0-04 | In Progress | auth.uid privacy RPC·claim 직접 쓰기 revoke·public CREATE revoke·경계 계약 통과    | CLI lint·원격 적용·RPC/owner 우회 matrix              |
-| G0-05 | In Progress | intent·원자 생성/소비·orphan·cache replay; 계약 3/3·replay 단위 8/8                | DB/Storage replay·20-way 경쟁·위조 파일 E2E          |
-| G0-06 | In Progress | 외부/scheme-relative/backslash redirect 차단 테스트; canonical origin 적용         | staging OAuth 정상 복귀·변조 통합 테스트             |
-| G0-07 | In Progress | Vercel-only IP trust, atomic fixed-window RPC, IP/user 이중 제한; 계약 7/7         | DB 50-way concurrency·staging spoof 검증             |
-| G0-08 | In Progress | mutation·query·UUID·64 KiB; production HTTP 실패·trace·health 경계 8/8             | 정상 DB/Storage API·위조 upload·staging 검증         |
-| G0-09 | In Progress | CSP/헤더와 env-bound Supabase image/connect origin RED 0/2→GREEN 2/2               | inline 정책 축소, staging CSP/E2E·7일 관찰           |
-| G0-10 | In Progress | public bucket·10 MiB·JPEG/PNG·browser object 작업 restrictive 정책; 계약 6/6       | 빈 DB replay·실제 역할별 Storage matrix              |
-| G0-11 | In Progress | PR/push CI: app gate+DB replay/matrix/concurrency 계약; Node 140/140               | 실제 Actions·API/RLS/E2E gate                        |
-| G0-12 | In Progress | `.venv` 제외·lint 0/0·CI 필수 단계; 합성 env 전체 local 재현                       | 실제 Actions·branch protection에서 재현              |
-| G0-13 | In Progress | 초기 schema·순서 2/2; 원격/로컬 공통 migration version 0개 확인                    | statements 대조·정합화 승인·빈 DB replay/schema diff |
-| G0-14 | In Progress | 로컬 INSERT 차단; 원격 `WITH CHECK(true)`·browser INSERT grant 확인                | history 정합화·원격 적용·정상 API 통합 검증          |
-| G0-15 | In Progress | 검색 30/분·300/일·5초 timeout, 지도 120/분·2° bbox, test 140/140                   | DB burst·Naver quota·EXPLAIN·staging 회귀            |
-| G0-16 | In Progress | 원자 RPC·lease/backoff; provider/finalize/lease fault injection 4/4               | DB replay·권한 행렬·실제 20-way 경쟁                 |
-| G0-17 | In Progress | APP_ORIGIN·exact HTTPS Supabase origin 검증; 요청 Host/proto·project ref 제거      | preview/staging Host·환경 drift 검증                 |
-| G0-18 | In Progress | dev/build Webpack 고정·Google font 의존 제거; 제한 네트워크 build 27/27·계약 1/1  | 새 checkout·CI 연속 build, Turbopack issue 증거 보존 |
+| ID    | 상태        | 완료한 범위·증거                                                                      | 남은 완료 조건                                       |
+| ----- | ----------- | ------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| G0-01 | In Progress | fail-closed 9건; service-role SKIP LOCKED lease; Vercel Cron GET 계약 6/6             | DB replay, 정상 Cron 200, 동시 호출·호출 제한 검증   |
+| G0-02 | In Progress | Babel 7.29.7 override·production audit 0; Next 16.2.11; Node 140/140·TS·Webpack 27/27 | 깨끗한 CI·핵심 E2E·staging image smoke               |
+| G0-03 | In Progress | 로컬 RLS/grant lock-down; 원격 3 table RLS OFF·browser 전체 grant 확인                | history 정합화·원격 적용·역할별 REST CRUD matrix     |
+| G0-04 | In Progress | auth.uid privacy RPC·claim 직접 쓰기 revoke·public CREATE revoke·경계 계약 통과       | CLI lint·원격 적용·RPC/owner 우회 matrix             |
+| G0-05 | In Progress | intent·원자 생성/소비·orphan·cache replay; 계약 3/3·replay 단위 8/8                   | DB/Storage replay·20-way 경쟁·위조 파일 E2E          |
+| G0-06 | In Progress | 외부/scheme-relative/backslash redirect 차단 테스트; canonical origin 적용            | staging OAuth 정상 복귀·변조 통합 테스트             |
+| G0-07 | In Progress | Vercel-only IP trust, atomic fixed-window RPC, IP/user 이중 제한; 계약 7/7            | DB 50-way concurrency·staging spoof 검증             |
+| G0-08 | In Progress | mutation·query·UUID·64 KiB; production HTTP 실패·trace·health 경계 8/8                | 정상 DB/Storage API·위조 upload·staging 검증         |
+| G0-09 | In Progress | CSP/헤더와 env-bound Supabase image/connect origin RED 0/2→GREEN 2/2                  | inline 정책 축소, staging CSP/E2E·7일 관찰           |
+| G0-10 | In Progress | public bucket·10 MiB·JPEG/PNG·browser object 작업 restrictive 정책; 계약 6/6          | 빈 DB replay·실제 역할별 Storage matrix              |
+| G0-11 | In Progress | PR/push CI: app gate+DB replay/matrix/concurrency 계약; Node 140/140                  | 실제 Actions·API/RLS/E2E gate                        |
+| G0-12 | In Progress | `.venv` 제외·lint 0/0·CI 필수 단계; 합성 env 전체 local 재현                          | 실제 Actions·branch protection에서 재현              |
+| G0-13 | In Progress | 초기 schema·순서 2/2; 원격/로컬 공통 migration version 0개 확인                       | statements 대조·정합화 승인·빈 DB replay/schema diff |
+| G0-14 | In Progress | 로컬 INSERT 차단; 원격 `WITH CHECK(true)`·browser INSERT grant 확인                   | history 정합화·원격 적용·정상 API 통합 검증          |
+| G0-15 | In Progress | 검색 30/분·300/일·5초 timeout, 지도 120/분·2° bbox, test 140/140                      | DB burst·Naver quota·EXPLAIN·staging 회귀            |
+| G0-16 | In Progress | 원자 RPC·lease/backoff; provider/finalize/lease fault injection 4/4                   | DB replay·권한 행렬·실제 20-way 경쟁                 |
+| G0-17 | In Progress | APP_ORIGIN·exact HTTPS Supabase origin 검증; 요청 Host/proto·project ref 제거         | preview/staging Host·환경 drift 검증                 |
+| G0-18 | In Progress | dev/build Webpack 고정·Google font 의존 제거; 제한 네트워크 build 27/27·계약 1/1      | 새 checkout·CI 연속 build, Turbopack issue 증거 보존 |
 
 ### Gate 0 종료 조건
 
@@ -100,17 +104,17 @@ Gate 0은 선행 조건을 지키며 진행한다. `G0-03`과 `G0-04`, `G0-05`�
 
 ### 현재 진행 상황 — 2026-07-25
 
-| ID    | 상태        | 완료한 범위·증거                                                                    | 남은 완료 조건                             |
-| ----- | ----------- | ----------------------------------------------------------------------------------- | ------------------------------------------ |
-| M1-01 | In Progress | Sentry client/Node/Edge·5xx correlation·strict sanitizer; 전체 170/170·build 27/27  | DSN/source map·Sentry 후 HTTP·민감값 0 staging |
-| M1-02 | In Progress | dependency 없는 health와 설정/DB readiness 분리; 단위 3/3·HTTP 8/8                 | staging 정상/장애 monitor·5분 alert·runbook |
-| M1-03 | In Progress | 배포·rollback·DB/Storage backup/restore·incident runbook과 증거 양식 작성          | 다른 작업자 staging rehearsal·RPO/RTO/checksum |
-| M1-04 | In Progress | app_metadata admin·원자 hide/unhide·append-only actor/action/target/reason audit | migration replay·비관리자/admin 역할 E2E |
-| M1-05 | In Progress | 원자 중복 신고·양방향 차단 필터·high 24h/일반 72h SLA·관리자 triage | DB 동시성·사용자/관리자 E2E·SLA alert |
-| M1-06 | In Progress | JWT 권한 RPC·0.05° 마스킹·활성 추천 후보 claim 검증; 전체 Node 170/170·build 27/27 | CLI lint·빈 DB replay, 서버 검증 match workflow, 역할별 E2E·PT-08 |
-| M1-07 | In Progress | domain·data hook·SDK adapter·renderer 연결, fallback 제거; 56 tests·lint 0·build 24 | 지도 핵심 브라우저 회귀·실제 SDK 누수 검증 |
-| M1-08 | In Progress | low-cardinality RED·운영 snapshot·SLO/예산 warning/critical evaluator | live dashboard·synthetic event·5분 alert |
-| M1-09 | In Progress | 즉시 Auth ban·lease/backoff 삭제 worker·Storage→DB→Auth·최소 tombstone | primary/backup 실제 삭제·복구 표본 E2E |
+| ID    | 상태        | 완료한 범위·증거                                                                    | 남은 완료 조건                                                    |
+| ----- | ----------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| M1-01 | In Progress | Sentry client/Node/Edge·5xx correlation·strict sanitizer; 전체 170/170·build 27/27  | DSN/source map·Sentry 후 HTTP·민감값 0 staging                    |
+| M1-02 | In Progress | dependency 없는 health와 설정/DB readiness 분리; 단위 3/3·HTTP 8/8                  | staging 정상/장애 monitor·5분 alert·runbook                       |
+| M1-03 | In Progress | 배포·rollback·DB/Storage backup/restore·incident runbook과 증거 양식 작성           | 다른 작업자 staging rehearsal·RPO/RTO/checksum                    |
+| M1-04 | In Progress | app_metadata admin·원자 hide/unhide·append-only actor/action/target/reason audit    | migration replay·비관리자/admin 역할 E2E                          |
+| M1-05 | In Progress | 원자 중복 신고·양방향 차단 필터·high 24h/일반 72h SLA·관리자 triage                 | DB 동시성·사용자/관리자 E2E·SLA alert                             |
+| M1-06 | In Progress | JWT 권한 RPC·0.05° 마스킹·활성 추천 후보 claim 검증; 전체 Node 170/170·build 27/27  | CLI lint·빈 DB replay, 서버 검증 match workflow, 역할별 E2E·PT-08 |
+| M1-07 | In Progress | domain·data hook·SDK adapter·renderer 연결, fallback 제거; 56 tests·lint 0·build 24 | 지도 핵심 브라우저 회귀·실제 SDK 누수 검증                        |
+| M1-08 | In Progress | low-cardinality RED·운영 snapshot·SLO/예산 warning/critical evaluator               | live dashboard·synthetic event·5분 alert                          |
+| M1-09 | In Progress | 즉시 Auth ban·lease/backoff 삭제 worker·Storage→DB→Auth·최소 tombstone              | primary/backup 실제 삭제·복구 표본 E2E                            |
 
 ### Milestone 1 종료 조건
 
@@ -138,15 +142,15 @@ Gate 0은 선행 조건을 지키며 진행한다. `G0-03`과 `G0-04`, `G0-05`�
 
 ### 현재 진행 상황 — 2026-07-25
 
-| ID    | 상태        | 완료한 범위·증거                                                                 | 남은 완료 조건                          |
-| ----- | ----------- | -------------------------------------------------------------------------------- | --------------------------------------- |
-| M2-01 | In Progress | in-app notifications migration·me API·`/my/notifications` UI·계약 테스트 | staging delivery ≥95%·opt-out E2E |
-| M2-02 | In Progress | owner mutation RPC·EditForm(traits/LocationPicker/idempotency)·audit queue | Storage orphan 0·mutation E2E |
-| M2-03 | In Progress | status history trigger·owner history API·상세 이력 UI | 금지 전이 E2E |
-| M2-04 | In Progress | `/share/lost-posts`·OG image·cover·privacy smoke | Kakao/Slack crawler snapshot |
-| M2-05 | In Progress | `lang=ko`·skip link·focus-visible·aria busy/live 계약 | axe critical/serious 0·키보드 E2E |
-| M2-06 | In Progress | client key/intent 재사용·파일 hash 단위 4/4·EditForm lifecycle | 20-way fault/concurrency staging |
-| M2-07 | In Progress | funnel schema·5이벤트 클라이언트 배선·analytics opt-out 설정 UI | staging opt-out E2E |
+| ID    | 상태        | 완료한 범위·증거                                                           | 남은 완료 조건                    |
+| ----- | ----------- | -------------------------------------------------------------------------- | --------------------------------- |
+| M2-01 | In Progress | in-app notifications migration·me API·`/my/notifications` UI·계약 테스트   | staging delivery ≥95%·opt-out E2E |
+| M2-02 | In Progress | owner mutation RPC·EditForm(traits/LocationPicker/idempotency)·audit queue | Storage orphan 0·mutation E2E     |
+| M2-03 | In Progress | status history trigger·owner history API·상세 이력 UI                      | 금지 전이 E2E                     |
+| M2-04 | In Progress | `/share/lost-posts`·OG image·cover·privacy smoke                           | Kakao/Slack crawler snapshot      |
+| M2-05 | In Progress | `lang=ko`·skip link·focus-visible·aria busy/live 계약                      | axe critical/serious 0·키보드 E2E |
+| M2-06 | In Progress | client key/intent 재사용·파일 hash 단위 4/4·EditForm lifecycle             | 20-way fault/concurrency staging  |
+| M2-07 | In Progress | funnel schema·5이벤트 클라이언트 배선·analytics opt-out 설정 UI            | staging opt-out E2E               |
 
 `M2-06`은 현재 In Progress다. 서버는 동일 idempotency key의 도메인 생성과
 upload intent 소비를 DB 트랜잭션으로 직렬화한다. 클라이언트도 동일 payload의

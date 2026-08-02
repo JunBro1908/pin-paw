@@ -1,5 +1,11 @@
 # PinPaw 보안·품질 감사
 
+> **최신 상태 안내 (2026-08-02):** 아래 결론과 finding 본문은 2026-07-25의
+> 기준선 감사 기록이다. 이후 보안 migration, 테스트, CI, 운영 통제가 대폭
+> 구현됐다. 현재 검증 결과와 아직 닫히지 않은 외부 증거는
+> [현재 프로젝트 진행 현황](./PROJECT_STATUS_KO.md)을 우선한다. 기존 finding은
+> staging·DB·브라우저 검증 없이 자동으로 `CLOSED`로 간주하지 않는다.
+
 - **기준일**: 2026-07-25
 - **대상**: 현재 working tree의 Next.js 애플리케이션, API Route, Supabase
   기준 스키마·마이그레이션, 배포 설정, npm 의존성
@@ -45,20 +51,20 @@
 
 ### 2.1 수행한 검사
 
-| 검사                          | 2026-07-25 결과                              | 판정      |
-| ----------------------------- | -------------------------------------------- | --------- |
-| `next build --webpack`        | 컴파일·TypeScript·27개 route 생성 성공        | 통과      |
-| 변경 전 `npm run build` (Turbopack) | panic 또는 장시간 정체가 재현됨         | 실패      |
-| `npx tsc --noEmit`            | 오류 없음                                    | 통과      |
-| `npm run lint`                | 0 errors, 0 warnings                         | 통과      |
-| `npm audit --json`            | high 6, moderate 1, low 1                    | 개선 필요 |
-| `npm audit --omit=dev --json` | high/critical 0, `@babel/core` low 1          | 개선 필요 |
-| `npm test`                    | unit·보안 경계 테스트 134/134 통과           | 개선 필요 |
-| CI 설정 검색                  | release gate 추가, 정적 계약 4/4             | 개선 필요 |
-| 추적 파일의 키 패턴 검색      | 키 값 발견 없음                              | 통과      |
-| 환경파일 추적 확인            | `.env.local`, `sim_test/.env` 모두 ignore    | 통과      |
-| API 인증·Service Role 추적    | 22개 API route와 공용 클라이언트 수동 검토   | 개선 필요 |
-| SQL RLS·함수 검토             | 기준 스키마와 전체 migration 검색            | 실패      |
+| 검사                                | 2026-07-25 결과                            | 판정      |
+| ----------------------------------- | ------------------------------------------ | --------- |
+| `next build --webpack`              | 컴파일·TypeScript·27개 route 생성 성공     | 통과      |
+| 변경 전 `npm run build` (Turbopack) | panic 또는 장시간 정체가 재현됨            | 실패      |
+| `npx tsc --noEmit`                  | 오류 없음                                  | 통과      |
+| `npm run lint`                      | 0 errors, 0 warnings                       | 통과      |
+| `npm audit --json`                  | high 6, moderate 1, low 1                  | 개선 필요 |
+| `npm audit --omit=dev --json`       | high/critical 0, `@babel/core` low 1       | 개선 필요 |
+| `npm test`                          | unit·보안 경계 테스트 134/134 통과         | 개선 필요 |
+| CI 설정 검색                        | release gate 추가, 정적 계약 4/4           | 개선 필요 |
+| 추적 파일의 키 패턴 검색            | 키 값 발견 없음                            | 통과      |
+| 환경파일 추적 확인                  | `.env.local`, `sim_test/.env` 모두 ignore  | 통과      |
+| API 인증·Service Role 추적          | 22개 API route와 공용 클라이언트 수동 검토 | 개선 필요 |
+| SQL RLS·함수 검토                   | 기준 스키마와 전체 migration 검색          | 실패      |
 
 `npm audit` 결과는 감사 시점의 레지스트리 정보다. 수정 시점에는 동일 명령을
 다시 실행해 최신 advisory와 안전 버전을 확정해야 한다.
