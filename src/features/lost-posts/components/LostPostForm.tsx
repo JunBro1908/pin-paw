@@ -377,13 +377,13 @@ export function LostPostForm() {
                 {isLocating
                   ? "위치 확인 중..."
                   : isLocationSet
-                    ? `${formData.lat.toFixed(6)}, ${formData.lng.toFixed(6)}`
+                    ? "현재 위치가 설정되었습니다"
                     : "위치를 설정해주세요"}
               </Text>
             </div>
             <div className="bg-primary-soft flex items-center gap-1 rounded-lg px-3 py-1.5">
               <Text variant="caption" className="text-primary font-bold">
-                <span className="text-lg">🐾</span> 변경
+                변경
               </Text>
             </div>
           </button>
@@ -418,104 +418,111 @@ export function LostPostForm() {
           />
         </section>
 
-        <section className="space-y-3">
-          <Text variant="body" className="font-bold">
-            색상 · 크기 · 종 (선택)
-          </Text>
-          <input
-            type="text"
-            name="traitColor"
-            value={formData.traitColor}
-            onChange={handleChange}
-            placeholder="예: 갈색, 흰색 얼룩, 검정·흰색"
-            maxLength={100}
-            className={inputBase}
-          />
-          <div className="grid grid-cols-2 gap-3">
-            <select
-              name="traitSize"
-              value={formData.traitSize}
-              onChange={handleChange}
-              className={selectBase}
-            >
-              {SIZE_VALUES.map((v) => (
-                <option key={v} value={v}>
-                  {SIZE_LABELS[v as SizeValue]}
-                </option>
-              ))}
-            </select>
-            <select
-              name="traitSpecies"
-              value={formData.traitSpecies}
-              onChange={handleChange}
-              className={selectBase}
-            >
-              {DOG_BREEDS.map((b) => (
-                <option key={b} value={b}>
-                  {getBreedLabel(b)}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="space-y-2">
-            <Text variant="caption" color="caption">
-              특이사항 (최대 {MAX_TAG_SELECT_LOST_POST}개)
+        <details className="border-border-subtle bg-surface group rounded-2xl border shadow-sm">
+          <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-bold [&::-webkit-details-marker]:hidden">
+            특징을 더 알려주기 (선택)
+            <span aria-hidden className="transition-transform group-open:rotate-180">
+              ⌄
+            </span>
+          </summary>
+          <div className="border-border-subtle space-y-4 border-t px-4 py-5">
+            <Text variant="body" className="font-bold">
+              색상 · 크기 · 종
             </Text>
-            <div className="flex flex-wrap gap-2">
-              {TRAIT_TAGS.map((tag) => {
-                const selected = formData.traitTags.includes(tag.id);
-                const disabled =
-                  !selected &&
-                  formData.traitTags.length >= MAX_TAG_SELECT_LOST_POST;
-                return (
-                  <button
-                    key={tag.id}
-                    type="button"
-                    onClick={() => {
-                      if (selected) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          traitTags: prev.traitTags.filter(
-                            (id) => id !== tag.id
-                          ),
-                        }));
-                      } else if (!disabled) {
-                        setFormData((prev) => ({
-                          ...prev,
-                          traitTags: [...prev.traitTags, tag.id],
-                        }));
-                      }
-                    }}
-                    disabled={disabled}
-                    className={cn(
-                      "rounded-full px-3 py-1.5 text-sm transition-colors",
-                      selected
-                        ? "bg-primary text-white"
-                        : "bg-muted text-muted-foreground hover:bg-muted/80",
-                      disabled && "cursor-not-allowed opacity-50"
-                    )}
-                  >
-                    {tag.labelKo}
-                  </button>
-                );
-              })}
+            <input
+              type="text"
+              name="traitColor"
+              value={formData.traitColor}
+              onChange={handleChange}
+              placeholder="예: 갈색, 흰색 얼룩, 검정·흰색"
+              maxLength={100}
+              className={inputBase}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <select
+                name="traitSize"
+                value={formData.traitSize}
+                onChange={handleChange}
+                className={selectBase}
+              >
+                {SIZE_VALUES.map((v) => (
+                  <option key={v} value={v}>
+                    {SIZE_LABELS[v as SizeValue]}
+                  </option>
+                ))}
+              </select>
+              <select
+                name="traitSpecies"
+                value={formData.traitSpecies}
+                onChange={handleChange}
+                className={selectBase}
+              >
+                {DOG_BREEDS.map((b) => (
+                  <option key={b} value={b}>
+                    {getBreedLabel(b)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Text variant="caption" color="caption">
+                특이사항 (최대 {MAX_TAG_SELECT_LOST_POST}개)
+              </Text>
+              <div className="flex flex-wrap gap-2">
+                {TRAIT_TAGS.map((tag) => {
+                  const selected = formData.traitTags.includes(tag.id);
+                  const disabled =
+                    !selected &&
+                    formData.traitTags.length >= MAX_TAG_SELECT_LOST_POST;
+                  return (
+                    <button
+                      key={tag.id}
+                      type="button"
+                      onClick={() => {
+                        if (selected) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            traitTags: prev.traitTags.filter(
+                              (id) => id !== tag.id
+                            ),
+                          }));
+                        } else if (!disabled) {
+                          setFormData((prev) => ({
+                            ...prev,
+                            traitTags: [...prev.traitTags, tag.id],
+                          }));
+                        }
+                      }}
+                      disabled={disabled}
+                      className={cn(
+                        "rounded-full px-3 py-1.5 text-sm transition-colors",
+                        selected
+                          ? "bg-primary text-white"
+                          : "bg-muted text-muted-foreground hover:bg-muted/80",
+                        disabled && "cursor-not-allowed opacity-50"
+                      )}
+                    >
+                      {tag.labelKo}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Text variant="body" className="font-bold">
+                추가 설명
+              </Text>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                placeholder="상세 정보를 입력해주세요"
+                rows={4}
+                className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full resize-none rounded-xl border bg-white px-4 py-4 outline-none focus:ring-2"
+              />
             </div>
           </div>
-        </section>
-
-        <section className="space-y-3">
-          <Text variant="body" className="font-bold">
-            추가 설명 (선택)
-          </Text>
-          <textarea
-            name="description"
-            value={formData.description}
-            onChange={handleChange}
-            placeholder="상세 정보를 입력해주세요"
-            rows={4}
-            className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full resize-none rounded-xl border bg-white px-4 py-4 outline-none focus:ring-2"
-          />
-        </section>
+        </details>
 
         <Button
           type="submit"

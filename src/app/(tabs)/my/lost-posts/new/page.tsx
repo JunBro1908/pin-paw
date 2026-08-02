@@ -10,10 +10,10 @@ function NewLostPostPageContent() {
   return (
     <Container className="py-8">
       <Link
-        href="/my/lost-posts"
+        href="/my"
         className="text-primary mb-6 inline-block text-sm font-medium"
       >
-        ← 목록으로
+        ← 내 활동으로
       </Link>
       <Text variant="title" className="mb-6">
         유실글 등록

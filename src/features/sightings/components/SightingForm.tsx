@@ -184,9 +184,15 @@ export function SightingForm() {
     };
 
     // Optimistic confirmation: show success sheet immediately, finish network later.
+    // Auto-dismiss keeps the authenticated report path to one essential screen.
     setIsSubmitting(true);
     setOptimisticSent(true);
     resetForm();
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => {
+        setOptimisticSent((open) => (open ? false : open));
+      }, 2200);
+    }
 
     try {
       const payloadFingerprint = JSON.stringify({
@@ -433,7 +439,7 @@ export function SightingForm() {
               className="mt-5 w-full"
               onClick={() => setOptimisticSent(false)}
             >
-              확인
+              이어서 제보하기
             </Button>
           </div>
         </div>
