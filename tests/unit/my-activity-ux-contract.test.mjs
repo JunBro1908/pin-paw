@@ -7,18 +7,20 @@ test("my activity leads with an active case carousel and next actions", async ()
   assert.match(page, /<LostCaseCarousel/);
   assert.match(page, /<LostCaseNextActions/);
   assert.match(page, /내 활동/);
+  assert.match(page, /유실글 올리기/);
+  assert.doesNotMatch(page, /유실 사건 등록/);
   assert.doesNotMatch(page, /지난 유실글/);
   assert.doesNotMatch(page, /<LostPostList/);
 });
 
-test("active case card prioritizes cover photo, edit, and confirmation CTA", async () => {
+test("active case card prioritizes cover photo, edit, and find CTA", async () => {
   const card = await readFile(
     "src/features/lost-posts/components/ActiveLostCaseCard.tsx",
     "utf8"
   );
   assert.match(card, /getLostPostCoverUrl/);
   assert.match(card, /마지막 확인/);
-  assert.match(card, /확인할 제보 보기/);
+  assert.match(card, /비슷한 제보 보기/);
   assert.match(card, /\/recommend\?lostPostId=\$\{item\.id\}/);
   assert.match(card, /\?edit=1/);
   assert.match(card, /aria-label="유실글 수정"/);
@@ -26,14 +28,19 @@ test("active case card prioritizes cover photo, edit, and confirmation CTA", asy
   assert.doesNotMatch(card, /bg-black(?!\/)/);
 });
 
-test("lost case carousel is horizontal snap and opens detail routes", async () => {
+test("lost case carousel shows one full-width snap card at a time", async () => {
   const carousel = await readFile(
     "src/features/lost-posts/components/LostCaseCarousel.tsx",
     "utf8"
   );
   assert.match(carousel, /snap-x snap-mandatory/);
   assert.match(carousel, /overflow-x-auto/);
+  assert.match(carousel, /w-full shrink-0 snap-center/);
+  assert.match(carousel, /compact=\{false\}/);
+  assert.match(carousel, /headingAction/);
   assert.match(carousel, /<ActiveLostCaseCard/);
+  assert.doesNotMatch(carousel, /w-\[min\(100%,18\.5rem\)\]/);
+  assert.doesNotMatch(carousel, /gap-3 overflow-x-auto/);
 });
 
 test("next actions cover notifications, case management edit, and map focus", async () => {
@@ -71,4 +78,16 @@ test("my activity leads with user profile before case carousel", async () => {
   );
   assert.match(page, /max-h-72 overflow-y-auto/);
   assert.match(page, /useMySightings\(\)/);
+  assert.match(page, /headingAction=/);
+  assert.match(page, /heading="내 유실 사건"/);
+});
+
+test("my sighting cards use a top-right edit icon instead of text", async () => {
+  const card = await readFile(
+    "src/features/sightings/components/MySightingCard.tsx",
+    "utf8"
+  );
+  assert.match(card, /aria-label="제보 수정"/);
+  assert.match(card, /\/my\/sightings\/\$\{item\.id\}\/edit/);
+  assert.doesNotMatch(card, />\s*수정\s*</);
 });

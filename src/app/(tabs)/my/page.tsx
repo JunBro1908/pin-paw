@@ -52,10 +52,15 @@ function MyPageContent() {
   };
 
   return (
-    <Container className="py-10">
-      <Text as="h1" variant="title" className="mb-6">
-        내 활동
-      </Text>
+    <Container className="py-8">
+      <header className="mb-8">
+        <Text as="h1" variant="title" className="text-2xl">
+          내 활동
+        </Text>
+        <Text variant="body" color="sub" className="mt-1">
+          올린 유실글과 제보를 이어서 관리하세요.
+        </Text>
+      </header>
 
       <AccountSurface user={user} onSignOut={handleSignOut} />
 
@@ -64,7 +69,7 @@ function MyPageContent() {
           <div className="bg-border-subtle h-3 w-40 animate-pulse rounded-full" />
           <div className="bg-border-subtle h-3 w-28 animate-pulse rounded-full" />
           <Text variant="caption" color="caption">
-            활성 사건을 불러오는 중...
+            유실글을 불러오는 중...
           </Text>
         </div>
       ) : null}
@@ -83,14 +88,13 @@ function MyPageContent() {
       {!loading && !error && carouselItems.length === 0 ? (
         <div className="border-border-subtle bg-surface mb-6 rounded-2xl border border-dashed p-6 text-center shadow-sm">
           <Text variant="body" className="mb-2 font-medium">
-            찾는 중인 유실 사건이 없어요
+            찾는 중인 유실글이 없어요
           </Text>
           <Text variant="caption" color="caption" className="mb-4 block">
-            유실 사건을 등록하면 확인할 제보와 지도 흔적을 여기서 이어서 볼 수
-            있어요.
+            유실글을 올리면 비슷한 제보와 지도 흔적을 여기서 이어서 볼 수 있어요.
           </Text>
           <Link href="/my/lost-posts/new">
-            <Button variant="primary">유실 사건 등록하기</Button>
+            <Button variant="primary">유실글 올리기</Button>
           </Link>
         </div>
       ) : null}
@@ -104,18 +108,18 @@ function MyPageContent() {
             onSelect={(item) => setSelectedId(item.id)}
             primaryAction="recommend"
             heading="내 유실 사건"
+            headingAction={
+              <Link
+                href="/my/lost-posts/new"
+                className="text-action-primary text-sm font-medium underline-offset-4 hover:underline"
+              >
+                유실글 올리기
+              </Link>
+            }
           />
           {selectedCase ? (
             <LostCaseNextActions lostPostId={selectedCase.id} />
           ) : null}
-          <div className="mb-6 flex justify-end">
-            <Link
-              href="/my/lost-posts/new"
-              className="text-primary text-sm font-medium hover:underline"
-            >
-              + 유실 사건 등록
-            </Link>
-          </div>
         </>
       ) : null}
 
@@ -190,7 +194,7 @@ function AccountSurface({
         <button
           type="button"
           onClick={() => void onSignOut()}
-          className="text-primary text-sm font-medium hover:underline"
+          className="text-action-primary text-sm font-medium hover:underline"
         >
           로그아웃
         </button>
@@ -198,13 +202,13 @@ function AccountSurface({
       <div className="mt-4 flex flex-wrap gap-3">
         <Link
           href="/my/notifications"
-          className="text-primary text-sm font-medium hover:underline"
+          className="text-action-primary text-sm font-medium hover:underline"
         >
           알림
         </Link>
         <Link
           href="/my/settings"
-          className="text-primary text-sm font-medium hover:underline"
+          className="text-action-primary text-sm font-medium hover:underline"
         >
           설정
         </Link>

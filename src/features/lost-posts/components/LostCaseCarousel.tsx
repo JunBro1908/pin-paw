@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import { Text } from "@/shared/ui/Text";
 import { ActiveLostCaseCard } from "./ActiveLostCaseCard";
 import type { LostPostItem } from "../model/types";
@@ -13,6 +13,7 @@ interface LostCaseCarouselProps {
   onSelect?: (item: LostPostItem) => void;
   primaryAction?: "recommend" | "detail";
   heading?: string;
+  headingAction?: ReactNode;
   className?: string;
 }
 
@@ -22,7 +23,8 @@ export function LostCaseCarousel({
   selectedId = null,
   onSelect,
   primaryAction = "recommend",
-  heading = "유실 사건",
+  heading = "유실글",
+  headingAction,
   className,
 }: LostCaseCarouselProps) {
   const scrollerRef = useRef<HTMLUListElement>(null);
@@ -52,19 +54,22 @@ export function LostCaseCarousel({
       aria-labelledby={headingId}
       className={cn("mb-6", className)}
     >
-      <div className="mb-3 flex items-end justify-between gap-3">
-        <Text as="h2" id={headingId} variant="body" className="font-medium">
-          {heading}
-        </Text>
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <Text as="h2" id={headingId} variant="body" className="font-medium">
+            {heading}
+          </Text>
+          {headingAction}
+        </div>
         {items.length > 1 ? (
-          <Text variant="caption" color="caption">
+          <Text variant="caption" color="caption" className="shrink-0">
             좌우로 넘겨 선택
           </Text>
         ) : null}
       </div>
       <ul
         ref={scrollerRef}
-        className="flex snap-x snap-mandatory gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="flex snap-x snap-mandatory overflow-x-auto scroll-smooth pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         aria-label={heading}
       >
         {items.map((item) => {
@@ -72,7 +77,7 @@ export function LostCaseCarousel({
           return (
             <li
               key={item.id}
-              className="snap-center"
+              className="w-full shrink-0 snap-center snap-always"
               onFocusCapture={() => {
                 setActiveId(item.id);
                 onSelect?.(item);
@@ -85,10 +90,10 @@ export function LostCaseCarousel({
               <ActiveLostCaseCard
                 item={item}
                 refreshing={refreshing && selected}
-                compact={items.length > 1}
+                compact={false}
                 primaryAction={primaryAction}
                 className={cn(
-                  "transition-[box-shadow,ring] duration-200",
+                  "w-full transition-[box-shadow,ring] duration-200",
                   selected
                     ? "ring-action-primary/40 ring-2 ring-offset-2"
                     : "opacity-95"
