@@ -14,6 +14,8 @@ import {
 export interface SightingEssentialsProps {
   photoUrl: string | null;
   occurredAt: string;
+  photoError?: string;
+  locationError?: string;
   timeError?: string;
   locationStatus: SightingLocationStatus;
   disabled: boolean;
@@ -25,9 +27,38 @@ export interface SightingEssentialsProps {
 const inputBase =
   "w-full rounded-xl border border-border-subtle bg-surface px-4 py-3 text-[15px] text-text-main shadow-sm outline-none transition-all focus:border-action-primary focus:ring-2 focus:ring-action-primary/20 disabled:cursor-not-allowed disabled:opacity-60";
 
+function FieldTitle({
+  icon,
+  label,
+  required,
+  error,
+}: {
+  icon: "camera" | "location" | "clock";
+  label: string;
+  required?: boolean;
+  error?: string;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <Icon name={icon} size={20} className="text-action-primary" />
+      <Text variant="body" className="text-text-main font-bold">
+        {label}
+        {required ? <span className="text-action-primary"> *</span> : null}
+      </Text>
+      {error ? (
+        <span role="alert" className="text-error text-xs font-medium">
+          {error}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 export function SightingEssentials({
   photoUrl,
   occurredAt,
+  photoError,
+  locationError,
   timeError,
   locationStatus,
   disabled,
@@ -46,12 +77,12 @@ export function SightingEssentials({
   return (
     <section className="space-y-6" aria-label="필수 목격 정보">
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Icon name="camera" size={20} className="text-action-primary" />
-          <Text variant="body" className="text-text-main font-bold">
-            사진 추가 <span className="text-action-primary">*</span>
-          </Text>
-        </div>
+        <FieldTitle
+          icon="camera"
+          label="사진 추가"
+          required
+          error={photoError}
+        />
         <div className="relative">
           <input
             ref={fileInputRef}
@@ -68,7 +99,8 @@ export function SightingEssentials({
             htmlFor="sighting-photo"
             className={cn(
               "group border-border-subtle bg-surface-soft hover:border-action-primary/50 hover:bg-accent-warm/10 peer-focus-visible:outline-action-primary relative flex aspect-4/3 max-h-80 w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-all peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2",
-              disabled && "pointer-events-none opacity-60"
+              disabled && "pointer-events-none opacity-60",
+              photoError && "border-error"
             )}
           >
             {photoUrl ? (
@@ -106,15 +138,18 @@ export function SightingEssentials({
       </div>
 
       <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Icon name="location" size={20} className="text-action-primary" />
-          <Text variant="body" className="text-text-main font-bold">
-            목격 위치 <span className="text-action-primary">*</span>
-          </Text>
-        </div>
+        <FieldTitle
+          icon="location"
+          label="목격 위치"
+          required
+          error={locationError}
+        />
         <div
           aria-live="polite"
-          className="border-border-subtle bg-surface flex items-center justify-between gap-3 rounded-xl border px-4 py-4 shadow-sm"
+          className={cn(
+            "border-border-subtle bg-surface flex items-center justify-between gap-3 rounded-xl border px-4 py-4 shadow-sm",
+            locationError && "border-error"
+          )}
         >
           <Text
             variant="body"
@@ -140,10 +175,21 @@ export function SightingEssentials({
       <div className="space-y-3">
         <label
           htmlFor="sighting-occurred-at"
-          className="text-text-main flex items-center gap-2 font-bold"
+          className="flex flex-wrap items-center gap-x-2 gap-y-1"
         >
           <Icon name="clock" size={20} className="text-action-primary" />
-          목격 시각 <span className="text-action-primary">*</span>
+          <span className="text-text-main font-bold">
+            목격 시각 <span className="text-action-primary">*</span>
+          </span>
+          {timeError ? (
+            <span
+              id="sighting-time-error"
+              role="alert"
+              className="text-error text-xs font-medium"
+            >
+              {timeError}
+            </span>
+          ) : null}
         </label>
         <input
           id="sighting-occurred-at"
@@ -156,17 +202,8 @@ export function SightingEssentials({
           aria-describedby={timeError ? "sighting-time-error" : undefined}
           disabled={disabled}
           onChange={(event) => onOccurredAtChange(event.target.value)}
-          className={cn(inputBase, "py-4")}
+          className={cn(inputBase, "py-4", timeError && "border-error")}
         />
-        {timeError ? (
-          <p
-            id="sighting-time-error"
-            role="alert"
-            className="text-error text-sm"
-          >
-            {timeError}
-          </p>
-        ) : null}
       </div>
     </section>
   );

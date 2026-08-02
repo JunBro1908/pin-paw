@@ -56,6 +56,8 @@ test("required sighting time exposes localized application feedback", async () =
     /type="datetime-local"[\s\S]*?required[\s\S]*?aria-describedby=\{timeError \? "sighting-time-error" : undefined\}/
   );
   assert.match(essentials, /id="sighting-time-error"[\s\S]*?role="alert"/);
+  assert.match(essentials, /photoError/);
+  assert.match(essentials, /locationError/);
 });
 
 test("submit action shares bottom navigation geometry and action tokens", async () => {
@@ -91,7 +93,7 @@ test("sighting controls only use defined warm and surface utilities", async () =
   assert.doesNotMatch(`${essentials}\n${optional}`, /accent-warm-soft/);
 });
 
-test("domain success is exposed before best-effort cache invalidation", async () => {
+test("domain success toast follows registration before best-effort cache invalidation", async () => {
   const form = await readFile(
     "src/features/sightings/components/SightingForm.tsx",
     "utf8"
@@ -101,17 +103,18 @@ test("domain success is exposed before best-effort cache invalidation", async ()
     "submissionAttemptRef.current = completeSubmission()",
     registration
   );
-  const reset = form.indexOf("resetForm();", clearAttempt);
-  const exposeSuccess = form.indexOf("setSubmissionSucceeded(true);", reset);
-  const invalidate = form.indexOf("runBestEffort(async () =>", exposeSuccess);
+  const toastSuccess = form.indexOf(
+    'message: "제보가 성공적으로 등록되었습니다!"',
+    clearAttempt
+  );
+  const invalidate = form.indexOf("runBestEffort(async () =>", toastSuccess);
 
   assert.ok(registration >= 0, "domain registration should be present");
   assert.ok(clearAttempt > registration, "attempt clears after registration");
-  assert.ok(reset > clearAttempt, "form resets after attempt clears");
-  assert.ok(exposeSuccess > reset, "persistent success appears after reset");
+  assert.ok(toastSuccess > clearAttempt, "success toast after attempt clears");
   assert.ok(
-    invalidate > exposeSuccess,
-    "cache invalidation starts after domain success is exposed"
+    invalidate > toastSuccess,
+    "cache invalidation starts after domain success toast"
   );
   const invalidationBlock = form.slice(
     invalidate,
@@ -124,14 +127,22 @@ test("domain success is exposed before best-effort cache invalidation", async ()
   assert.doesNotMatch(invalidationBlock, /console\./);
 });
 
-test("successful submission leaves factual in-page map feedback", async () => {
+test("submit shows optimistic confirmation and defers result to toast", async () => {
   const form = await readFile(
     "src/features/sightings/components/SightingForm.tsx",
     "utf8"
   );
 
-  assert.match(form, /submissionSucceeded/);
-  assert.match(form, /제보가 지도에 등록되었습니다\./);
-  assert.match(form, /<Link\s+href="\/map"/);
-  assert.match(form, /지도에서 확인/);
+  assert.match(form, /optimisticSent/);
+  assert.match(form, /제보가 전송되었습니다/);
+  assert.match(form, /setOptimisticSent\(true\)/);
+  assert.ok(
+    form.indexOf("setOptimisticSent(true)") <
+      form.indexOf("await uploadPhoto("),
+    "optimistic confirmation should appear before network upload"
+  );
+  assert.doesNotMatch(form, /지도에서 확인/);
+  assert.doesNotMatch(form, /제보가 지도에 등록되었습니다/);
+  assert.match(form, /사진을 등록해주세요/);
+  assert.match(form, /photoError=\{photoError\}/);
 });

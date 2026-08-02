@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import Link from "next/link";
 import { Button } from "@/shared/ui/Button";
 import { SightingFormData } from "../model/types";
 import { validateSightingForm } from "../lib/validators";
 import { Toast } from "@/shared/ui/Toast";
+import { Text } from "@/shared/ui/Text";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { supabase } from "@/shared/supabase/client";
 import { SPECIES_UNKNOWN } from "../constants/breeds";
@@ -40,7 +40,7 @@ export function SightingForm() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submissionSucceeded, setSubmissionSucceeded] = useState(false);
+  const [optimisticSent, setOptimisticSent] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isLocationSet, setIsLocationSet] = useState(false);
@@ -138,37 +138,59 @@ export function SightingForm() {
   };
 
   const errors = validateSightingForm(formData);
-  const isValid = Object.keys(errors).length === 0 && isLocationSet;
+  const photoError =
+    showErrors && !formData.photo ? "사진을 등록해주세요." : undefined;
+  const locationError =
+    showErrors && !isLocationSet
+      ? "목격 위치를 확인해 주세요."
+      : showErrors
+        ? errors.location
+        : undefined;
+  const timeError = showErrors ? errors.time : undefined;
+  const isValid =
+    Object.keys(errors).length === 0 && isLocationSet && Boolean(formData.photo);
+
+  const firstValidationMessage = (): string => {
+    if (!formData.photo) return "사진을 등록해주세요.";
+    if (!isLocationSet) return "목격 위치를 확인해 주세요.";
+    if (errors.time) return errors.time;
+    if (errors.location) return errors.location;
+    return "필수 항목을 확인해 주세요.";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
     if (!isValid || !formData.photo) {
       setShowErrors(true);
+      setToast({ message: firstValidationMessage(), type: "error" });
       return;
     }
 
-    // 1. 네트워크 연결 상태 확인
     if (typeof window !== "undefined" && !window.navigator.onLine) {
       setToast({ message: "이미지 업로드에 실패했습니다.", type: "error" });
       return;
     }
 
-    setSubmissionSucceeded(false);
+    const photo = formData.photo;
+    const domainPayload = {
+      location: { lat: formData.lat, lng: formData.lng },
+      occurredAt: new Date(formData.time).toISOString(),
+      traitColor: formData.traitColor?.trim() || null,
+      traitSize: formData.traitSize,
+      traitSpecies: formData.traitSpecies,
+      traitTags: formData.traitTags?.length ? formData.traitTags : null,
+      note: formData.description?.trim() || null,
+    };
+
+    // Optimistic confirmation: show success sheet immediately, finish network later.
     setIsSubmitting(true);
+    setOptimisticSent(true);
+    resetForm();
 
     try {
-      const domainPayload = {
-        location: { lat: formData.lat, lng: formData.lng },
-        occurredAt: new Date(formData.time).toISOString(),
-        traitColor: formData.traitColor?.trim() || null,
-        traitSize: formData.traitSize,
-        traitSpecies: formData.traitSpecies,
-        traitTags: formData.traitTags?.length ? formData.traitTags : null,
-        note: formData.description?.trim() || null,
-      };
       const payloadFingerprint = JSON.stringify({
-        file: await fingerprintUploadFile(formData.photo),
+        file: await fingerprintUploadFile(photo),
         domainPayload,
       });
       const attempt = prepareSubmission(
@@ -178,20 +200,15 @@ export function SightingForm() {
       );
       submissionAttemptRef.current = attempt;
 
-      // 2. 사진 업로드 (Presigned URL 발급 + Storage 업로드)
-      const fileKey = await uploadPhoto(formData.photo, attempt);
+      const fileKey = await uploadPhoto(photo, attempt);
       const currentAttempt = submissionAttemptRef.current ?? attempt;
 
-      // 3. 목격 제보 저장
       await registerSighting(
         fileKey,
         domainPayload,
         currentAttempt.submissionIdempotencyKey
       );
       submissionAttemptRef.current = completeSubmission();
-
-      resetForm();
-      setSubmissionSucceeded(true);
 
       setToast({
         message: "제보가 성공적으로 등록되었습니다!",
@@ -225,7 +242,6 @@ export function SightingForm() {
       } = await supabase.auth.getSession();
       let attempt = initialAttempt;
 
-      // 1-1. Presigned URL 요청
       if (!attempt.uploadIntent) {
         const presignRes = await fetch("/api/v1/uploads/presign", {
           method: "POST",
@@ -242,7 +258,6 @@ export function SightingForm() {
           }),
         });
 
-        // HTTP 상태 코드 체크
         if (!presignRes.ok) {
           const errorData = await presignRes.json();
           const errorMessage =
@@ -264,7 +279,6 @@ export function SightingForm() {
       const uploadIntent = attempt.uploadIntent;
       if (!uploadIntent) throw new Error("이미지 업로드에 실패했습니다.");
 
-      // 1-2. Storage로 직접 업로드 (PUT)
       if (!uploadIntent.uploaded) {
         const uploadRes = await fetch(uploadIntent.uploadUrl, {
           method: "PUT",
@@ -393,26 +407,44 @@ export function SightingForm() {
           onClose={() => setToast(null)}
         />
       )}
-      {submissionSucceeded ? (
+      {optimisticSent ? (
         <div
-          role="status"
-          aria-live="polite"
-          className="border-border-subtle bg-surface text-text-main mb-6 rounded-2xl border p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="sighting-sent-title"
+          className="fixed inset-0 z-[120] flex items-end justify-center bg-black/40 px-4 pb-[calc(var(--bottom-nav-height)+env(safe-area-inset-bottom)+1rem)] sm:items-center sm:pb-0"
         >
-          <p className="font-semibold">제보가 지도에 등록되었습니다.</p>
-          <Link
-            href="/map"
-            className="text-action-primary focus-visible:outline-action-primary mt-2 inline-flex min-h-11 min-w-11 items-center font-semibold underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2"
-          >
-            지도에서 확인
-          </Link>
+          <div className="border-border-subtle bg-surface w-full max-w-sm rounded-2xl border p-6 shadow-sm">
+            <Text
+              as="h2"
+              id="sighting-sent-title"
+              variant="title"
+              className="block text-lg"
+            >
+              제보가 전송되었습니다
+            </Text>
+            <Text variant="body" color="sub" className="mt-2 block">
+              등록 결과는 잠시 후 알려드릴게요. 그동안 다른 제보를 이어서 할 수
+              있어요.
+            </Text>
+            <Button
+              type="button"
+              variant="primary"
+              className="mt-5 w-full"
+              onClick={() => setOptimisticSent(false)}
+            >
+              확인
+            </Button>
+          </div>
         </div>
       ) : null}
       <form onSubmit={handleSubmit} className="space-y-8">
         <SightingEssentials
           photoUrl={formData.photoUrl}
           occurredAt={formData.time}
-          timeError={errors.time}
+          photoError={photoError}
+          locationError={locationError}
+          timeError={timeError}
           locationStatus={locationStatus}
           disabled={isSubmitting}
           onPhotoChange={handlePhotoChange}
@@ -431,12 +463,6 @@ export function SightingForm() {
             setIsMapOpen(true);
           }}
         />
-
-        {showErrors && !formData.photo ? (
-          <p role="alert" className="text-error text-sm font-medium">
-            사진을 등록해주세요
-          </p>
-        ) : null}
 
         {isMapOpen && naverMapsClientId ? (
           <LocationPicker
