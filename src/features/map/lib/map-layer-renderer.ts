@@ -195,7 +195,7 @@ export function createMapLayerRenderer({
         width: 44px;
         height: 44px;
         background: white;
-        border: 2.5px solid #f59e0b;
+        border: 2.5px solid #B85C1B;
         border-radius: 12px;
         display: flex;
         align-items: center;
@@ -248,12 +248,19 @@ export function createMapLayerRenderer({
     onItemClick,
   }: RenderSightingsInput) => {
     const markers = items.map((item) => {
+      const presentation = getMapMarkerPresentation(
+        item.source_type,
+        item.type
+      );
       const marker = adapter.createMarker({
         position: toLatLng(item),
         map,
         icon: {
           content: createSightingContent(item, feedback, getImageUrl),
-          anchor: toPoint(22, 50),
+          anchor: toPoint(
+            22,
+            presentation.shape === "rounded-square" ? 44 : 50
+          ),
         },
         title: item.type === "point" ? item.note : `클러스터 (${item.count})`,
       });
@@ -276,7 +283,7 @@ export function createMapLayerRenderer({
         )
         .map((point) => ({
           type: "point" as const,
-          source_type: "sighting" as const,
+          source_type: point.source_type,
           id: point.sighting_id,
           lat: point.lat,
           lng: point.lng,
@@ -293,12 +300,19 @@ export function createMapLayerRenderer({
         .map((item) => [normalizeId(item.id), { seen: false, claimed: true }])
     );
     const markers = items.map((item) => {
+      const presentation = getMapMarkerPresentation(
+        item.source_type,
+        item.type
+      );
       const marker = adapter.createMarker({
         position: toLatLng(item),
         map,
         icon: {
           content: createSightingContent(item, feedback, getImageUrl),
-          anchor: toPoint(22, 50),
+          anchor: toPoint(
+            22,
+            presentation.shape === "rounded-square" ? 44 : 50
+          ),
         },
         title: item.type === "point" ? item.note : "제보",
       });

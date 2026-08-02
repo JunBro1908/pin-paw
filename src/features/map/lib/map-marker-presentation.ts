@@ -2,6 +2,10 @@ import type { MapSourceType } from "../types/naver";
 
 export type MapMarkerKind = "point" | "cluster";
 
+export function normalizeMapSourceType(value: unknown): MapSourceType {
+  return value === "shelter" ? "shelter" : "sighting";
+}
+
 export function getMapMarkerPresentation(
   sourceType: MapSourceType,
   kind: MapMarkerKind

@@ -34,6 +34,7 @@ import {
   createMapLayerRenderer,
   type MapLayerRenderer,
 } from "../lib/map-layer-renderer";
+import { normalizeMapSourceType } from "../lib/map-marker-presentation";
 import { useMapData } from "../hooks/use-map-data";
 
 interface NaverMapProps {
@@ -547,7 +548,7 @@ export function NaverMap({
             lat: initialCenter.lat,
             lng: initialCenter.lng,
             type: "point",
-            source_type: "sighting",
+            source_type: normalizeMapSourceType(d.source_type),
             photo_keys: d.photo_keys as string[] | undefined,
             occurred_at: d.occurred_at as string | undefined,
             author_type: d.author_type as "anon" | "user" | undefined,

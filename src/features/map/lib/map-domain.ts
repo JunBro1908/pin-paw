@@ -1,4 +1,4 @@
-import type { MapItem } from "../types/naver";
+import type { MapItem, MapSourceType } from "../types/naver";
 
 export type SightingFeedbackMap = Record<
   string,
@@ -85,6 +85,7 @@ export interface BookmarkPath {
   lost_at: string;
   points: {
     sighting_id: string;
+    source_type: MapSourceType;
     lat: number;
     lng: number;
     occurred_at: string;

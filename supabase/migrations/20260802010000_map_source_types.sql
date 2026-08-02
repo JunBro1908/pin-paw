@@ -361,6 +361,165 @@ grant execute on function public.get_block_filtered_sighting_markers(
   integer
 ) to authenticated;
 
+-- Preserve the latest owner-only precise bookmark trail contract while
+-- carrying source identity into locally rendered bookmark markers.
+create or replace function public.get_my_lost_post_paths()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = pg_catalog, public, extensions
+as $$
+  with my_lost as (
+    select
+      lp.id as lost_post_id,
+      st_y(lp.lost_location::geometry) as lost_lat,
+      st_x(lp.lost_location::geometry) as lost_lng,
+      lp.lost_at
+    from public.lost_posts lp
+    where lp.owner_id = auth.uid()
+      and lp.archived_at is null
+      and lp.hidden_at is null
+  ),
+  claimed_after_lost as (
+    select
+      claim.lost_post_id,
+      s.id as sighting_id,
+      st_y(s.location::geometry) as lat,
+      st_x(s.location::geometry) as lng,
+      s.occurred_at,
+      s.photo_keys,
+      s.note,
+      case
+        when exists (
+          select 1
+          from public.shelter_animal_imports sai
+          where sai.sighting_id = s.id
+        ) then 'shelter'
+        else 'sighting'
+      end as source_type
+    from public.lost_post_sighting_claims claim
+    join public.sightings s on s.id = claim.sighting_id
+    join my_lost mine on mine.lost_post_id = claim.lost_post_id
+    where s.occurred_at >= mine.lost_at
+      and s.location is not null
+      and s.archived_at is null
+      and s.hidden_at is null
+      and (
+        s.user_id is null
+        or not public.users_are_blocked(auth.uid(), s.user_id)
+      )
+  ),
+  points_ordered as (
+    select
+      lost_post_id,
+      jsonb_agg(
+        jsonb_build_object(
+          'sighting_id', sighting_id,
+          'lat', lat,
+          'lng', lng,
+          'occurred_at', occurred_at,
+          'photo_keys', photo_keys,
+          'note', note,
+          'source_type', source_type,
+          'location_precision', 'precise'
+        )
+        order by occurred_at
+      ) as points
+    from claimed_after_lost
+    group by lost_post_id
+  )
+  select coalesce(
+    (
+      select jsonb_agg(
+        jsonb_build_object(
+          'lost_post_id', mine.lost_post_id,
+          'lost_lat', mine.lost_lat,
+          'lost_lng', mine.lost_lng,
+          'lost_at', mine.lost_at,
+          'points', coalesce(points.points, '[]'::jsonb)
+        )
+        order by mine.lost_at desc
+      )
+      from my_lost mine
+      left join points_ordered points
+        on points.lost_post_id = mine.lost_post_id
+    ),
+    '[]'::jsonb
+  );
+$$;
+
+revoke all on function public.get_my_lost_post_paths()
+  from public, anon, authenticated, service_role;
+grant execute on function public.get_my_lost_post_paths()
+  to authenticated;
+
+-- Preserve the latest authenticated precise-detail boundary. Source identity
+-- is derived inside the definer function; the locked mapping table remains
+-- unavailable to browser roles.
+create or replace function public.get_block_filtered_sighting_detail(
+  p_sighting_id uuid
+)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = pg_catalog, public, extensions
+as $$
+  with visible_sighting as (
+    select
+      s.id,
+      s.photo_keys,
+      s.occurred_at,
+      s.author_type,
+      s.trait_color,
+      s.trait_size,
+      s.trait_species,
+      s.note,
+      s.location,
+      case
+        when exists (
+          select 1
+          from public.shelter_animal_imports sai
+          where sai.sighting_id = s.id
+        ) then 'shelter'
+        else 'sighting'
+      end as source_type
+    from public.sightings s
+    where auth.uid() is not null
+      and s.id = p_sighting_id
+      and s.archived_at is null
+      and s.hidden_at is null
+      and s.location is not null
+      and (
+        s.user_id is null
+        or not public.users_are_blocked(auth.uid(), s.user_id)
+      )
+  )
+  select jsonb_strip_nulls(
+    jsonb_build_object(
+      'id', s.id,
+      'photo_keys', s.photo_keys,
+      'occurred_at', s.occurred_at,
+      'author_type', s.author_type,
+      'trait_color', s.trait_color,
+      'trait_size', s.trait_size,
+      'trait_species', s.trait_species,
+      'note', s.note,
+      'lat', st_y(s.location::geometry),
+      'lng', st_x(s.location::geometry),
+      'source_type', source_type,
+      'location_precision', 'precise'
+    )
+  )
+  from visible_sighting s;
+$$;
+
+revoke all on function public.get_block_filtered_sighting_detail(uuid)
+  from public, anon, authenticated, service_role;
+grant execute on function public.get_block_filtered_sighting_detail(uuid)
+  to authenticated;
+
 alter table public.shelter_animal_imports enable row level security;
 revoke all on table public.shelter_animal_imports
   from public, anon, authenticated;

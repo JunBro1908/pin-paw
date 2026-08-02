@@ -111,6 +111,7 @@ const path = {
   points: [
     {
       sighting_id: "sighting-1",
+      source_type: "shelter",
       lat: 0,
       lng: 4,
       occurred_at: "2026-07-25T01:00:00.000Z",
@@ -306,6 +307,7 @@ test("keeps source identity outside feedback state and exposes accessible marker
     /border: 2\.5px solid #28736F/
   );
   assert.match(fake.markers[2].options.icon.content, /border-radius: 12px/);
+  assert.deepEqual(fake.markers[2].options.icon.anchor, { x: 22, y: 44 });
   assert.match(
     fake.markers[2].options.icon.content,
     /box-shadow: inset 0 0 0 3px #6b7280/
@@ -356,12 +358,13 @@ test("renders bookmark sightings and lost posts in independent groups", () => {
   assert.equal(fake.markerGroups.get("lost-posts").length, 1);
   assert.match(
     fake.markers[0].options.icon.content,
-    /border: 2\.5px solid #087A3E/
+    /border: 2\.5px solid #28736F/
   );
   assert.match(
     fake.markers[0].options.icon.content,
     /box-shadow: inset 0 0 0 3px #22c55e/
   );
-  assert.match(fake.markers[1].options.icon.content, /#f59e0b/);
+  assert.deepEqual(fake.markers[0].options.icon.anchor, { x: 22, y: 44 });
+  assert.match(fake.markers[1].options.icon.content, /#B85C1B/);
   assert.deepEqual(fake.markers[1].options.icon.anchor, { x: 22, y: 44 });
 });

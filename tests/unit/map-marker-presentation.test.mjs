@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { getMapMarkerPresentation } from "../../src/features/map/lib/map-marker-presentation.ts";
+import {
+  getMapMarkerPresentation,
+  normalizeMapSourceType,
+} from "../../src/features/map/lib/map-marker-presentation.ts";
 
 test("uses stable labels, colors, and shapes for sighting and shelter markers", () => {
   assert.deepEqual(getMapMarkerPresentation("sighting", "point"), {
@@ -24,4 +27,11 @@ test("uses stable labels, colors, and shapes for sighting and shelter markers", 
     color: "#28736F",
     shape: "cluster",
   });
+});
+
+test("accepts only the shelter detail source and falls back safely", () => {
+  assert.equal(normalizeMapSourceType("shelter"), "shelter");
+  assert.equal(normalizeMapSourceType("sighting"), "sighting");
+  assert.equal(normalizeMapSourceType("unknown"), "sighting");
+  assert.equal(normalizeMapSourceType(null), "sighting");
 });
