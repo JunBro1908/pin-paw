@@ -91,3 +91,10 @@ export function formatSeoulMonthDay(
     day: "numeric",
   });
 }
+
+/** 표시용: 「8월 2일」 또는 필요 시 날짜만 (공유 티저) */
+export function formatSeoulLostDateLabel(
+  value: string | Date | null | undefined
+): string {
+  return formatSeoulMonthDay(value);
+}

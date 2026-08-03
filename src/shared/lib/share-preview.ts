@@ -152,12 +152,17 @@ function formatShareTraitSize(value: string | null | undefined): string | null {
 }
 
 export function buildOpenGraphDescription(
-  preview: SafeLostPostSharePreview
+  preview: SafeLostPostSharePreview,
+  options?: { regionLabel?: string | null; lostDateLabel?: string | null }
 ): string {
   const traits = buildShareTraitLabels(preview).join(" · ");
   const name = preview.petName ?? "강아지";
-  const areaHint = preview.approximateArea
-    ? "근처에서 찾고 있습니다."
-    : "찾고 있습니다.";
-  return [`${name} 실종 제보`, traits, areaHint].filter(Boolean).join(" · ");
+  const datePart = options?.lostDateLabel?.trim() || null;
+  const regionPart = options?.regionLabel?.trim() || null;
+  const areaHint =
+    regionPart ||
+    (preview.approximateArea ? "근처에서 찾고 있습니다." : "찾고 있습니다.");
+  return [`${name} 실종 제보`, datePart, regionPart ?? areaHint, traits]
+    .filter(Boolean)
+    .join(" · ");
 }

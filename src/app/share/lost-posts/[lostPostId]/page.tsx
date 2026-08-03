@@ -8,6 +8,8 @@ import {
   buildOpenGraphDescription,
   buildShareTraitLabels,
 } from "@/shared/lib/share-preview";
+import { resolveApproxRegionLabel } from "@/shared/lib/approx-region-label";
+import { formatSeoulLostDateLabel } from "@/shared/lib/date";
 import { isValidUuid } from "@/shared/lib/api-input";
 import { parseAppOrigin } from "@/shared/lib/app-origin";
 import { Text } from "@/shared/ui/Text";
@@ -120,7 +122,17 @@ export async function generateMetadata({
   }
 
   const title = `${preview.petName ?? "강아지"} · PinPaw`;
-  const description = buildOpenGraphDescription(preview);
+  const lostDateLabel = formatSeoulLostDateLabel(preview.lostAt);
+  const regionLabel = preview.approximateArea
+    ? await resolveApproxRegionLabel(
+        preview.approximateArea.lat,
+        preview.approximateArea.lng
+      )
+    : null;
+  const description = buildOpenGraphDescription(preview, {
+    lostDateLabel,
+    regionLabel,
+  });
   const image = coverPublicUrl(preview.coverPhotoKey);
   const origin = appOrigin();
   const shareUrl = absoluteUrl(preview.sharePath);
@@ -152,6 +164,13 @@ export default async function ShareLostPostPage({ params }: PageProps) {
   const traits = buildShareTraitLabels(preview);
   const coverUrl = coverPublicUrl(preview.coverPhotoKey);
   const petName = preview.petName ?? "강아지";
+  const lostDateLabel = formatSeoulLostDateLabel(preview.lostAt);
+  const regionLabel = preview.approximateArea
+    ? await resolveApproxRegionLabel(
+        preview.approximateArea.lat,
+        preview.approximateArea.lng
+      )
+    : null;
 
   return (
     <Container className="flex min-h-[100dvh] flex-col gap-6 py-10">
@@ -186,6 +205,18 @@ export default async function ShareLostPostPage({ params }: PageProps) {
         <Text variant="title" className="block">
           {petName}를 찾고 있습니다
         </Text>
+        <div className="mt-3 space-y-1.5">
+          {lostDateLabel ? (
+            <Text variant="body" color="sub" className="block text-sm">
+              유실 날짜 : {lostDateLabel}
+            </Text>
+          ) : null}
+          {regionLabel ? (
+            <Text variant="body" color="sub" className="block text-sm">
+              유실 지역 : {regionLabel}
+            </Text>
+          ) : null}
+        </div>
         {traits.length > 0 ? (
           <ul className="mt-3 flex flex-wrap gap-1.5">
             {traits.map((label) => (
