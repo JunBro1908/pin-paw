@@ -52,7 +52,22 @@ $$ language plpgsql;
 create table if not exists public.users (
   id uuid primary key references auth.users(id) on delete cascade,
   nickname text,
-  created_at timestamptz not null default now()
+  -- Curated paw avatar tone key; see paw_color_key_for_user / paw-avatar-color.ts
+  paw_color_key text,
+  created_at timestamptz not null default now(),
+  constraint users_paw_color_key_check check (
+    paw_color_key is null
+    or paw_color_key in (
+      'pine',
+      'honey',
+      'sky',
+      'coral',
+      'sage',
+      'teal',
+      'rose',
+      'slate'
+    )
+  )
 );
 
 -- -----------------------------------------------------------------------------

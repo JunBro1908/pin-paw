@@ -4,6 +4,7 @@ import {
   getVerifiedUser,
 } from "@/shared/supabase/server";
 import { getSafeOAuthRedirectUrl } from "@/shared/lib/app-origin";
+import { resolvePawColorKey } from "@/shared/lib/paw-avatar-color";
 
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
@@ -49,6 +50,22 @@ export async function GET(request: Request) {
   if (!verified.user) {
     await supabase.auth.signOut();
     return homeWithAuth("denied");
+  }
+
+  // Persist stable paw color on first successful OAuth (idempotent).
+  const assignedKey = resolvePawColorKey(
+    verified.user.id,
+    verified.user.user_metadata?.paw_color_key
+  );
+  if (verified.user.user_metadata?.paw_color_key !== assignedKey) {
+    const { error: metadataError } = await supabase.auth.updateUser({
+      data: { paw_color_key: assignedKey },
+    });
+    if (metadataError) {
+      console.warn("[auth/callback] paw_color_key persist failed", {
+        message: metadataError.message,
+      });
+    }
   }
 
   return NextResponse.redirect(redirectUrl);

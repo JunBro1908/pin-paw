@@ -104,6 +104,7 @@ test("login prompt states the purpose and links policies", async () => {
 test("my activity leads with user profile before case carousel", async () => {
   const page = await readFile("src/app/(tabs)/my/page.tsx", "utf8");
   assert.match(page, /<AccountSurface/);
+  assert.match(page, /<PawAvatar/);
   assert.match(page, /<LostCaseCarousel/);
   assert.ok(
     page.indexOf("<AccountSurface") < page.indexOf("<LostCaseCarousel"),

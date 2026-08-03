@@ -15,6 +15,7 @@ import { useMyLostPosts } from "@/features/lost-posts/hooks/useMyLostPosts";
 import type { LostPostItem } from "@/features/lost-posts/model/types";
 import { cn } from "@/shared/lib/cn";
 import { Icon } from "@/shared/ui/Icon";
+import { PawAvatar } from "@/shared/ui/PawAvatar";
 import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
 import { MySightingList } from "@/features/sightings/components/MySightingList";
 import { useMySightings } from "@/features/sightings/hooks/useMySightings";
@@ -187,15 +188,15 @@ function AccountSurface({
     "사용자";
   const displayEmail = user?.email ?? "";
 
+  const pawColorKey =
+    typeof user?.user_metadata?.paw_color_key === "string"
+      ? user.user_metadata.paw_color_key
+      : undefined;
+
   return (
     <div className="border-border-subtle bg-surface mb-6 rounded-2xl border p-5 shadow-sm">
       <div className="flex items-center gap-4">
-        <div
-          className="bg-primary-soft text-action-primary flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full"
-          aria-hidden
-        >
-          <Icon name="paw" size={28} className="shrink-0" />
-        </div>
+        <PawAvatar userId={user?.id} colorKey={pawColorKey} />
         <div className="min-w-0 flex-1">
           <Text variant="body" color="main" className="font-semibold">
             {displayName}님
