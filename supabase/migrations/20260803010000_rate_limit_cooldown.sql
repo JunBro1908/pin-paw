@@ -1,5 +1,5 @@
--- Sliding cooldown counter for short burst limits (e.g. "10초 쿨다운").
--- Fixed-window buckets can allow 2 requests within <10s wall-clock time at
+-- Sliding cooldown counter for short burst limits (e.g. "15초 쿨다운").
+-- Fixed-window buckets can allow 2 requests within <cooldown wall-clock time at
 -- window boundaries; cooldown enforces min spacing from the last allow.
 
 create table if not exists public.rate_limit_cooldowns (

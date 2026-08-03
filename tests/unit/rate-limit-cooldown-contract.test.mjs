@@ -63,7 +63,7 @@ test("cooldown allows only after full 10s from last allow", () => {
   );
 });
 
-test("sighting 10s preset uses cooldown RPC wiring", async () => {
+test("sighting 15s preset uses cooldown RPC wiring", async () => {
   const migration = await readFile(cooldownMigration, "utf8");
   const hardenMigration = await readFile(
     new URL(
@@ -91,8 +91,9 @@ test("sighting 10s preset uses cooldown RPC wiring", async () => {
   assert.match(source, /\.rpc\(\s*"consume_rate_limit_cooldown"/);
   assert.match(
     source,
-    /windowMs:\s*10\s*\*\s*1000[\s\S]*strategy:\s*"cooldown"/
+    /windowMs:\s*15\s*\*\s*1000[\s\S]*strategy:\s*"cooldown"/
   );
+  assert.match(source, /\(15초 쿨다운\)/);
 });
 
 test("cooldown missing RPC fails closed instead of fixed-window fallback", async () => {
@@ -105,7 +106,7 @@ test("cooldown missing RPC fails closed instead of fixed-window fallback", async
   assert.doesNotMatch(
     afterCooldown,
     /consumeFixedWindow/,
-    "10s cooldown must not fall back to boundary-prone fixed windows"
+    "short cooldown must not fall back to boundary-prone fixed windows"
   );
 });
 

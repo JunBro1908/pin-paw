@@ -11,7 +11,7 @@ export interface RateLimitConfig {
   priority: number; // 우선순위 (낮을수록 높은 우선순위)
   /**
    * fixed_window: Unix epoch 정렬 버킷 (1h/24h 한도)
-   * cooldown: 마지막 허용 시각 기준 최소 간격 (10초 쿨다운)
+   * cooldown: 마지막 허용 시각 기준 최소 간격 (15초 쿨다운)
    */
   strategy?: "fixed_window" | "cooldown";
 }
@@ -103,7 +103,7 @@ async function consumeLimit(
     p_cooldown_seconds: windowSeconds,
   });
 
-  // 짧은 cooldown을 fixed-window로 폴백하면 epoch 경계에서 10초 안 2회가 다시 통과한다.
+  // 짧은 cooldown을 fixed-window로 폴백하면 epoch 경계에서 쿨다운 안 2회가 다시 통과한다.
   // RPC 미배포/스키마 캐시 미갱신 시에는 fail-closed (unavailable)로 막는다.
   if (isMissingRpcError(error)) {
     return {
@@ -198,11 +198,11 @@ export const RateLimitPresets = {
       strategy: "fixed_window",
     },
     {
-      windowMs: 10 * 1000, // 10초
+      windowMs: 15 * 1000, // 15초
       maxRequests: 1,
-      message: "잠시 후 다시 시도해주세요. (10초 쿨다운)",
+      message: "잠시 후 다시 시도해주세요. (15초 쿨다운)",
       priority: 3, // 최하위
-      // fixed-window 경계에서는 벽시계 10초 안에 2회가 통과할 수 있어 cooldown 사용
+      // fixed-window 경계에서는 벽시계 15초 안에 2회가 통과할 수 있어 cooldown 사용
       strategy: "cooldown",
     },
   ] as RateLimitConfig[],
