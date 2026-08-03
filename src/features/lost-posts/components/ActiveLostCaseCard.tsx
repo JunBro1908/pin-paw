@@ -162,11 +162,17 @@ export function ActiveLostCaseCard({
               ))}
             </ul>
           ) : null}
-          {note ? (
-            <Text variant="caption" color="caption" className="mt-2 block">
-              특이사항 : {note}
-            </Text>
-          ) : null}
+          <Text
+            variant="caption"
+            color="caption"
+            className={cn(
+              "mt-2 block min-h-[2.5rem] line-clamp-2",
+              !note && "invisible"
+            )}
+            aria-hidden={!note}
+          >
+            {note ? `특이사항 : ${note}` : "\u00A0"}
+          </Text>
         </div>
         {onPrimaryAction ? (
           <Button
