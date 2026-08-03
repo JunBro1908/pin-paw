@@ -5,9 +5,9 @@ import Image from "next/image";
 import { cn } from "@/shared/lib/cn";
 import { Icon } from "@/shared/ui/Icon";
 import { Text } from "@/shared/ui/Text";
+import { useSeoulDatetimeLocalMax } from "@/shared/hooks/useSeoulDatetimeLocalMax";
 import {
   formatSightingLocationStatus,
-  toLocalDateTimeInputValue,
   type SightingLocationStatus,
 } from "../lib/sighting-form-presentation";
 
@@ -68,6 +68,7 @@ export function SightingEssentials({
   onOccurredAtChange,
   onOpenLocationPicker,
 }: SightingEssentialsProps) {
+  const maxOccurredAt = useSeoulDatetimeLocalMax();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -198,7 +199,7 @@ export function SightingEssentials({
           type="datetime-local"
           name="time"
           value={occurredAt}
-          max={toLocalDateTimeInputValue(new Date())}
+          max={maxOccurredAt}
           required
           aria-invalid={Boolean(timeError)}
           aria-describedby={timeError ? "sighting-time-error" : undefined}

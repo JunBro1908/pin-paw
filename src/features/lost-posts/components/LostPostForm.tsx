@@ -7,6 +7,7 @@ import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { cn } from "@/shared/lib/cn";
 import { parseSeoulDateTimeLocal, toLocalDatetimeLocalString } from "@/shared/lib/date";
+import { useSeoulDatetimeLocalMax } from "@/shared/hooks/useSeoulDatetimeLocalMax";
 import { Toast } from "@/shared/ui/Toast";
 import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
@@ -58,6 +59,7 @@ const getInitialFormData = (): LostPostFormData => ({
 export function LostPostForm() {
   const router = useRouter();
   const { session } = useAuth();
+  const maxLostAt = useSeoulDatetimeLocalMax();
   const [formData, setFormData] =
     useState<LostPostFormData>(getInitialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -419,7 +421,7 @@ export function LostPostForm() {
             type="datetime-local"
             name="lostAt"
             value={formData.lostAt}
-            max={toLocalDatetimeLocalString()}
+            max={maxLostAt}
             onChange={handleChange}
             className="border-border-subtle focus:border-primary focus:ring-primary/20 min-h-12 w-full appearance-none rounded-xl border bg-white px-4 py-3 text-base leading-normal outline-none [color-scheme:light] focus:ring-2 [&::-webkit-calendar-picker-indicator]:h-5 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-datetime-edit]:m-0 [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0"
           />
