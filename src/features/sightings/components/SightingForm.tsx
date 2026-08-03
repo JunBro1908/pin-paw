@@ -204,8 +204,9 @@ export function SightingForm() {
       note: formData.description?.trim() || null,
     };
 
-    // 체감 대기 축소: 1~2초 전송 연출 후 「전송되었습니다」를 먼저 보여 주고,
-    // 실제 등록 API는 백그라운드에서 이어간다. 실패(rate limit 등)만 toast로 구분한다.
+    // 최소 전송 연출(hold)과 실제 등록을 맞춘다.
+    // rate limit(429) 등 실패를 성공 화면보다 먼저 확정해야 익명 연속 제보가
+    // 「전송되었습니다」로 오인되지 않는다.
     setIsSubmitting(true);
     setSubmitPhase("sending");
     setSendProgress(12);
@@ -215,52 +216,56 @@ export function SightingForm() {
       setSendProgress((prev) => Math.min(prev + 8 + Math.random() * 12, 90));
     }, 160);
     const holdMs = 1600;
+    const holdStartedAt = Date.now();
 
-    const networkWork = (async () => {
-      try {
-        const payloadFingerprint = JSON.stringify({
-          file: await fingerprintUploadFile(photo),
-          domainPayload,
-        });
-        const attempt = prepareSubmission(
-          submissionAttemptRef.current,
-          payloadFingerprint,
-          () => crypto.randomUUID()
-        );
-        submissionAttemptRef.current = attempt;
+    let registered = false;
+    try {
+      const payloadFingerprint = JSON.stringify({
+        file: await fingerprintUploadFile(photo),
+        domainPayload,
+      });
+      const attempt = prepareSubmission(
+        submissionAttemptRef.current,
+        payloadFingerprint,
+        () => crypto.randomUUID()
+      );
+      submissionAttemptRef.current = attempt;
 
-        const fileKey = await uploadPhoto(photo, attempt);
-        const currentAttempt = submissionAttemptRef.current ?? attempt;
+      const fileKey = await uploadPhoto(photo, attempt);
+      const currentAttempt = submissionAttemptRef.current ?? attempt;
 
-        await registerSighting(
-          fileKey,
-          domainPayload,
-          currentAttempt.submissionIdempotencyKey
-        );
-        submissionAttemptRef.current = completeSubmission();
-        runBestEffort(async () => {
-          const { invalidateMySightingsCache } =
-            await import("@/features/sightings/hooks/useMySightings");
-          invalidateMySightingsCache();
-        });
-      } catch (err) {
-        setSubmitPhase("idle");
-        setSendProgress(8);
-        setToast({
-          message: err instanceof Error ? err.message : "오류가 발생했습니다.",
-          type: "error",
-        });
-      } finally {
-        setIsSubmitting(false);
+      await registerSighting(
+        fileKey,
+        domainPayload,
+        currentAttempt.submissionIdempotencyKey
+      );
+      submissionAttemptRef.current = completeSubmission();
+      registered = true;
+      runBestEffort(async () => {
+        const { invalidateMySightingsCache } =
+          await import("@/features/sightings/hooks/useMySightings");
+        invalidateMySightingsCache();
+      });
+    } catch (err) {
+      setSubmitPhase("idle");
+      setSendProgress(8);
+      setToast({
+        message: err instanceof Error ? err.message : "오류가 발생했습니다.",
+        type: "error",
+      });
+    } finally {
+      window.clearInterval(progressTimer);
+      setIsSubmitting(false);
+    }
+
+    if (registered) {
+      const remainingMs = holdMs - (Date.now() - holdStartedAt);
+      if (remainingMs > 0) {
+        await new Promise((resolve) => window.setTimeout(resolve, remainingMs));
       }
-    })();
-
-    await new Promise((resolve) => window.setTimeout(resolve, holdMs));
-    window.clearInterval(progressTimer);
-    setSendProgress(100);
-    // hold 중 실패로 idle이 됐으면 성공 화면으로 올리지 않는다.
-    setSubmitPhase((prev) => (prev === "sending" ? "success" : prev));
-    void networkWork;
+      setSendProgress(100);
+      setSubmitPhase("success");
+    }
   };
 
   /**

@@ -113,24 +113,27 @@ test("sighting controls only use defined warm and surface utilities", async () =
   assert.doesNotMatch(`${essentials}\n${optional}`, /accent-warm-soft/);
 });
 
-test("optimistic sent screen precedes background registration work", async () => {
+test("confirmed sent screen waits for registration before success", async () => {
   const form = await readFile(
     "src/features/sightings/components/SightingForm.tsx",
     "utf8"
   );
   const sending = form.indexOf('setSubmitPhase("sending")');
-  const hold = form.indexOf("holdMs");
-  const successFlip = form.indexOf(
-    'prev === "sending" ? "success" : prev',
-    hold
-  );
   const registration = form.indexOf("await registerSighting(");
+  const registeredFlag = form.indexOf("registered = true", registration);
+  const successFlip = form.indexOf('setSubmitPhase("success")', registeredFlag);
   const invalidate = form.indexOf("runBestEffort(async () =>", registration);
 
   assert.ok(sending >= 0, "sending phase should start on submit");
-  assert.ok(hold > sending, "fake hold should follow sending phase");
-  assert.ok(successFlip > hold, "success flip follows fake hold");
-  assert.ok(registration >= 0, "domain registration should be present");
+  assert.ok(registration > sending, "domain registration follows sending");
+  assert.ok(
+    registeredFlag > registration,
+    "success is gated on registration completing"
+  );
+  assert.ok(
+    successFlip > registeredFlag,
+    "success phase must follow confirmed registration"
+  );
   assert.ok(
     invalidate > registration,
     "cache invalidation starts after registration"
@@ -144,6 +147,11 @@ test("optimistic sent screen precedes background registration work", async () =>
     /await import\("@\/features\/sightings\/hooks\/useMySightings"\)/
   );
   assert.doesNotMatch(invalidationBlock, /console\./);
+  assert.doesNotMatch(
+    form,
+    /prev === "sending" \? "success" : prev/,
+    "must not flip to success before registration finishes"
+  );
 });
 
 test("submit shows send progress then transmitted confirmation", async () => {
@@ -166,7 +174,9 @@ test("submit shows send progress then transmitted confirmation", async () => {
   assert.match(form, /name="send"/);
   assert.doesNotMatch(form, /name="check"/);
   assert.match(form, /setSubmitPhase\("sending"\)/);
-  assert.match(form, /prev === "sending" \? "success" : prev/);
+  assert.match(form, /registered = true/);
+  assert.match(form, /setSubmitPhase\("success"\)/);
+  assert.doesNotMatch(form, /prev === "sending" \? "success" : prev/);
   assert.match(form, /setSubmitPhase\("idle"\)/);
   assert.match(form, /type: "error"/);
   assert.doesNotMatch(form, /지도에서 확인|지도로 보러가기/);

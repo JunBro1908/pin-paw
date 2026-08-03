@@ -103,15 +103,14 @@ async function consumeLimit(
     p_cooldown_seconds: windowSeconds,
   });
 
-  // 마이그레이션 전 배포 순서에서도 제보가 503으로 죽지 않도록 기존 fixed-window로 폴백
+  // 짧은 cooldown을 fixed-window로 폴백하면 epoch 경계에서 10초 안 2회가 다시 통과한다.
+  // RPC 미배포/스키마 캐시 미갱신 시에는 fail-closed (unavailable)로 막는다.
   if (isMissingRpcError(error)) {
-    return consumeFixedWindow(
-      supabase,
-      scope,
-      identifierHash,
-      limit,
-      windowSeconds
-    );
+    return {
+      allowed: false,
+      errorMessage: "요청 제한 상태를 확인할 수 없습니다.",
+      unavailable: true,
+    };
   }
 
   return toLimitResult(limit, data, error);
@@ -160,6 +159,7 @@ export async function checkRateLimitDimensions(
   userId: string | null,
   limits: RateLimitConfig[]
 ): Promise<RateLimitResult> {
+  // 익명: IP 해시만. 로그인: IP + user 이중 제한 (같은 limits 프리셋).
   const ipResult = await checkRateLimit(
     supabase,
     `${scope}:ip`,
