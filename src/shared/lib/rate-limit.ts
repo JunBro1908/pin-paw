@@ -9,6 +9,11 @@ export interface RateLimitConfig {
   maxRequests: number; // 최대 요청 수
   message: string; // 제한 초과 시 표시할 메시지
   priority: number; // 우선순위 (낮을수록 높은 우선순위)
+  /**
+   * fixed_window: Unix epoch 정렬 버킷 (1h/24h 한도)
+   * cooldown: 마지막 허용 시각 기준 최소 간격 (10초 쿨다운)
+   */
+  strategy?: "fixed_window" | "cooldown";
 }
 
 /**
@@ -20,6 +25,96 @@ export interface RateLimitResult {
   count?: number;
   retryAfterSeconds?: number;
   unavailable?: boolean;
+}
+
+function isMissingRpcError(error: { message?: string; code?: string } | null) {
+  if (!error) return false;
+  const message = error.message ?? "";
+  return (
+    error.code === "PGRST202" ||
+    error.code === "42883" ||
+    /could not find the function/i.test(message) ||
+    /function .* does not exist/i.test(message)
+  );
+}
+
+function toLimitResult(
+  limit: RateLimitConfig,
+  data: unknown,
+  error: { message?: string; code?: string } | null
+): RateLimitResult {
+  const row = Array.isArray(data) ? data[0] : data;
+  if (error || !row || typeof row.allowed !== "boolean") {
+    return {
+      allowed: false,
+      errorMessage: "요청 제한 상태를 확인할 수 없습니다.",
+      unavailable: true,
+    };
+  }
+  if (!row.allowed) {
+    return {
+      allowed: false,
+      errorMessage: limit.message,
+      count: Number(row.request_count),
+      retryAfterSeconds: Number(row.retry_after_seconds),
+    };
+  }
+  return { allowed: true };
+}
+
+async function consumeFixedWindow(
+  supabase: SupabaseClient,
+  scope: string,
+  identifierHash: string,
+  limit: RateLimitConfig,
+  windowSeconds: number
+): Promise<RateLimitResult> {
+  const { data, error } = await supabase.rpc("consume_rate_limit", {
+    p_scope: scope,
+    p_identifier_hash: identifierHash,
+    p_window_seconds: windowSeconds,
+    p_max_requests: limit.maxRequests,
+  });
+  return toLimitResult(limit, data, error);
+}
+
+async function consumeLimit(
+  supabase: SupabaseClient,
+  scope: string,
+  identifierHash: string,
+  limit: RateLimitConfig
+): Promise<RateLimitResult> {
+  const windowSeconds = Math.max(1, Math.floor(limit.windowMs / 1000));
+  const strategy = limit.strategy ?? "fixed_window";
+
+  if (strategy !== "cooldown") {
+    return consumeFixedWindow(
+      supabase,
+      scope,
+      identifierHash,
+      limit,
+      windowSeconds
+    );
+  }
+
+  const { data, error } = await supabase.rpc("consume_rate_limit_cooldown", {
+    p_scope: scope,
+    p_identifier_hash: identifierHash,
+    p_cooldown_seconds: windowSeconds,
+  });
+
+  // 마이그레이션 전 배포 순서에서도 제보가 503으로 죽지 않도록 기존 fixed-window로 폴백
+  if (isMissingRpcError(error)) {
+    return consumeFixedWindow(
+      supabase,
+      scope,
+      identifierHash,
+      limit,
+      windowSeconds
+    );
+  }
+
+  return toLimitResult(limit, data, error);
 }
 
 /**
@@ -43,29 +138,13 @@ export async function checkRateLimit(
   const identifierHash = userId ? sha256(`user:${userId}`) : ipHash;
 
   for (const limit of sortedLimits) {
-    const windowSeconds = Math.max(1, Math.floor(limit.windowMs / 1000));
-    const { data, error } = await supabase.rpc("consume_rate_limit", {
-      p_scope: scope,
-      p_identifier_hash: identifierHash,
-      p_window_seconds: windowSeconds,
-      p_max_requests: limit.maxRequests,
-    });
-    const row = Array.isArray(data) ? data[0] : data;
-    if (error || !row || typeof row.allowed !== "boolean") {
-      return {
-        allowed: false,
-        errorMessage: "요청 제한 상태를 확인할 수 없습니다.",
-        unavailable: true,
-      };
-    }
-    if (!row.allowed) {
-      return {
-        allowed: false,
-        errorMessage: limit.message,
-        count: Number(row.request_count),
-        retryAfterSeconds: Number(row.retry_after_seconds),
-      };
-    }
+    const result = await consumeLimit(
+      supabase,
+      scope,
+      identifierHash,
+      limit
+    );
+    if (!result.allowed) return result;
   }
 
   // 모든 제한 통과
@@ -108,6 +187,7 @@ export const RateLimitPresets = {
       message:
         "하루 동안 최대 30회까지 제보할 수 있습니다. 내일 다시 시도해주세요.",
       priority: 1, // 최우선
+      strategy: "fixed_window",
     },
     {
       windowMs: 60 * 60 * 1000, // 1시간
@@ -115,12 +195,15 @@ export const RateLimitPresets = {
       message:
         "1시간 동안 최대 10회까지 제보할 수 있습니다. 잠시 후 다시 시도해주세요.",
       priority: 2,
+      strategy: "fixed_window",
     },
     {
       windowMs: 10 * 1000, // 10초
       maxRequests: 1,
       message: "잠시 후 다시 시도해주세요. (10초 쿨다운)",
       priority: 3, // 최하위
+      // fixed-window 경계에서는 벽시계 10초 안에 2회가 통과할 수 있어 cooldown 사용
+      strategy: "cooldown",
     },
   ] as RateLimitConfig[],
   search: [

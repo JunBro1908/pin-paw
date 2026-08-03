@@ -55,6 +55,7 @@ test("application limiter uses the atomic RPC instead of count-then-record", asy
   const source = await read(implementationUrl);
 
   assert.match(source, /\.rpc\(\s*"consume_rate_limit"/);
+  assert.match(source, /\.rpc\(\s*"consume_rate_limit_cooldown"/);
   assert.doesNotMatch(source, /\.from\("idempotency_keys"\)/);
   assert.match(source, /`\$\{scope\}:ip`/);
   assert.match(source, /`\$\{scope\}:user`/);

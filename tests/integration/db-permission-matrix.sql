@@ -12,6 +12,7 @@ begin
     'public.recommendation_cache',
     'public.upload_intents',
     'public.rate_limit_buckets',
+    'public.rate_limit_cooldowns',
     'public.funnel_events',
     'public.shelter_animal_imports'
   ] loop
@@ -92,7 +93,8 @@ begin
     'public.claim_embedding_jobs(integer,integer)',
     'public.complete_embedding_job(uuid,uuid,jsonb)',
     'public.fail_embedding_job(uuid,uuid,text,boolean)',
-    'public.consume_rate_limit(text,text,integer,integer)'
+    'public.consume_rate_limit(text,text,integer,integer)',
+    'public.consume_rate_limit_cooldown(text,text,integer)'
   ] loop
     if not has_function_privilege('service_role', v_function, 'execute') then
       raise exception 'service_role is missing execute on %', v_function;
@@ -134,6 +136,7 @@ begin
         'idempotency_keys',
         'upload_intents',
         'rate_limit_buckets',
+        'rate_limit_cooldowns',
         'lost_post_status_history',
         'funnel_events'
       )
