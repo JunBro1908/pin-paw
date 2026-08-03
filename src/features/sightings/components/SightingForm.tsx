@@ -43,7 +43,10 @@ export function SightingForm() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [optimisticSent, setOptimisticSent] = useState(false);
+  const [submitPhase, setSubmitPhase] = useState<"idle" | "sending" | "success">(
+    "idle"
+  );
+  const [sendProgress, setSendProgress] = useState(8);
   const [showErrors, setShowErrors] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isLocationSet, setIsLocationSet] = useState(false);
@@ -55,9 +58,13 @@ export function SightingForm() {
   } | null>(null);
 
   const submissionAttemptRef = useRef<FormSubmissionAttempt | null>(null);
-  const closeConfirmation = () => setOptimisticSent(false);
+  const closeConfirmation = () => {
+    setSubmitPhase("idle");
+    setSendProgress(8);
+  };
+  const confirmationActive = submitPhase !== "idle";
   const { dialogRef, closeButtonRef } = useDialogFocus({
-    active: optimisticSent,
+    active: confirmationActive,
     onClose: closeConfirmation,
   });
   const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
@@ -197,50 +204,63 @@ export function SightingForm() {
       note: formData.description?.trim() || null,
     };
 
-    // Optimistic confirmation: show success panel immediately, finish network later.
+    // 체감 대기 축소: 1~2초 전송 연출 후 「전송되었습니다」를 먼저 보여 주고,
+    // 실제 등록 API는 백그라운드에서 이어간다. 실패(rate limit 등)만 toast로 구분한다.
     setIsSubmitting(true);
-    setOptimisticSent(true);
+    setSubmitPhase("sending");
+    setSendProgress(12);
     resetForm();
 
-    try {
-      const payloadFingerprint = JSON.stringify({
-        file: await fingerprintUploadFile(photo),
-        domainPayload,
-      });
-      const attempt = prepareSubmission(
-        submissionAttemptRef.current,
-        payloadFingerprint,
-        () => crypto.randomUUID()
-      );
-      submissionAttemptRef.current = attempt;
+    const progressTimer = window.setInterval(() => {
+      setSendProgress((prev) => Math.min(prev + 8 + Math.random() * 12, 90));
+    }, 160);
+    const holdMs = 1600;
 
-      const fileKey = await uploadPhoto(photo, attempt);
-      const currentAttempt = submissionAttemptRef.current ?? attempt;
+    const networkWork = (async () => {
+      try {
+        const payloadFingerprint = JSON.stringify({
+          file: await fingerprintUploadFile(photo),
+          domainPayload,
+        });
+        const attempt = prepareSubmission(
+          submissionAttemptRef.current,
+          payloadFingerprint,
+          () => crypto.randomUUID()
+        );
+        submissionAttemptRef.current = attempt;
 
-      await registerSighting(
-        fileKey,
-        domainPayload,
-        currentAttempt.submissionIdempotencyKey
-      );
-      submissionAttemptRef.current = completeSubmission();
+        const fileKey = await uploadPhoto(photo, attempt);
+        const currentAttempt = submissionAttemptRef.current ?? attempt;
 
-      setToast({
-        message: "제보가 성공적으로 등록되었습니다!",
-        type: "success",
-      });
-      runBestEffort(async () => {
-        const { invalidateMySightingsCache } =
-          await import("@/features/sightings/hooks/useMySightings");
-        invalidateMySightingsCache();
-      });
-    } catch (err) {
-      setToast({
-        message: err instanceof Error ? err.message : "오류가 발생했습니다.",
-        type: "error",
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
+        await registerSighting(
+          fileKey,
+          domainPayload,
+          currentAttempt.submissionIdempotencyKey
+        );
+        submissionAttemptRef.current = completeSubmission();
+        runBestEffort(async () => {
+          const { invalidateMySightingsCache } =
+            await import("@/features/sightings/hooks/useMySightings");
+          invalidateMySightingsCache();
+        });
+      } catch (err) {
+        setSubmitPhase("idle");
+        setSendProgress(8);
+        setToast({
+          message: err instanceof Error ? err.message : "오류가 발생했습니다.",
+          type: "error",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+    })();
+
+    await new Promise((resolve) => window.setTimeout(resolve, holdMs));
+    window.clearInterval(progressTimer);
+    setSendProgress(100);
+    // hold 중 실패로 idle이 됐으면 성공 화면으로 올리지 않는다.
+    setSubmitPhase((prev) => (prev === "sending" ? "success" : prev));
+    void networkWork;
   };
 
   /**
@@ -421,41 +441,76 @@ export function SightingForm() {
           onClose={() => setToast(null)}
         />
       )}
-      {optimisticSent ? (
+      {confirmationActive ? (
         <div
           ref={dialogRef as React.RefObject<HTMLDivElement>}
           role="dialog"
           aria-modal="true"
           aria-labelledby="sighting-sent-title"
-          className="fixed inset-0 z-[120] flex items-center justify-center bg-black/40 px-4"
+          className="bg-background-warm fixed inset-0 z-[120] flex flex-col px-5 pt-12 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
         >
-          <div className="border-border-subtle bg-surface flex h-[80vh] max-h-[80vh] w-full max-w-md flex-col rounded-3xl border px-6 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-8 shadow-sm">
-            <div className="flex flex-1 flex-col items-center justify-center text-center">
-              <div
-                className="bg-action-primary text-action-on-primary flex h-24 w-24 items-center justify-center rounded-full"
-                aria-hidden="true"
-              >
-                <Icon name="check" size={48} className="stroke-[2.4]" />
+          <div className="mx-auto flex w-full max-w-md flex-1 flex-col">
+            {submitPhase === "sending" ? (
+              <div className="flex flex-1 flex-col items-center justify-center text-center">
+                <div
+                  className="bg-primary-soft text-action-primary flex h-24 w-24 items-center justify-center rounded-full"
+                  aria-hidden="true"
+                >
+                  <Icon name="send" size={44} className="stroke-[2.2]" />
+                </div>
+                <Text
+                  as="h2"
+                  id="sighting-sent-title"
+                  variant="title"
+                  color="main"
+                  className="mt-8 block text-2xl leading-snug tracking-tight"
+                >
+                  제보를 전송하고 있어요
+                </Text>
+                <div
+                  className="bg-surface-soft mt-10 h-2 w-full overflow-hidden rounded-full"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-valuenow={Math.round(sendProgress)}
+                  aria-label="제보 전송 진행"
+                >
+                  <div
+                    className="bg-action-primary h-full rounded-full transition-[width] duration-200 ease-out"
+                    style={{ width: `${sendProgress}%` }}
+                  />
+                </div>
               </div>
-              <Text
-                as="h2"
-                id="sighting-sent-title"
-                variant="title"
-                color="main"
-                className="mt-8 block text-2xl leading-snug tracking-tight"
-              >
-                소중한 제보가 전송되었습니다
-              </Text>
-            </div>
-            <Button
-              ref={closeButtonRef}
-              type="button"
-              variant="primary"
-              className="min-h-12 w-full rounded-2xl text-base font-semibold"
-              onClick={closeConfirmation}
-            >
-              확인했어요
-            </Button>
+            ) : (
+              <>
+                <div className="flex flex-1 flex-col items-center justify-center text-center">
+                  <div
+                    className="bg-primary-soft text-action-primary flex h-24 w-24 items-center justify-center rounded-full"
+                    aria-hidden="true"
+                  >
+                    <Icon name="send" size={44} className="stroke-[2.2]" />
+                  </div>
+                  <Text
+                    as="h2"
+                    id="sighting-sent-title"
+                    variant="title"
+                    color="main"
+                    className="mt-8 block text-2xl leading-snug tracking-tight"
+                  >
+                    제보가 전송되었습니다
+                  </Text>
+                </div>
+                <Button
+                  ref={closeButtonRef}
+                  type="button"
+                  variant="primary"
+                  className="min-h-12 w-full rounded-2xl text-base font-semibold"
+                  onClick={closeConfirmation}
+                >
+                  확인했어요
+                </Button>
+              </>
+            )}
           </div>
         </div>
       ) : null}

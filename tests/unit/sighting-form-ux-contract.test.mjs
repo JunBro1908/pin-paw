@@ -113,28 +113,27 @@ test("sighting controls only use defined warm and surface utilities", async () =
   assert.doesNotMatch(`${essentials}\n${optional}`, /accent-warm-soft/);
 });
 
-test("domain success toast follows registration before best-effort cache invalidation", async () => {
+test("optimistic sent screen precedes background registration work", async () => {
   const form = await readFile(
     "src/features/sightings/components/SightingForm.tsx",
     "utf8"
   );
+  const sending = form.indexOf('setSubmitPhase("sending")');
+  const hold = form.indexOf("holdMs");
+  const successFlip = form.indexOf(
+    'prev === "sending" ? "success" : prev',
+    hold
+  );
   const registration = form.indexOf("await registerSighting(");
-  const clearAttempt = form.indexOf(
-    "submissionAttemptRef.current = completeSubmission()",
-    registration
-  );
-  const toastSuccess = form.indexOf(
-    'message: "제보가 성공적으로 등록되었습니다!"',
-    clearAttempt
-  );
-  const invalidate = form.indexOf("runBestEffort(async () =>", toastSuccess);
+  const invalidate = form.indexOf("runBestEffort(async () =>", registration);
 
+  assert.ok(sending >= 0, "sending phase should start on submit");
+  assert.ok(hold > sending, "fake hold should follow sending phase");
+  assert.ok(successFlip > hold, "success flip follows fake hold");
   assert.ok(registration >= 0, "domain registration should be present");
-  assert.ok(clearAttempt > registration, "attempt clears after registration");
-  assert.ok(toastSuccess > clearAttempt, "success toast after attempt clears");
   assert.ok(
-    invalidate > toastSuccess,
-    "cache invalidation starts after domain success toast"
+    invalidate > registration,
+    "cache invalidation starts after registration"
   );
   const invalidationBlock = form.slice(
     invalidate,
@@ -147,31 +146,33 @@ test("domain success toast follows registration before best-effort cache invalid
   assert.doesNotMatch(invalidationBlock, /console\./);
 });
 
-test("submit shows optimistic confirmation and defers result to toast", async () => {
+test("submit shows send progress then transmitted confirmation", async () => {
   const form = await readFile(
     "src/features/sightings/components/SightingForm.tsx",
     "utf8"
   );
 
-  assert.match(form, /optimisticSent/);
-  assert.match(form, /소중한 제보가 전송되었습니다/);
+  assert.match(form, /submitPhase/);
+  assert.match(form, /제보를 전송하고 있어요/);
+  assert.match(form, /role="progressbar"/);
+  assert.match(form, /제보가 전송되었습니다/);
+  assert.doesNotMatch(form, /소중한 제보가 전송되었습니다/);
   assert.match(form, /확인했어요/);
   assert.match(form, /useDialogFocus/);
   assert.match(form, /role="dialog"/);
   assert.match(form, /aria-modal="true"/);
-  assert.match(form, /h-\[80vh\]/);
-  assert.match(form, /max-h-\[80vh\]/);
-  assert.match(form, /name="check"/);
-  assert.match(form, /bg-action-primary/);
-  assert.match(form, /setOptimisticSent\(true\)/);
-  assert.ok(
-    form.indexOf("setOptimisticSent(true)") <
-      form.indexOf("await uploadPhoto("),
-    "optimistic confirmation should appear before network upload"
-  );
+  assert.match(form, /fixed inset-0/);
+  assert.match(form, /bg-background-warm/);
+  assert.match(form, /name="send"/);
+  assert.doesNotMatch(form, /name="check"/);
+  assert.match(form, /setSubmitPhase\("sending"\)/);
+  assert.match(form, /prev === "sending" \? "success" : prev/);
+  assert.match(form, /setSubmitPhase\("idle"\)/);
+  assert.match(form, /type: "error"/);
   assert.doesNotMatch(form, /지도에서 확인|지도로 보러가기/);
   assert.doesNotMatch(form, /이어서 제보하기/);
-  assert.doesNotMatch(form, /setTimeout/);
+  assert.doesNotMatch(form, /optimisticSent/);
+  assert.doesNotMatch(form, /h-\[80vh\]/);
   assert.doesNotMatch(form, /제보가 지도에 등록되었습니다/);
   assert.match(form, /사진을 등록해주세요/);
   assert.match(form, /photoError=\{photoError\}/);
