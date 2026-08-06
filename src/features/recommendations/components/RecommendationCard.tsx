@@ -7,7 +7,7 @@ import { Text } from "@/shared/ui/Text";
 import { Icon } from "@/shared/ui/Icon";
 import { createClient } from "@/shared/supabase/client";
 import { trackFunnelEvent } from "@/shared/lib/funnel-client";
-import type { RecommendationItem } from "../model/types";
+import { buildRecommendationMapHref } from "@/features/map/lib/map-deep-link-focus";
 
 const SIMILARITY_DISCLAIMER =
   "유사도와 근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을 보장하지 않습니다.";
@@ -110,10 +110,7 @@ export function RecommendationCard({
       })
     : "";
 
-  const mapHref =
-    item.lat != null && item.lng != null
-      ? `/map?lat=${item.lat}&lng=${item.lng}&sightingId=${item.sightingId}${lostPostId ? `&lostPostId=${lostPostId}` : ""}`
-      : `/map?sightingId=${item.sightingId}${lostPostId ? `&lostPostId=${lostPostId}` : ""}`;
+  const mapHref = buildRecommendationMapHref(item.sightingId, lostPostId);
 
   const handleRecordSeen = useCallback(() => {
     if (!accessToken) return;

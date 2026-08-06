@@ -34,8 +34,13 @@ function isValidCoordinate(
   return Number.isFinite(coordinate.lat) && Number.isFinite(coordinate.lng);
 }
 
-function normalizeId(id: string): string {
-  return String(id).toLowerCase().trim();
+export function buildRecommendationMapHref(
+  sightingId: string,
+  lostPostId?: string
+): string {
+  const params = new URLSearchParams({ sightingId });
+  if (lostPostId) params.set("lostPostId", lostPostId);
+  return `/map?${params.toString()}`;
 }
 
 function toMapSourceType(value: unknown): MapSourceType {

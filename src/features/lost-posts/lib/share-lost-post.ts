@@ -11,7 +11,7 @@ export function buildLostPostShareUrl(
 
 export function buildLostPostShareText(petName?: string | null): string {
   const name = petName?.trim() || "강아지";
-  return `${name}를 찾고 있습니다. PinPaw에 접속해서 함께해주세요.`;
+  return `${name}를 찾고 있습니다. PinPaw에 접속해서 도와주세요.`;
 }
 
 /**
@@ -23,16 +23,16 @@ export async function shareLostPost(
 ): Promise<ShareLostPostResult> {
   const shareUrl = buildLostPostShareUrl(lostPostId);
   const text = buildLostPostShareText(options.petName);
+  const sharePayload = `${text} ${shareUrl}`;
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
       await navigator.share({
         title: "PinPaw 작은 제보들이 만든 발자취",
-        text,
-        url: shareUrl,
+        text: sharePayload,
       });
       return { ok: true, method: "native" };
     }
-    await navigator.clipboard.writeText(`${text}\n${shareUrl}`);
+    await navigator.clipboard.writeText(sharePayload);
     return { ok: true, method: "clipboard" };
   } catch {
     return { ok: false };

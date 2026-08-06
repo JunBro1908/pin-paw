@@ -712,9 +712,11 @@ export function NaverMap({
     return () => cancelAnimationFrame(frameId);
   }, [initialFocusSightingId, itemsInView, panMapToDeepLinkCenter]);
 
-  // URL lat/lng만으로 먼저 들어온 경우 맵이 준비되면 provisional pan (정밀 좌표로 덮어쓸 수 있음)
+  // URL lat/lng만으로 먼저 들어온 경우 맵이 준비되면 provisional pan (정밀 좌표로 덮어쓸 수 있음).
+  // 추천 「지도에서 보기」는 sightingId만 전달하고 auth detail로 정밀 좌표를 받는다.
   useEffect(() => {
     if (
+      initialFocusSightingId ||
       !initialCenter ||
       !mapInstanceRef.current ||
       !window.naver?.maps ||
@@ -729,7 +731,7 @@ export function NaverMap({
     );
     mapInstanceRef.current.panTo(center);
     mapInstanceRef.current.setZoom(DEEP_LINK_FOCUS_ZOOM);
-  }, [initialCenter, isLoaded]);
+  }, [initialCenter, isLoaded, initialFocusSightingId]);
 
   // 폴백: lat/lng 없이 제보 ID만 있을 때 — 소유 제보면 me API로 중심 이동
   // (추천 딥링크는 위 auth detail effect가 담당)
