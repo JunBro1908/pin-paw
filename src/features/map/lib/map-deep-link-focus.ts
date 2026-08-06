@@ -21,11 +21,20 @@ export type SightingDetailPayload = {
 
 function asFiniteNumber(value: unknown): number | null {
   if (typeof value === "number" && Number.isFinite(value)) return value;
+
   if (typeof value === "string" && value.trim() !== "") {
     const parsed = Number(value);
     return Number.isFinite(parsed) ? parsed : null;
   }
+
   return null;
+}
+
+/**
+ * API·URL·지도 데이터에서 전달되는 ID의 대소문자와 주변 공백 차이를 제거한다.
+ */
+function normalizeId(value: string): string {
+  return value.trim().toLowerCase();
 }
 
 function isValidCoordinate(
@@ -38,8 +47,14 @@ export function buildRecommendationMapHref(
   sightingId: string,
   lostPostId?: string
 ): string {
-  const params = new URLSearchParams({ sightingId });
-  if (lostPostId) params.set("lostPostId", lostPostId);
+  const params = new URLSearchParams({
+    sightingId: normalizeId(sightingId),
+  });
+
+  if (lostPostId) {
+    params.set("lostPostId", normalizeId(lostPostId));
+  }
+
   return `/map?${params.toString()}`;
 }
 
@@ -57,11 +72,22 @@ export function resolveDeepLinkCenter(
 ): DeepLinkCoordinate | null {
   const detailLat = asFiniteNumber(detail?.lat);
   const detailLng = asFiniteNumber(detail?.lng);
+
   if (detailLat != null && detailLng != null) {
-    const precise = { lat: detailLat, lng: detailLng };
-    if (isValidCoordinate(precise)) return precise;
+    const precise = {
+      lat: detailLat,
+      lng: detailLng,
+    };
+
+    if (isValidCoordinate(precise)) {
+      return precise;
+    }
   }
-  if (urlCenter && isValidCoordinate(urlCenter)) return urlCenter;
+
+  if (urlCenter && isValidCoordinate(urlCenter)) {
+    return urlCenter;
+  }
+
   return null;
 }
 
@@ -70,8 +96,11 @@ export function buildFocusedSightingFromDetail(
   detail: SightingDetailPayload,
   center: DeepLinkCoordinate
 ): ClusterPoint | null {
-  const id = typeof detail.id === "string" ? detail.id.trim() : "";
-  if (!id || !isValidCoordinate(center)) return null;
+  const id = typeof detail.id === "string" ? normalizeId(detail.id) : "";
+
+  if (!id || !isValidCoordinate(center)) {
+    return null;
+  }
 
   return {
     id,
@@ -80,18 +109,26 @@ export function buildFocusedSightingFromDetail(
     type: "point",
     source_type: toMapSourceType(detail.source_type),
     photo_keys: Array.isArray(detail.photo_keys)
-      ? (detail.photo_keys.filter((key) => typeof key === "string") as string[])
+      ? (detail.photo_keys.filter(
+          (key): key is string => typeof key === "string"
+        ) as string[])
       : undefined,
     occurred_at:
-      typeof detail.occurred_at === "string" ? detail.occurred_at : undefined,
+      typeof detail.occurred_at === "string"
+        ? detail.occurred_at
+        : undefined,
     author_type:
       detail.author_type === "anon" || detail.author_type === "user"
         ? detail.author_type
         : undefined,
     trait_color:
-      typeof detail.trait_color === "string" ? detail.trait_color : undefined,
+      typeof detail.trait_color === "string"
+        ? detail.trait_color
+        : undefined,
     trait_size:
-      typeof detail.trait_size === "string" ? detail.trait_size : undefined,
+      typeof detail.trait_size === "string"
+        ? detail.trait_size
+        : undefined,
     trait_species:
       typeof detail.trait_species === "string"
         ? detail.trait_species
@@ -106,6 +143,11 @@ export function findFocusedPointInItems(
   sightingId: string
 ): (MapItem & { type: "point"; id: string }) | null {
   const wantId = normalizeId(sightingId);
+
+  if (!wantId) {
+    return null;
+  }
+
   const point = items.find(
     (item): item is MapItem & { type: "point"; id: string } =>
       item.type === "point" &&
@@ -113,5 +155,6 @@ export function findFocusedPointInItems(
       typeof item.id === "string" &&
       normalizeId(item.id) === wantId
   );
+
   return point ?? null;
 }

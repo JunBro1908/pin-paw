@@ -47,7 +47,7 @@ test("NaverMap restores and writes map layer preference", async () => {
   );
 });
 
-test("recommend map deep link forces ALL layer before focus", async () => {
+test("recommend map deep link forces default layer before focus", async () => {
   const [map, page, card, focusLib] = await Promise.all([
     readFile("src/features/map/components/NaverMap.tsx", "utf8"),
     readFile("src/app/(tabs)/map/page.tsx", "utf8"),
@@ -64,7 +64,23 @@ test("recommend map deep link forces ALL layer before focus", async () => {
     page,
     /key=\{\s*initialFocusSightingId\s*\?\s*`focus:\$\{initialFocusSightingId\}`\s*:\s*"map"\s*\}/
   );
-  assert.match(card, /\/map\?lat=\$\{item\.lat\}&lng=\$\{item\.lng\}&sightingId=/);
+
+  // 추천 카드에서는 마스킹된 lat/lng를 URL 중심점으로 사용하지 않는다.
+  // sightingId만 전달하고 인증 상세 API의 정확한 좌표로 포커스한다.
+  assert.match(
+    card,
+    /import \{ buildRecommendationMapHref \} from "@\/features\/map\/lib\/map-deep-link-focus";/
+  );
+  assert.match(
+    card,
+    /const mapHref = buildRecommendationMapHref\(item\.sightingId,\s*lostPostId\);/
+  );
+  assert.match(card, /router\.push\(mapHref\)/);
+  assert.doesNotMatch(
+    card,
+    /\/map\?lat=\$\{item\.lat\}&lng=\$\{item\.lng\}/
+  );
+
   assert.match(
     map,
     /if \(initialFocusSightingId\) \{\s*writeStoredMapLayer\("default"\);\s*return "default";/
@@ -77,18 +93,29 @@ test("recommend map deep link forces ALL layer before focus", async () => {
     map,
     /\/api\/v1\/auth\/sightings\/\$\{encodeURIComponent\(focusId\)\}/
   );
+
   // Success-gated lock: do not set hasAutoFocused before detail resolves.
   assert.match(
     map,
     /hasAutoFocusedRef\.current = true;\s*setSelectedSighting\(focused\);\s*panMapToDeepLinkCenter\(center\);/
   );
-  // Viewport fallback must still run when URL center (approximate) is present.
+
+  // Viewport fallback must still run when URL center is present.
   assert.doesNotMatch(
     map,
     /itemsInView\.length === 0 \|\|\s*initialCenter/
   );
+
   assert.match(focusLib, /Prefer precise coords from auth detail RPC/);
   assert.match(focusLib, /DEEP_LINK_FOCUS_ZOOM = 16/);
+  assert.match(
+    focusLib,
+    /const params = new URLSearchParams\(\{\s*sightingId:/
+  );
+  assert.doesNotMatch(
+    focusLib,
+    /params\.(?:set|append)\(["'](?:lat|lng)["']/
+  );
 });
 
 test("NaverMap refetches bookmark layer after claim mutations succeed", async () => {

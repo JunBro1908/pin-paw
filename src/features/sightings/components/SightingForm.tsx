@@ -174,94 +174,123 @@ export function SightingForm() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isSubmitting) return;
-    if (!isValid || !formData.photo) {
-      setShowErrors(true);
-      setToast({ message: firstValidationMessage(), type: "error" });
-      return;
-    }
+  e.preventDefault();
 
-    if (typeof window !== "undefined" && !window.navigator.onLine) {
-      setToast({ message: "이미지 업로드에 실패했습니다.", type: "error" });
-      return;
-    }
+  if (isSubmitting) return;
 
-    const photo = formData.photo;
-    const domainPayload = {
-      location: { lat: formData.lat, lng: formData.lng },
-      occurredAt: (() => {
-        const occurredAt = parseSeoulDateTimeLocal(formData.time);
-        if (!occurredAt) {
-          throw new Error("invalid_sighting_time");
-        }
-        return occurredAt.toISOString();
-      })(),
-      traitColor: formData.traitColor?.trim() || null,
-      traitSize: formData.traitSize,
-      traitSpecies: formData.traitSpecies,
-      traitTags: formData.traitTags?.length ? formData.traitTags : null,
-      note: formData.description?.trim() || null,
-    };
+  if (!isValid || !formData.photo) {
+    setShowErrors(true);
+    setToast({
+      message: firstValidationMessage(),
+      type: "error",
+    });
+    return;
+  }
 
-    // 체감 대기 축소: 2.5초 전송 연출 후 「전송되었습니다」를 먼저 보여 주고,
-    // 실제 등록 API는 백그라운드에서 이어간다. 실패(rate limit 등)만 toast로 구분한다.
-    setIsSubmitting(true);
-    setSubmitPhase("sending");
-    setSendProgress(12);
-    resetForm();
+  if (typeof window !== "undefined" && !window.navigator.onLine) {
+    setToast({
+      message: "이미지 업로드에 실패했습니다.",
+      type: "error",
+    });
+    return;
+  }
 
-    const progressTimer = window.setInterval(() => {
-      setSendProgress((prev) => Math.min(prev + 8 + Math.random() * 12, 90));
-    }, 160);
-    const holdMs = 2500;
+  const photo = formData.photo;
 
-    const networkWork = (async () => {
-      try {
-        const payloadFingerprint = JSON.stringify({
-          file: await fingerprintUploadFile(photo),
-          domainPayload,
-        });
-        const attempt = prepareSubmission(
-          submissionAttemptRef.current,
-          payloadFingerprint,
-          () => crypto.randomUUID()
-        );
-        submissionAttemptRef.current = attempt;
+  const domainPayload = {
+    location: {
+      lat: formData.lat,
+      lng: formData.lng,
+    },
+    occurredAt: (() => {
+      const occurredAt = parseSeoulDateTimeLocal(formData.time);
 
-        const fileKey = await uploadPhoto(photo, attempt);
-        const currentAttempt = submissionAttemptRef.current ?? attempt;
-
-        await registerSighting(
-          fileKey,
-          domainPayload,
-          currentAttempt.submissionIdempotencyKey
-        );
-        submissionAttemptRef.current = completeSubmission();
-        runBestEffort(async () => {
-          const { invalidateMySightingsCache } =
-            await import("@/features/sightings/hooks/useMySightings");
-          invalidateMySightingsCache();
-        });
-      } catch (err) {
-        setSubmitPhase("idle");
-        setSendProgress(8);
-        setToast({
-          message: err instanceof Error ? err.message : "오류가 발생했습니다.",
-          type: "error",
-        });
-      } finally {
-        window.clearInterval(progressTimer);
-        setIsSubmitting(false);
+      if (!occurredAt) {
+        throw new Error("invalid_sighting_time");
       }
-    })();
 
-    await new Promise((resolve) => window.setTimeout(resolve, holdMs));
-    setSendProgress(100);
-    // hold 중 실패로 idle이 됐으면 성공 화면으로 올리지 않는다.
-    setSubmitPhase((prev) => (prev === "sending" ? "success" : prev));
-    void networkWork;
+      return occurredAt.toISOString();
+    })(),
+    traitColor: formData.traitColor?.trim() || null,
+    traitSize: formData.traitSize,
+    traitSpecies: formData.traitSpecies,
+    traitTags: formData.traitTags?.length ? formData.traitTags : null,
+    note: formData.description?.trim() || null,
   };
+
+  // 2.5초 동안 전송 연출을 표시한 뒤 완료 화면으로 전환한다.
+  // 실제 등록은 별도로 진행하고 실패한 경우에만 오류 토스트를 표시한다.
+  setIsSubmitting(true);
+  setSubmitPhase("sending");
+  setSendProgress(12);
+  setToast(null);
+  resetForm();
+
+  const progressTimer = window.setInterval(() => {
+    setSendProgress((prev) =>
+      Math.min(prev + 8 + Math.random() * 12, 90)
+    );
+  }, 160);
+
+  const holdMs = 2500;
+
+  const networkWork = (async () => {
+    try {
+      const payloadFingerprint = JSON.stringify({
+        file: await fingerprintUploadFile(photo),
+        domainPayload,
+      });
+
+      const attempt = prepareSubmission(
+        submissionAttemptRef.current,
+        payloadFingerprint,
+        () => crypto.randomUUID()
+      );
+
+      submissionAttemptRef.current = attempt;
+
+      const fileKey = await uploadPhoto(photo, attempt);
+      const currentAttempt =
+        submissionAttemptRef.current ?? attempt;
+
+      await registerSighting(
+        fileKey,
+        domainPayload,
+        currentAttempt.submissionIdempotencyKey
+      );
+
+      submissionAttemptRef.current = completeSubmission();
+
+      runBestEffort(async () => {
+        const { invalidateMySightingsCache } =
+          await import("@/features/sightings/hooks/useMySightings");
+
+        invalidateMySightingsCache();
+      });
+    } catch (err) {
+      // 완료 화면 상태는 변경하지 않고 오류만 독립적으로 알린다.
+      setToast({
+        message:
+          err instanceof Error && err.message
+            ? err.message
+            : "제보 등록에 실패했습니다.",
+        type: "error",
+      });
+    }
+  })();
+
+  await new Promise<void>((resolve) => {
+    window.setTimeout(resolve, holdMs);
+  });
+
+  window.clearInterval(progressTimer);
+  setSendProgress(100);
+  setSubmitPhase("success");
+  setIsSubmitting(false);
+
+  // 등록 작업은 성공 화면 표시 이후에도 계속될 수 있다.
+  void networkWork;
+};
 
   /**
    * 사진을 업로드하고 fileKey를 반환합니다.

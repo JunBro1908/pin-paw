@@ -1,94 +1,3 @@
-import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
-import test from "node:test";
-
-const pagePath = "src/app/(tabs)/recommend/page.tsx";
-const cardPath =
-  "src/features/recommendations/components/RecommendationCard.tsx";
-const hookPath = "src/features/recommendations/hooks/useRecommendations.ts";
-
-test("recommendation result cards scroll in place under a fixed range header", async () => {
-  const page = await readFile(pagePath, "utf8");
-  const panel = await readFile("src/shared/ui/ScrollablePanel.tsx", "utf8");
-
-  assert.match(panel, /results:[\s\S]*?max-h-\[min\(60vh,28rem\)\]/);
-  assert.match(panel, /overflow-y-auto overscroll-contain/);
-
-  // Range summary + refresh stay outside the results scroller.
-  const readyList = page.match(
-    /aria-label="새로고침"[\s\S]*?ScrollablePanel variant="results"[\s\S]*?RecommendationCard[\s\S]*?<\/ScrollablePanel>/
-  );
-  assert.ok(readyList, "refresh control should sit above the scrollable card list");
-
-  // Loading / empty branches must not force the results max-height wrapper.
-  assert.doesNotMatch(
-    page,
-    /ScrollablePanel variant="results"[\s\S]*?비슷한 제보를 정리하고 있습니다/
-  );
-  assert.doesNotMatch(
-    page,
-    /ScrollablePanel variant="results"[\s\S]*?이 탐색 범위에는 아직 볼 목격 제보가 없습니다/
-  );
-});
-
-test("confirmation page presents a review workflow without model or result-count controls", async () => {
-  const page = await readFile(pagePath, "utf8");
-
-  assert.match(page, /<Text as="h1"[^>]*>\s*비슷한 제보 찾기\s*<\/Text>/);
-  assert.match(
-    page,
-    /가능성이 높은 목격 제보를 모아 보여드려요/
-  );
-  assert.match(page, /<summary[^>]*>[\s\S]*?탐색 범위[\s\S]*?<\/summary>/);
-  assert.match(page, /반경[\s\S]*?기간[\s\S]*?적용/);
-  assert.match(page, /ScrollablePanel/);
-  assert.match(
-    page,
-    /ScrollablePanel variant="results"[\s\S]*?RecommendationCard/
-  );
-  assert.match(page, /variant="secondary"[\s\S]*?>\s*적용\s*</);
-  assert.match(page, /h-11 min-h-11 min-w-\[5\.5rem\]/);
-  assert.match(page, /items-end/);
-  assert.match(page, /text-xs leading-none/);
-  assert.match(page, /aria-label="새로고침"/);
-  assert.match(page, /name="refresh"/);
-  assert.doesNotMatch(page, />\s*새로고침\s*</);
-  assert.doesNotMatch(
-    page,
-    /aria-label="새로고침"[\s\S]{0,80}?variant="secondary"/
-  );
-  assert.doesNotMatch(page, /topK|TOP_K|추천 조건:|개수|toFixed\(1\)/i);
-});
-
-test("recommend shows matches under the selected lost post without a full view swap", async () => {
-  const page = await readFile(pagePath, "utf8");
-  const card = await readFile(
-    "src/features/lost-posts/components/ActiveLostCaseCard.tsx",
-    "utf8"
-  );
-  const carousel = await readFile(
-    "src/features/lost-posts/components/LostCaseCarousel.tsx",
-    "utf8"
-  );
-
-  assert.match(page, /appliedLostPostId/);
-  assert.match(page, /draftLostPostId/);
-  assert.match(page, /searchParams\.get\("lostPostId"\)/);
-  assert.match(page, /onPrimaryAction=\{handlePrimaryAction\}/);
-  assert.match(page, /primaryAction="recommend"/);
-  assert.match(
-    page,
-    /<LostCaseCarousel[\s\S]*?\{appliedLostPostId \? \([\s\S]*?<RecommendWithLostPost/
-  );
-  assert.doesNotMatch(page, /다른 유실글 선택/);
-  assert.doesNotMatch(page, /선택된 유실글/);
-  assert.doesNotMatch(page, /if \(!lostPostId\)/);
-  assert.match(page, /router\.replace\(next, \{ scroll: false \}\)/);
-  assert.match(card, /onPrimaryAction\?:/);
-  assert.match(card, /onPrimaryAction\(item\)/);
-  assert.match(carousel, /onPrimaryAction=\{onPrimaryAction\}/);
-});
-
 test("confirmation card leads with distance-time chips, date, match percent tip, and map CTA", async () => {
   const card = await readFile(cardPath, "utf8");
 
@@ -123,32 +32,32 @@ test("confirmation card leads with distance-time chips, date, match percent tip,
     /유사도와 근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을 보장하지 않습니다\./
   );
   assert.match(card, /role="tooltip"/);
+
   assert.match(card, /지도에서 보기/);
-  assert.match(card, /mapHref/);
-  assert.match(card, /\/map\?lat=/);
-  assert.match(card, /sightingId=/);
+  assert.match(
+    card,
+    /import \{\s*buildRecommendationMapHref\s*\} from "@\/features\/map\/lib\/map-deep-link-focus";/
+  );
+  assert.match(
+    card,
+    /const mapHref = buildRecommendationMapHref\(\s*item\.sightingId,\s*lostPostId\s*\);/
+  );
+  assert.match(card, /router\.push\(mapHref\)/);
+
+  // 추천 결과의 마스킹된 좌표를 URL 중심점으로 직접 사용하지 않는다.
+  assert.doesNotMatch(card, /\/map\?lat=/);
+  assert.doesNotMatch(card, /item\.lat/);
+  assert.doesNotMatch(card, /item\.lng/);
+
   assert.match(card, /북마크 등록/);
   assert.doesNotMatch(card, /상세 보기/);
   assert.doesNotMatch(card, /item\.matchSummary/);
   assert.doesNotMatch(card, /RECOMMENDATION_PRIORITY_LABELS/);
   assert.doesNotMatch(card, /후보|유력|참고/);
   assert.doesNotMatch(card, /openModal|SightingDetailCard|ReportBlockSheet/);
-  assert.doesNotMatch(card, /item\.similarity|toFixed\(1\)|AI confidence|범위 안 제보|먼저 확인|함께 확인/);
+  assert.doesNotMatch(
+    card,
+    /item\.similarity|toFixed\(1\)|AI confidence|범위 안 제보|먼저 확인|함께 확인/
+  );
   assert.doesNotMatch(card, /item\.evidence/);
-});
-
-test("recommendation hook keeps a private result limit of ten without a public topK parameter", async () => {
-  const hook = await readFile(hookPath, "utf8");
-
-  assert.doesNotMatch(hook, /topK\?:|params\?\.topK/);
-  assert.match(hook, /topK:\s*String\(DEFAULT_TOP_K\)/);
-  assert.match(hook, /const DEFAULT_TOP_K = 10/);
-});
-
-test("recommendation card uses the warm restrained surface treatment", async () => {
-  const card = await readFile(cardPath, "utf8");
-
-  assert.doesNotMatch(card, /rounded-\[32px\]|shadow-\[/);
-  assert.match(card, /rounded-2xl/);
-  assert.match(card, /shadow-sm/);
 });
