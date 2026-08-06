@@ -8,6 +8,7 @@ import { Icon } from "@/shared/ui/Icon";
 import { createClient } from "@/shared/supabase/client";
 import { trackFunnelEvent } from "@/shared/lib/funnel-client";
 import { buildRecommendationMapHref } from "@/features/map/lib/map-deep-link-focus";
+import { RecommendationItem } from "../model/types";
 
 const SIMILARITY_DISCLAIMER =
   "유사도와 근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을 보장하지 않습니다.";
