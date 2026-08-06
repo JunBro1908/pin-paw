@@ -1,3 +1,12 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
+const pagePath = "src/app/(tabs)/recommend/page.tsx";
+const cardPath =
+  "src/features/recommendations/components/RecommendationCard.tsx";
+const hookPath = "src/features/recommendations/hooks/useRecommendations.ts";
+
 test("confirmation card leads with distance-time chips, date, match percent tip, and map CTA", async () => {
   const card = await readFile(cardPath, "utf8");
 

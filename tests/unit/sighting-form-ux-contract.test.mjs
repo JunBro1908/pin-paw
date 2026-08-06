@@ -1,3 +1,7 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+import test from "node:test";
+
 test(
   "confirmed sent screen appears after the fixed hold while registration continues independently",
   async () => {
