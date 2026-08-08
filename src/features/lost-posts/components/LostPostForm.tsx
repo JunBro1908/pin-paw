@@ -6,7 +6,10 @@ import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
 import { cn } from "@/shared/lib/cn";
-import { parseSeoulDateTimeLocal, toLocalDatetimeLocalString } from "@/shared/lib/date";
+import {
+  parseSeoulDateTimeLocal,
+  toLocalDatetimeLocalString,
+} from "@/shared/lib/date";
 import { useSeoulDatetimeLocalMax } from "@/shared/hooks/useSeoulDatetimeLocalMax";
 import { Toast } from "@/shared/ui/Toast";
 import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
@@ -423,14 +426,17 @@ export function LostPostForm() {
             value={formData.lostAt}
             max={maxLostAt}
             onChange={handleChange}
-            className="border-border-subtle focus:border-primary focus:ring-primary/20 min-h-12 w-full appearance-none rounded-xl border bg-white px-4 py-3 text-base leading-normal outline-none [color-scheme:light] focus:ring-2 [&::-webkit-calendar-picker-indicator]:h-5 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-datetime-edit]:m-0 [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0"
+            className="border-border-subtle focus:border-primary focus:ring-primary/20 min-h-12 w-full appearance-none rounded-xl border bg-white px-4 py-3 text-base leading-normal [color-scheme:light] outline-none focus:ring-2 [&::-webkit-calendar-picker-indicator]:h-5 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-datetime-edit]:m-0 [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0"
           />
         </section>
 
         <details className="border-border-subtle bg-surface group rounded-2xl border shadow-sm">
           <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-3 px-4 py-3 font-bold [&::-webkit-details-marker]:hidden">
             추가 정보 입력하기 (선택)
-            <span aria-hidden className="transition-transform group-open:rotate-180">
+            <span
+              aria-hidden
+              className="transition-transform group-open:rotate-180"
+            >
               ⌄
             </span>
           </summary>
@@ -442,7 +448,7 @@ export function LostPostForm() {
                     htmlFor="lost-trait-color"
                     className="text-text-main mb-1.5 block text-sm font-semibold"
                   >
-                    색상
+                    색상·무늬
                   </label>
                   <input
                     id="lost-trait-color"
@@ -450,7 +456,7 @@ export function LostPostForm() {
                     name="traitColor"
                     value={formData.traitColor}
                     onChange={handleChange}
-                    placeholder="예: 갈색, 흰색 얼룩, 검정·흰색"
+                    placeholder="예: 갈색 바탕에 흰색 점박이, 검정·흰색 투톤"
                     maxLength={100}
                     className={inputBase}
                   />
@@ -501,7 +507,7 @@ export function LostPostForm() {
                 </div>
                 <div className="space-y-2">
                   <Text variant="caption" color="caption">
-                    특이사항 (최대 {MAX_TAG_SELECT_LOST_POST}개)
+                    특이사항 (선택, 최대 {MAX_TAG_SELECT_LOST_POST}개)
                   </Text>
                   <div className="flex flex-wrap gap-2">
                     {TRAIT_TAGS.map((tag) => {
@@ -546,13 +552,13 @@ export function LostPostForm() {
               </div>
               <div className="space-y-2 pt-1">
                 <Text variant="body" className="font-bold">
-                  추가 설명
+                  메모 (확인용, 추천 점수에 반영하지 않음)
                 </Text>
                 <textarea
                   name="description"
                   value={formData.description}
                   onChange={handleChange}
-                  placeholder="상세 정보를 입력해주세요"
+                  placeholder="발견 당시 상황 등 확인에 필요한 내용을 입력해주세요"
                   rows={4}
                   className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full resize-none rounded-xl border bg-white px-4 py-4 outline-none focus:ring-2"
                 />

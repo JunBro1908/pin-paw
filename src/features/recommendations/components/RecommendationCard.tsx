@@ -11,7 +11,77 @@ import { buildRecommendationMapHref } from "@/features/map/lib/map-deep-link-foc
 import { RecommendationItem } from "../model/types";
 
 const SIMILARITY_DISCLAIMER =
-  "유사도와 근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을 보장하지 않습니다.";
+  "점수 막대는 이동 가능성, 외형 정보, 특이사항의 실제 점수 기여도입니다. 동일한 동물임을 보장하지 않습니다.";
+
+const SCORE_SEGMENTS = [
+  { key: "movement", label: "목격 정보", color: "bg-action-primary" },
+  { key: "species", label: "종", color: "bg-sky-500" },
+  { key: "size", label: "크기", color: "bg-amber-500" },
+  { key: "color", label: "색상·무늬", color: "bg-rose-500" },
+  {
+    key: "distinctiveTrait",
+    label: "특이사항 보너스",
+    color: "bg-violet-500",
+  },
+] as const;
+
+function ScoreBreakdownBar({ item }: { item: RecommendationItem }) {
+  const segments = SCORE_SEGMENTS.map((segment) => ({
+    ...segment,
+    value: Math.max(0, Math.min(item.scoreBreakdown[segment.key], 1)),
+  })).filter((segment) => segment.value > 0);
+  const radius = item.scoreBreakdown.movementRadiusKm;
+
+  return (
+    <div className="mt-2.5" onClick={(event) => event.stopPropagation()}>
+      <div className="mb-1 flex items-center justify-between gap-2">
+        <Text variant="caption" className="text-text-sub text-xs">
+          점수 구성
+        </Text>
+        {radius ? (
+          <Text variant="caption" className="text-text-caption text-[11px]">
+            현재 이동 반경 약 {radius}km
+          </Text>
+        ) : null}
+      </div>
+      <div
+        role="progressbar"
+        aria-label="유사도 점수 구성"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={item.matchPercent}
+        className="bg-surface-soft flex h-2 overflow-hidden rounded-full"
+      >
+        {segments.map((segment) => (
+          <span
+            key={segment.key}
+            title={`${segment.label} ${Math.round(segment.value * 100)}점`}
+            aria-label={`${segment.label} ${Math.round(segment.value * 100)}점`}
+            className={`${segment.color} h-full first:rounded-l-full last:rounded-r-full`}
+            style={{ width: `${segment.value * 100}%` }}
+          />
+        ))}
+      </div>
+      <ul
+        className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-1"
+        aria-label="점수 상세"
+      >
+        {segments.map((segment) => (
+          <li
+            key={segment.key}
+            className="text-text-caption inline-flex items-center gap-1 text-[11px]"
+          >
+            <span
+              className={`${segment.color} h-1.5 w-1.5 rounded-full`}
+              aria-hidden
+            />
+            {segment.label} {Math.round(segment.value * 100)}점
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 interface RecommendationCardProps {
   item: RecommendationItem;
@@ -246,7 +316,9 @@ export function RecommendationCard({
       className="border-border-subtle bg-surface focus-visible:outline-action-primary flex cursor-pointer flex-col gap-3 rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2"
     >
       {claimed ? (
-        <span className="text-primary text-xs font-medium">✓ 북마크한 제보</span>
+        <span className="text-primary text-xs font-medium">
+          ✓ 북마크한 제보
+        </span>
       ) : null}
 
       <div className="flex items-stretch gap-3">
@@ -299,6 +371,7 @@ export function RecommendationCard({
                 </Text>
                 <SimilarityInfoTip />
               </div>
+              <ScoreBreakdownBar item={item} />
             </div>
             {bookmarkButton}
           </div>

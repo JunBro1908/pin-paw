@@ -7,6 +7,15 @@ export const RECOMMENDATION_PRIORITY_LABELS = {
   "within-range": "참고",
 } as const satisfies Record<RecommendationPriority, string>;
 
+export interface RecommendationScoreBreakdown {
+  movement: number;
+  species: number;
+  size: number;
+  color: number;
+  distinctiveTrait: number;
+  movementRadiusKm?: number;
+}
+
 export interface RecommendationItem {
   sightingId: string;
   photoKeys: string[];
@@ -25,6 +34,8 @@ export interface RecommendationItem {
   timeDeltaHours: number;
   /** Distance + time chips only (traits live in matchSummary). */
   contextChips: string[];
+  /** Final-score contributions, each expressed on the same 0–1 scale as matchPercent. */
+  scoreBreakdown: RecommendationScoreBreakdown;
 }
 
 export interface RecommendationsData {

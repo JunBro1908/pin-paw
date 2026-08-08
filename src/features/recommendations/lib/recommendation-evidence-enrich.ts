@@ -14,6 +14,14 @@ export interface SparseRecommendationItem {
   distanceKm?: number;
   timeDeltaHours?: number;
   matchedTraits?: string[];
+  scoreBreakdown?: {
+    movement?: number;
+    species?: number;
+    size?: number;
+    color?: number;
+    distinctiveTrait?: number;
+    movementRadiusKm?: number;
+  };
 }
 
 export interface LostPostEvidenceAnchor {
@@ -63,8 +71,9 @@ export function enrichRecommendationEvidence(
             anchor.lng != null &&
             Number.isFinite(item.lat) &&
             Number.isFinite(item.lng)
-          ? Math.round(haversineKm(anchor.lat, anchor.lng, item.lat, item.lng) * 10) /
-            10
+          ? Math.round(
+              haversineKm(anchor.lat, anchor.lng, item.lat, item.lng) * 10
+            ) / 10
           : 0;
 
     const occurredMs = Date.parse(item.occurredAt);
@@ -73,7 +82,10 @@ export function enrichRecommendationEvidence(
       Number.isFinite(item.timeDeltaHours)
         ? item.timeDeltaHours
         : Number.isFinite(lostAtMs) && Number.isFinite(occurredMs)
-          ? Math.max(0, Math.round(((occurredMs - lostAtMs) / 3_600_000) * 10) / 10)
+          ? Math.max(
+              0,
+              Math.round(((occurredMs - lostAtMs) / 3_600_000) * 10) / 10
+            )
           : 0;
 
     const matchedTraits = Array.isArray(item.matchedTraits)

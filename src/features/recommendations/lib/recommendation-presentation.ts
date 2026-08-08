@@ -1,6 +1,7 @@
 import type {
   RecommendationItem,
   RecommendationPriority,
+  RecommendationScoreBreakdown,
 } from "../model/types";
 
 const TRAIT_LABELS = {
@@ -17,6 +18,7 @@ export interface RawRecommendationEvidence {
   distanceKm: number;
   timeDeltaHours: number;
   matchedTraits: readonly string[];
+  scoreBreakdown?: Partial<RecommendationScoreBreakdown>;
 }
 
 export interface RecommendationPresentation {
@@ -26,6 +28,7 @@ export interface RecommendationPresentation {
   distanceKm: number;
   timeDeltaHours: number;
   contextChips: string[];
+  scoreBreakdown: RecommendationScoreBreakdown;
 }
 
 export type ProtectedRawRecommendationItem = RawRecommendationEvidence & {
@@ -46,6 +49,40 @@ function sanitizeSimilarity(value: number): number {
   return Math.min(sanitizeNonNegative(value), 1);
 }
 
+function sanitizeContribution(value: number | undefined): number {
+  return Math.min(Math.max(value ?? 0, 0), 1);
+}
+
+function fallbackScoreBreakdown(
+  similarity: number
+): RecommendationScoreBreakdown {
+  return {
+    movement: similarity,
+    species: 0,
+    size: 0,
+    color: 0,
+    distinctiveTrait: 0,
+  };
+}
+
+function toScoreBreakdown(
+  raw: Partial<RecommendationScoreBreakdown> | undefined,
+  similarity: number
+): RecommendationScoreBreakdown {
+  if (!raw) return fallbackScoreBreakdown(similarity);
+  return {
+    movement: sanitizeContribution(raw.movement),
+    species: sanitizeContribution(raw.species),
+    size: sanitizeContribution(raw.size),
+    color: sanitizeContribution(raw.color),
+    distinctiveTrait: sanitizeContribution(raw.distinctiveTrait),
+    movementRadiusKm:
+      typeof raw.movementRadiusKm === "number" && raw.movementRadiusKm > 0
+        ? raw.movementRadiusKm
+        : undefined,
+  };
+}
+
 export function toMatchPercent(similarity: number): number {
   return Math.round(sanitizeSimilarity(similarity) * 100);
 }
@@ -60,9 +97,7 @@ function isKnownTrait(trait: string): trait is KnownTrait {
   return Object.hasOwn(TRAIT_LABELS, trait);
 }
 
-function knownTraitsInOrder(
-  matchedTraits: readonly string[]
-): KnownTrait[] {
+function knownTraitsInOrder(matchedTraits: readonly string[]): KnownTrait[] {
   const matchedTraitSet = new Set(
     (Array.isArray(matchedTraits) ? matchedTraits : []).filter(isKnownTrait)
   );
@@ -158,6 +193,7 @@ export function toRecommendationPresentation(
     distanceKm,
     timeDeltaHours,
     contextChips: buildContextChips(distanceKm, timeDeltaHours),
+    scoreBreakdown: toScoreBreakdown(raw.scoreBreakdown, similarity),
   };
 }
 
@@ -169,6 +205,7 @@ export function toPublicRecommendationItem(
     matchedTraits: raw.matchedTraits,
     distanceKm: raw.distanceKm,
     timeDeltaHours: raw.timeDeltaHours,
+    scoreBreakdown: raw.scoreBreakdown,
   });
 
   return {
@@ -185,5 +222,6 @@ export function toPublicRecommendationItem(
     distanceKm: presentation.distanceKm,
     timeDeltaHours: presentation.timeDeltaHours,
     contextChips: presentation.contextChips,
+    scoreBreakdown: presentation.scoreBreakdown,
   };
 }

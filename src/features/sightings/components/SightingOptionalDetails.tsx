@@ -77,7 +77,7 @@ export function SightingOptionalDetails({
           <div className="space-y-3">
             <div>
               <label htmlFor={colorId} className={fieldLabelClass}>
-                색상
+                색상·무늬
               </label>
               <input
                 id={colorId}
@@ -86,7 +86,7 @@ export function SightingOptionalDetails({
                 value={traitColor}
                 onChange={onFieldChange}
                 disabled={disabled}
-                placeholder="예: 갈색, 흰색 얼룩, 검정·흰색"
+                placeholder="예: 갈색 바탕에 흰색 점박이, 검정·흰색 투톤"
                 maxLength={100}
                 className={inputBase}
               />
@@ -137,7 +137,7 @@ export function SightingOptionalDetails({
             </div>
             <div className="space-y-2">
               <Text variant="caption" color="caption">
-                특이사항 (최대 {maxTags}개)
+                특이사항 (선택, 최대 {maxTags}개)
               </Text>
               <div className="flex flex-wrap gap-2">
                 {TRAIT_TAGS.map((tag) => {
@@ -173,7 +173,7 @@ export function SightingOptionalDetails({
               htmlFor={descriptionId}
               className="text-text-main block font-semibold"
             >
-              추가 설명
+              메모 (확인용, 추천 점수에 반영하지 않음)
             </label>
             <textarea
               id={descriptionId}
@@ -181,7 +181,7 @@ export function SightingOptionalDetails({
               value={description}
               onChange={onFieldChange}
               disabled={disabled}
-              placeholder="상세 정보를 입력해주세요"
+              placeholder="발견 당시 상황 등 확인에 필요한 내용을 입력해주세요"
               rows={4}
               className={cn(inputBase, "resize-none py-4")}
             />

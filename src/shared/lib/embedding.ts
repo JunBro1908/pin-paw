@@ -41,8 +41,12 @@ function normalizeEmbeddingValue(value: string): string {
   return value.trim().replace(/\s+/g, " ");
 }
 
-function serializeTags(tags: readonly string[] | null | undefined): string | null {
-  const normalized = [...new Set((tags ?? []).map(normalizeEmbeddingValue).filter(Boolean))];
+function serializeTags(
+  tags: readonly string[] | null | undefined
+): string | null {
+  const normalized = [
+    ...new Set((tags ?? []).map(normalizeEmbeddingValue).filter(Boolean)),
+  ];
   return normalized.length > 0 ? normalized.join(", ") : null;
 }
 
@@ -60,13 +64,13 @@ export function getTraitTexts(
       ? `대상 동물 정보. 종: ${normalizeEmbeddingValue(attrs.traitSpecies)}.${tagContext}`
       : null,
     attrs.traitColor
-      ? `대상 동물 정보. 털 색상: ${normalizeEmbeddingValue(attrs.traitColor)}.${tagContext}`
+      ? `반려동물 외형 색상 판별 정보. 색상과 무늬만 해석한다. 색상/무늬 표현: ${normalizeEmbeddingValue(attrs.traitColor)}. 단색, 얼룩, 점박이, 줄무늬, 투톤, 삼색 등의 표현 차이를 보존한다.`
       : null,
     attrs.traitSize
       ? `대상 동물 정보. 크기: ${normalizeEmbeddingValue(attrs.traitSize)}.${tagContext}`
       : null,
     attrs.note
-      ? `대상 동물의 추가 관찰 메모: ${normalizeEmbeddingValue(attrs.note)}.${tagContext}`
+      ? `대상 동물의 추가 관찰 메모: ${normalizeEmbeddingValue(attrs.note)}.`
       : tags
         ? `대상 동물의 특이사항 태그: ${tags}.`
         : null,

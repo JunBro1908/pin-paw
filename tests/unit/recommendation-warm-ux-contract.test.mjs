@@ -2,10 +2,8 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 
-const pagePath = "src/app/(tabs)/recommend/page.tsx";
 const cardPath =
   "src/features/recommendations/components/RecommendationCard.tsx";
-const hookPath = "src/features/recommendations/hooks/useRecommendations.ts";
 
 test("confirmation card leads with distance-time chips, date, match percent tip, and map CTA", async () => {
   const card = await readFile(cardPath, "utf8");
@@ -18,10 +16,7 @@ test("confirmation card leads with distance-time chips, date, match percent tip,
   assert.match(card, /items-stretch/);
   assert.match(card, /mt-auto[\s\S]*지도에서 보기/);
   assert.match(card, /item\.contextChips\.map/);
-  assert.match(
-    card,
-    /variant="caption"[\s\S]*text-xs[\s\S]*\{occurredAt\}/
-  );
+  assert.match(card, /variant="caption"[\s\S]*text-xs[\s\S]*\{occurredAt\}/);
   assert.match(
     card,
     /variant="caption"[\s\S]*text-sm[\s\S]*\{item\.matchPercent\}%/
@@ -38,9 +33,13 @@ test("confirmation card leads with distance-time chips, date, match percent tip,
   assert.match(card, /h-5 w-5 text-yellow-500/);
   assert.match(
     card,
-    /유사도와 근거는 확인 순서를 돕기 위한 정보이며 동일한 동물임을 보장하지 않습니다\./
+    /점수 막대는 이동 가능성, 외형 정보, 특이사항의 실제 점수 기여도입니다\. 동일한 동물임을 보장하지 않습니다\./
   );
   assert.match(card, /role="tooltip"/);
+  assert.match(card, /function ScoreBreakdownBar/);
+  assert.match(card, /aria-label="유사도 점수 구성"/);
+  assert.match(card, /현재 이동 반경 약/);
+  assert.match(card, /특이사항 보너스/);
 
   assert.match(card, /지도에서 보기/);
   assert.match(

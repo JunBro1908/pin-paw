@@ -21,7 +21,7 @@ import { triggerEmbeddingsProcess } from "@/shared/lib/embeddings-worker";
 const CACHE_TTL_SECONDS = 180;
 
 function buildCacheKey(radiusKm: number, days: number, topK: number): string {
-  return `evidence-v2_${radiusKm}_${days}_${topK}`;
+  return `movement-v3_${radiusKm}_${days}_${topK}`;
 }
 
 /**
@@ -114,6 +114,7 @@ export async function GET(request: Request) {
     distanceKm: number;
     timeDeltaHours: number;
     matchedTraits: string[];
+    scoreBreakdown?: SparseRecommendationItem["scoreBreakdown"];
     photoKeys: string[];
     occurredAt: string;
     lat: number;
@@ -133,6 +134,7 @@ export async function GET(request: Request) {
         distanceKm: item.distanceKm ?? 0,
         timeDeltaHours: item.timeDeltaHours ?? 0,
         matchedTraits: item.matchedTraits ?? [],
+        scoreBreakdown: item.scoreBreakdown,
         photoKeys: item.photoKeys,
         occurredAt: item.occurredAt,
         lat: item.lat,
@@ -149,6 +151,7 @@ export async function GET(request: Request) {
       distanceKm: item.distanceKm ?? 0,
       timeDeltaHours: item.timeDeltaHours ?? 0,
       matchedTraits: item.matchedTraits ?? [],
+      scoreBreakdown: item.scoreBreakdown,
       photoKeys: item.photoKeys,
       occurredAt: item.occurredAt,
       lat: item.lat,
@@ -235,7 +238,9 @@ export async function GET(request: Request) {
   }
 
   const result = (
-    Array.isArray(items) ? items : (items as unknown[] as SparseRecommendationItem[])
+    Array.isArray(items)
+      ? items
+      : (items as unknown[] as SparseRecommendationItem[])
   ) as SparseRecommendationItem[];
 
   const { error: cacheWriteError } = await supabaseAdmin
