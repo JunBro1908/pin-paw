@@ -139,7 +139,7 @@ export async function POST(request: Request) {
       if (entityType === "sighting") {
         const { data: sighting, error: sightingError } = await supabase
           .from("sightings")
-          .select("trait_species, trait_color, trait_size, note")
+          .select("trait_species, trait_color, trait_size, trait_tags, note")
           .eq("id", entityId)
           .maybeSingle();
         const sightingResult = classifyEmbeddingEntityResult(
@@ -171,12 +171,13 @@ export async function POST(request: Request) {
           traitSpecies: sightingResult.entity.trait_species,
           traitColor: sightingResult.entity.trait_color,
           traitSize: sightingResult.entity.trait_size,
+          traitTags: sightingResult.entity.trait_tags,
           note: sightingResult.entity.note,
         });
       } else {
         const { data: lostPost, error: lostPostError } = await supabase
           .from("lost_posts")
-          .select("trait_species, trait_color, trait_size, note")
+          .select("trait_species, trait_color, trait_size, trait_tags, note")
           .eq("id", entityId)
           .maybeSingle();
         const lostPostResult = classifyEmbeddingEntityResult(
@@ -208,6 +209,7 @@ export async function POST(request: Request) {
           traitSpecies: lostPostResult.entity.trait_species,
           traitColor: lostPostResult.entity.trait_color,
           traitSize: lostPostResult.entity.trait_size,
+          traitTags: lostPostResult.entity.trait_tags,
           note: lostPostResult.entity.note,
         });
       }

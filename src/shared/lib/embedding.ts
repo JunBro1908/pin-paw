@@ -33,8 +33,18 @@ export type TraitAttrs = {
   traitSpecies?: string | null;
   traitColor?: string | null;
   traitSize?: string | null;
+  traitTags?: readonly string[] | null;
   note?: string | null;
 };
+
+function normalizeEmbeddingValue(value: string): string {
+  return value.trim().replace(/\s+/g, " ");
+}
+
+function serializeTags(tags: readonly string[] | null | undefined): string | null {
+  const normalized = [...new Set((tags ?? []).map(normalizeEmbeddingValue).filter(Boolean))];
+  return normalized.length > 0 ? normalized.join(", ") : null;
+}
 
 /**
  * 필드별 임베딩용 문장 4개 반환 [종, 색, 크기, 메모] 순서 (EMBEDDING_TRAITS와 동일)
@@ -43,17 +53,23 @@ export type TraitAttrs = {
 export function getTraitTexts(
   attrs: TraitAttrs
 ): [string | null, string | null, string | null, string | null] {
+  const tags = serializeTags(attrs.traitTags);
+  const tagContext = tags ? ` 특이사항 태그는 ${tags}입니다.` : "";
   return [
     attrs.traitSpecies
-      ? `이 유실 반려동물의 종은 ${attrs.traitSpecies}입니다.`
+      ? `대상 동물 정보. 종: ${normalizeEmbeddingValue(attrs.traitSpecies)}.${tagContext}`
       : null,
     attrs.traitColor
-      ? `이 유실 반려동물의 털 색상은 ${attrs.traitColor}입니다.`
+      ? `대상 동물 정보. 털 색상: ${normalizeEmbeddingValue(attrs.traitColor)}.${tagContext}`
       : null,
     attrs.traitSize
-      ? `이 유실 반려동물의 크기는 ${attrs.traitSize}입니다.`
+      ? `대상 동물 정보. 크기: ${normalizeEmbeddingValue(attrs.traitSize)}.${tagContext}`
       : null,
-    attrs.note ? `이 유실 반려동물에 대한 메모는 ${attrs.note}입니다.` : null,
+    attrs.note
+      ? `대상 동물의 추가 관찰 메모: ${normalizeEmbeddingValue(attrs.note)}.${tagContext}`
+      : tags
+        ? `대상 동물의 특이사항 태그: ${tags}.`
+        : null,
   ];
 }
 
