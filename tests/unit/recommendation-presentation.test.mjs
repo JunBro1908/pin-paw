@@ -40,6 +40,13 @@ test("exposes matchPercent and trait summary without raw similarity keys", () =>
     distanceKm: 1.4,
     timeDeltaHours: 5.2,
     contextChips: ["1.4km 거리", "약 5시간 뒤 목격"],
+    scoreBreakdown: {
+      movement: 0.76,
+      species: 0,
+      size: 0,
+      color: 0,
+      distinctiveTrait: 0,
+    },
   });
   assert.equal("similarity" in result, false);
   assert.equal("matchedTraits" in result, false);
@@ -117,6 +124,13 @@ test("sanitizes non-finite and negative numeric evidence inputs", () => {
     distanceKm: 0,
     timeDeltaHours: 0,
     contextChips: ["근처 목격", "1시간 이내 목격"],
+    scoreBreakdown: {
+      movement: 0,
+      species: 0,
+      size: 0,
+      color: 0,
+      distinctiveTrait: 0,
+    },
   });
 });
 
