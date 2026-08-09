@@ -11,7 +11,7 @@ import { buildRecommendationMapHref } from "@/features/map/lib/map-deep-link-foc
 import { RecommendationItem } from "../model/types";
 
 const SIMILARITY_DISCLAIMER =
-  "추천 점수는 후보를 비교하기 위한 표시용 점수입니다. 동일한 동물임을 보장하지 않습니다.";
+  "추천 점수는 후보 비교를 위한 참고 지표이며, 동일한 동물임을 보장하지 않습니다.";
 
 const SCORE_SEGMENTS = [
   { key: "locationTime", label: "위치·시간", color: "bg-action-primary" },
@@ -31,11 +31,6 @@ function ScoreBreakdownBar({ item }: { item: RecommendationItem }) {
 
   return (
     <div className="mt-2.5">
-      <div className="mb-1.5">
-        <Text variant="caption" className="text-text-sub text-xs">
-          점수 구성
-        </Text>
-      </div>
       <div
         role="progressbar"
         aria-label="추천 점수 구성: 위치와 시간, 외형 특징, 특이사항"
@@ -44,35 +39,24 @@ function ScoreBreakdownBar({ item }: { item: RecommendationItem }) {
         aria-valuenow={Math.round(
           segments.reduce((total, segment) => total + segment.value, 0) * 100
         )}
-        className="bg-surface-soft flex h-2 overflow-hidden rounded-full"
+        className="bg-surface-soft flex h-5 overflow-hidden rounded-full"
       >
         {segments.map((segment) => (
           <span
             key={segment.key}
             title={`${segment.label} ${Math.round(segment.value * 100)}점`}
             aria-label={`${segment.label} ${Math.round(segment.value * 100)}점`}
-            className={`${segment.color} h-full first:rounded-l-full last:rounded-r-full`}
+            className={`${segment.color} flex h-full min-w-0 items-center justify-center first:rounded-l-full last:rounded-r-full`}
             style={{ width: `${segment.value * 100}%` }}
-          />
+          >
+            {segment.value >= 0.12 ? (
+              <span className="text-[10px] font-semibold text-white">
+                {Math.round(segment.value * 100)}점
+              </span>
+            ) : null}
+          </span>
         ))}
       </div>
-      <ul
-        className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 sm:grid-cols-3"
-        aria-label="점수 상세"
-      >
-        {segments.map((segment) => (
-          <li
-            key={segment.key}
-            className="text-text-caption inline-flex items-center gap-1 text-[11px]"
-          >
-            <span
-              className={`${segment.color} h-1.5 w-1.5 rounded-full`}
-              aria-hidden
-            />
-            {segment.label} {Math.round(segment.value * 100)}점
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
@@ -87,7 +71,7 @@ interface RecommendationCardProps {
   accessToken?: string;
 }
 
-function SimilarityInfoTip() {
+function SimilarityInfoTip({ item }: { item: RecommendationItem }) {
   const [open, setOpen] = useState(false);
   const tipId = useId();
   const rootRef = useRef<HTMLSpanElement>(null);
@@ -132,9 +116,20 @@ function SimilarityInfoTip() {
         <span
           id={tipId}
           role="tooltip"
-          className="border-border-subtle bg-surface text-text-sub absolute top-full left-1/2 z-20 mt-1.5 w-max max-w-[14rem] -translate-x-1/2 rounded-lg border px-2.5 py-1.5 text-left text-xs leading-relaxed shadow-sm"
+          className="border-border-subtle bg-surface text-text-sub absolute top-full right-0 z-20 mt-1.5 w-[min(18rem,calc(100vw-2rem))] rounded-lg border px-3 py-2.5 text-left text-xs leading-relaxed shadow-sm"
         >
-          {SIMILARITY_DISCLAIMER}
+          <ul className="space-y-2">
+            {SCORE_SEGMENTS.map((segment) => (
+              <li key={segment.key} className="flex gap-2">
+                <span className={`${segment.color} mt-1 h-2 w-2 shrink-0 rounded-full`} />
+                <span>
+                  <strong>{segment.label} ({Math.round(item.scoreGroups[segment.key] * 100)}점)</strong>
+                  {segment.key === "locationTime" ? " 유실·목격 시각 차이와 목격 위치까지의 거리를 함께 반영" : segment.key === "appearance" ? " 종, 크기, 색상·무늬가 얼마나 비슷한지 반영" : " 목줄, 흉터 등 선택한 특징이 일치하는 경우"}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-text-caption mt-2 border-t pt-2 text-[11px]">{SIMILARITY_DISCLAIMER}</p>
         </span>
       ) : null}
     </span>
@@ -370,7 +365,7 @@ export function RecommendationCard({
                 >
                   {item.displayMatchPercent}점
                 </Text>
-                <SimilarityInfoTip />
+                    <SimilarityInfoTip item={item} />
               </div>
               <ScoreBreakdownBar item={item} />
             </div>

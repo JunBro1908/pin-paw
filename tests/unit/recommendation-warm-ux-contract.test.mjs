@@ -38,7 +38,7 @@ test("confirmation card leads with distance-time chips, display fit score, group
   assert.match(card, /h-5 w-5 text-yellow-500/);
   assert.match(
     card,
-    /추천 점수는 후보를 비교하기 위한 표시용 점수입니다\. 동일한 동물임을 보장하지 않습니다\./
+    /추천 점수는 후보 비교를 위한 참고 지표이며, 동일한 동물임을 보장하지 않습니다\./
   );
   assert.match(card, /role="tooltip"/);
   assert.match(card, /function ScoreBreakdownBar/);
@@ -51,6 +51,9 @@ test("confirmation card leads with distance-time chips, display fit score, group
   assert.match(card, /외형 특징/);
   assert.match(card, /특이사항/);
   assert.match(card, /item\.scoreGroups/);
+  assert.match(card, /segment\.value >= 0\.12/);
+  assert.match(card, /유실·목격 시각 차이와 목격 위치까지의 거리를 함께 반영/);
+  assert.match(card, /종, 크기, 색상·무늬가 얼마나 비슷한지 반영/);
   assert.doesNotMatch(scoreBreakdown, /aria-expanded/);
   assert.doesNotMatch(scoreBreakdown, /onClick/);
 
@@ -74,7 +77,7 @@ test("confirmation card leads with distance-time chips, display fit score, group
   assert.doesNotMatch(card, /상세 보기/);
   assert.doesNotMatch(card, /item\.matchSummary/);
   assert.doesNotMatch(card, /RECOMMENDATION_PRIORITY_LABELS/);
-  assert.doesNotMatch(card, /유력|참고/);
+  assert.doesNotMatch(card, /유력/);
   assert.doesNotMatch(card, /openModal|SightingDetailCard|ReportBlockSheet/);
   assert.doesNotMatch(
     card,

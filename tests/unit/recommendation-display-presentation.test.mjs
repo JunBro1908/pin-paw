@@ -57,5 +57,7 @@ test("recommendation card presents a static score breakdown without model-only c
   assert.doesNotMatch(scoreBar, /useState|setExpanded|aria-expanded/);
   assert.doesNotMatch(scoreBar, /<button|type="button"/);
   assert.match(scoreBar, /role="progressbar"/);
-  assert.match(scoreBar, /grid-cols-2/);
+  assert.match(scoreBar, /h-5 overflow-hidden/);
+  assert.match(scoreBar, /segment\.value >= 0\.12/);
+  assert.doesNotMatch(scoreBar, /aria-label="점수 상세"/);
 });
