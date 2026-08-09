@@ -5,13 +5,17 @@ import { readFile } from "node:fs/promises";
 const routePath = "src/app/api/v1/lost-posts/route.ts";
 const typesPath = "src/features/lost-posts/model/types.ts";
 
-test("authenticated lost post list maps its existing location to an approximate region", async () => {
+test("authenticated lost post list uses owner coordinate RPC for its approximate region", async () => {
   const route = await readFile(routePath, "utf8");
 
   assert.match(route, /import\s*\{\s*resolveApproxRegionLabel\s*\}\s*from\s*["']@\/shared\/lib\/approx-region-label["']/);
-  assert.match(route, /extractPointCoordinates\(row\.lost_location\)/);
-  assert.match(route, /maskShareCoordinate\(point\.lat\)/);
-  assert.match(route, /resolveApproxRegionLabel\(\s*approximatePoint\.lat,\s*approximatePoint\.lng/);
+  assert.match(
+    route,
+    /rpc\(\s*"get_my_lost_posts_with_location",\s*\{\s*limit_count: 100\s*\}\s*\)/
+  );
+  assert.match(route, /coordinatesByLostPostId/);
+  assert.match(route, /coordinatesByLostPostId\.get\(row\.id\)/);
+  assert.match(route, /resolveApproxRegionLabel\(\s*point\.lat,\s*point\.lng/);
   assert.match(route, /return ok\(list, \{ limit, offset \}\);/);
 });
 

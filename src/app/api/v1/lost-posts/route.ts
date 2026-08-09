@@ -21,7 +21,6 @@ import { getClientIp } from "@/shared/lib/ip";
 import { createRequestLogger } from "@/shared/lib/structured-log";
 import { getIdempotencyReplay } from "@/shared/lib/idempotency";
 import { resolveApproxRegionLabel } from "@/shared/lib/approx-region-label";
-import { maskShareCoordinate } from "@/shared/lib/share-preview";
 
 const APPROXIMATE_REGION_LOOKUP_CONCURRENCY = 4;
 
@@ -303,25 +302,40 @@ export async function GET(request: Request) {
     );
   }
 
+  // Geography serialization differs by PostgREST/runtime. Reuse the owner-only
+  // location RPC so the coarse-region lookup receives the same numeric values
+  // used by the my-sightings API.
+  const { data: locationRows } = await supabaseAuth.rpc(
+    "get_my_lost_posts_with_location",
+    { limit_count: 100 }
+  );
+  const coordinatesByLostPostId = new Map<string, { lat: number; lng: number }>();
+  for (const locationRow of locationRows ?? []) {
+    const lat = Number(locationRow.lat);
+    const lng = Number(locationRow.lng);
+    if (
+      typeof locationRow.id === "string" &&
+      Number.isFinite(lat) &&
+      Number.isFinite(lng)
+    ) {
+      coordinatesByLostPostId.set(locationRow.id, { lat, lng });
+    }
+  }
+
   const regionByCoordinates = new Map<string, Promise<string | null>>();
   const list = await mapWithConcurrency(
     rows ?? [],
     APPROXIMATE_REGION_LOOKUP_CONCURRENCY,
     async (row) => {
-      const point = extractPointCoordinates(row.lost_location);
+      const point =
+        coordinatesByLostPostId.get(row.id) ??
+        extractPointCoordinates(row.lost_location);
       let regionLookup: Promise<string | null> | null = null;
       if (point) {
-        const approximatePoint = {
-          lat: maskShareCoordinate(point.lat),
-          lng: maskShareCoordinate(point.lng),
-        };
-        const key = `${approximatePoint.lat},${approximatePoint.lng}`;
+        const key = `${point.lat},${point.lng}`;
         regionLookup = regionByCoordinates.get(key) ?? null;
         if (!regionLookup) {
-          regionLookup = resolveApproxRegionLabel(
-            approximatePoint.lat,
-            approximatePoint.lng
-          );
+          regionLookup = resolveApproxRegionLabel(point.lat, point.lng);
           regionByCoordinates.set(key, regionLookup);
         }
       }
