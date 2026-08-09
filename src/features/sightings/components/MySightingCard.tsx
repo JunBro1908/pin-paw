@@ -88,7 +88,7 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
   };
 
   return (
-    <div className="border-border-subtle bg-surface flex items-center gap-3 rounded-2xl border p-4 shadow-sm">
+    <div className="border-border-subtle bg-surface flex items-stretch gap-3 rounded-2xl border p-3.5 shadow-sm">
       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
         {thumbUrl ? (
           <Image
@@ -105,14 +105,17 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
         )}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+      <div className="flex min-w-0 flex-1 flex-col">
+        <Text variant="body" color="main" className="font-semibold">
+          목격 제보
+        </Text>
         {metadata ? (
-          <Text variant="body" className="truncate font-medium">
+          <Text variant="caption" color="caption" className="mt-0.5 block truncate">
             {metadata}
           </Text>
         ) : null}
         {traitTags.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
+          <div className="mt-2 flex flex-wrap gap-1">
             {traitTags.map((tag) => (
               <span key={tag} className={traitChipClass}>
                 {tag}
@@ -126,13 +129,13 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
               ? `/map?lat=${item.lat}&lng=${item.lng}&sightingId=${item.id}`
               : `/map?sightingId=${item.id}`
           }
-          className="text-action-primary inline-block text-sm font-medium hover:underline"
+          className="text-action-primary hover:bg-primary-soft mt-auto inline-flex min-h-9 w-fit items-center rounded-lg px-2.5 pt-0.5 text-sm font-medium"
         >
           지도에서 보기
         </Link>
       </div>
 
-      <div className="flex shrink-0 items-center self-center">
+      <div className="flex shrink-0 items-start self-start">
         <Link
           href={`/my/sightings/${item.id}/edit`}
           className={`${quietIconClass} text-text-main hover:bg-surface-soft`}
