@@ -22,6 +22,29 @@ import { createRequestLogger } from "@/shared/lib/structured-log";
 import { getIdempotencyReplay } from "@/shared/lib/idempotency";
 import { resolveApproxRegionLabel } from "@/shared/lib/approx-region-label";
 
+const APPROXIMATE_REGION_LOOKUP_CONCURRENCY = 4;
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  mapper: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+
+  async function worker() {
+    while (nextIndex < items.length) {
+      const index = nextIndex++;
+      results[index] = await mapper(items[index]);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, worker)
+  );
+  return results;
+}
+
 function extractPointCoordinates(
   location: unknown
 ): { lat: number; lng: number } | null {
@@ -271,8 +294,10 @@ export async function GET(request: Request) {
   }
 
   const regionByCoordinates = new Map<string, Promise<string | null>>();
-  const list = await Promise.all(
-    (rows ?? []).map(async (row) => {
+  const list = await mapWithConcurrency(
+    rows ?? [],
+    APPROXIMATE_REGION_LOOKUP_CONCURRENCY,
+    async (row) => {
       const point = extractPointCoordinates(row.lost_location);
       let regionLookup: Promise<string | null> | null = null;
       if (point) {
@@ -286,7 +311,7 @@ export async function GET(request: Request) {
       const approximate_region = regionLookup ? await regionLookup : null;
 
       return { ...row, approximate_region };
-    })
+    }
   );
   return ok(list, { limit, offset });
 }
