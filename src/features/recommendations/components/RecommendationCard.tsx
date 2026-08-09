@@ -1,6 +1,14 @@
 "use client";
 
-import { useState, useCallback, useEffect, useId, useRef } from "react";
+import {
+  useState,
+  useCallback,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useRef,
+} from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { Text } from "@/shared/ui/Text";
@@ -71,13 +79,50 @@ interface RecommendationCardProps {
 
 function SimilarityInfoTip() {
   const [open, setOpen] = useState(false);
+  const [tooltipPosition, setTooltipPosition] = useState<{
+    top: number;
+    left: number;
+  } | null>(null);
   const tipId = useId();
   const rootRef = useRef<HTMLSpanElement>(null);
+  const tooltipRef = useRef<HTMLSpanElement>(null);
+
+  const updateTooltipPosition = useCallback(() => {
+    const trigger = rootRef.current;
+    if (!trigger) return;
+
+    const rect = trigger.getBoundingClientRect();
+    const width = Math.min(288, window.innerWidth - 32);
+    const estimatedHeight = 180;
+    const left = Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16));
+    const top =
+      rect.bottom + 8 + estimatedHeight <= window.innerHeight
+        ? rect.bottom + 8
+        : Math.max(16, rect.top - estimatedHeight - 8);
+
+    setTooltipPosition({ top, left });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) return;
+
+    updateTooltipPosition();
+    window.addEventListener("resize", updateTooltipPosition);
+    window.addEventListener("scroll", updateTooltipPosition, true);
+    return () => {
+      window.removeEventListener("resize", updateTooltipPosition);
+      window.removeEventListener("scroll", updateTooltipPosition, true);
+    };
+  }, [open, updateTooltipPosition]);
 
   useEffect(() => {
     if (!open) return;
     const onPointerDown = (event: PointerEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        !rootRef.current?.contains(target) &&
+        !tooltipRef.current?.contains(target)
+      ) {
         setOpen(false);
       }
     };
@@ -110,26 +155,31 @@ function SimilarityInfoTip() {
       >
         <Icon name="info" size={10} />
       </button>
-      {open ? (
-        <span
-          id={tipId}
-          role="tooltip"
-          className="border-border-subtle bg-surface text-text-sub absolute top-full right-0 z-20 mt-1.5 w-[min(18rem,calc(100vw-2rem))] rounded-lg border px-3 py-2.5 text-left text-xs leading-relaxed shadow-sm"
-        >
-          <ul className="space-y-2">
-            {SCORE_SEGMENTS.map((segment) => (
-              <li key={segment.key} className="flex items-start gap-2">
-                <span className={`${segment.color} mt-1 h-2.5 w-2.5 shrink-0 rounded-full`} />
-                <span>
-                  <strong>{segment.label}:</strong>{" "}
-                  {segment.key === "locationTime" ? "유실·목격 시각 차이와 목격 위치까지의 거리" : segment.key === "appearance" ? "종, 크기, 색상·무늬의 유사도" : "목줄, 흉터 등 선택한 특징의 일치"}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-text-caption mt-2 border-t pt-2 text-[11px]">{SIMILARITY_DISCLAIMER}</p>
-        </span>
-      ) : null}
+      {open && tooltipPosition
+        ? createPortal(
+            <span
+              ref={tooltipRef}
+              id={tipId}
+              role="tooltip"
+              style={tooltipPosition}
+              className="border-border-subtle bg-surface text-text-sub fixed z-[130] w-[min(18rem,calc(100vw-2rem))] rounded-lg border px-3 py-2.5 text-left text-xs leading-relaxed shadow-sm"
+            >
+              <ul className="space-y-2">
+                {SCORE_SEGMENTS.map((segment) => (
+                  <li key={segment.key} className="flex items-start gap-2">
+                    <span className={`${segment.color} mt-1 h-2.5 w-2.5 shrink-0 rounded-full`} />
+                    <span>
+                      <strong>{segment.label}:</strong>{" "}
+                      {segment.key === "locationTime" ? "유실·목격 시각 차이와 목격 위치까지의 거리" : segment.key === "appearance" ? "종, 크기, 색상·무늬의 유사도" : "목줄, 흉터 등 선택한 특징의 일치"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="text-text-caption mt-2 border-t pt-2 text-[11px]">{SIMILARITY_DISCLAIMER}</p>
+            </span>,
+            document.body
+          )
+        : null}
     </span>
   );
 }

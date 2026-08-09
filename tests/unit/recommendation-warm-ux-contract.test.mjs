@@ -41,6 +41,15 @@ test("confirmation card leads with distance-time chips, display fit score, group
     /추천 점수는 후보 비교를 위한 참고 지표이며, 동일한 동물임을 보장하지 않습니다\./
   );
   assert.match(card, /role="tooltip"/);
+  assert.match(card, /import \{ createPortal \} from "react-dom"/);
+  assert.match(card, /createPortal\(/);
+  assert.match(card, /document\.body/);
+  assert.match(card, /fixed z-\[130\]/);
+  assert.match(card, /getBoundingClientRect\(\)/);
+  assert.doesNotMatch(
+    card,
+    /absolute top-full right-0 z-20[^]*role="tooltip"/
+  );
   assert.match(card, /function ScoreBreakdownBar/);
   assert.match(
     card,
