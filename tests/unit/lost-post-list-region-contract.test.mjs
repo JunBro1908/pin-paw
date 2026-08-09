@@ -9,7 +9,9 @@ test("authenticated lost post list maps its existing location to an approximate 
   const route = await readFile(routePath, "utf8");
 
   assert.match(route, /import\s*\{\s*resolveApproxRegionLabel\s*\}\s*from\s*["']@\/shared\/lib\/approx-region-label["']/);
-  assert.match(route, /const list = await mapWithConcurrency\([\s\S]*?extractPointCoordinates\(row\.lost_location\)[\s\S]*?resolveApproxRegionLabel\(point\.lat, point\.lng\)[\s\S]*?approximate_region[\s\S]*?\);/);
+  assert.match(route, /extractPointCoordinates\(row\.lost_location\)/);
+  assert.match(route, /maskShareCoordinate\(point\.lat\)/);
+  assert.match(route, /resolveApproxRegionLabel\(\s*approximatePoint\.lat,\s*approximatePoint\.lng/);
   assert.match(route, /return ok\(list, \{ limit, offset \}\);/);
 });
 

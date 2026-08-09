@@ -14,12 +14,11 @@ test("active lost-post card presents lost time and approximate region before tra
   assert.match(card, /formatSeoulLostDateTime/);
   assert.match(card, /item\.lost_at/);
   assert.match(card, /item\.approximate_region/);
-  assert.match(card, /잃어버린 시간/);
-  assert.match(card, /잃어버린 지역/);
+  assert.match(card, /\{lostAt\} \/ \{approximateRegion\}/);
   assert.match(card, /시간 정보 없음/);
   assert.match(card, /지역 정보 없음/);
   assert.ok(
-    card.indexOf('<dt className="text-text-caption shrink-0">잃어버린 시간</dt>') <
+    card.indexOf('{lostAt} / {approximateRegion}') <
       card.indexOf('<ul className="mt-2 flex flex-wrap gap-1.5">'),
     "time should be presented before trait chips"
   );

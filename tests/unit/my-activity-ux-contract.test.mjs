@@ -20,11 +20,10 @@ test("active case card prioritizes cover photo and detail CTA", async () => {
     "utf8"
   );
   assert.match(card, /getLostPostCoverUrl/);
-  assert.match(card, /잃어버린 시간/);
-  assert.match(card, /잃어버린 지역/);
+  assert.match(card, /\{lostAt\} \/ \{approximateRegion\}/);
   assert.match(card, /시간 정보 없음/);
   assert.match(card, /지역 정보 없음/);
-  assert.match(card, /특이사항 :/);
+  assert.match(card, />\s*특이사항\s*</);
   assert.match(card, /buildLostCaseTraitTags|traitTags/);
   assert.match(card, /trait_species|trait_size|trait_color/);
   assert.match(card, /item\.note/);
@@ -199,8 +198,8 @@ test("my sighting cards pair quiet edit and delete icon actions", async () => {
   assert.match(card, /buildTraitTags/);
   assert.match(card, /bg-surface-soft text-text-sub rounded-lg/);
   assert.match(card, /bg-border-subtle mx-0\.5 h-5 w-px/);
-  assert.match(card, /flex items-center gap-3/);
-  assert.match(card, /flex shrink-0 items-center self-center/);
+  assert.match(card, /flex items-stretch gap-3/);
+  assert.match(card, /flex shrink-0 items-start self-start/);
   assert.match(card, /min-h-11 min-w-11/);
   assert.match(card, /text-text-caption/);
   assert.doesNotMatch(card, /item\.note/);

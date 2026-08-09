@@ -149,16 +149,9 @@ export function ActiveLostCaseCard({
           >
             {item.pet_name?.trim() || "이름 미입력"}
           </Text>
-          <dl className="text-text-sub mt-2 space-y-0.5 text-sm">
-            <div className="flex min-w-0 gap-2">
-              <dt className="text-text-caption shrink-0">잃어버린 시간</dt>
-              <dd className="min-w-0 truncate">{lostAt}</dd>
-            </div>
-            <div className="flex min-w-0 gap-2">
-              <dt className="text-text-caption shrink-0">잃어버린 지역</dt>
-              <dd className="min-w-0 truncate">{approximateRegion}</dd>
-            </div>
-          </dl>
+          <Text variant="body" color="sub" className="mt-1.5 block truncate text-sm">
+            {lostAt} / {approximateRegion}
+          </Text>
           {traitTags.length > 0 ? (
             <ul className="mt-2 flex flex-wrap gap-1.5">
               {traitTags.map((label) => (
@@ -169,13 +162,22 @@ export function ActiveLostCaseCard({
             </ul>
           ) : null}
           {note ? (
-            <Text
-              variant="caption"
-              color="caption"
-              className="mt-2 block line-clamp-2"
-            >
-              특이사항 : {note}
-            </Text>
+            <div className="bg-surface-soft mt-3 rounded-xl px-3 py-2.5">
+              <Text
+                variant="caption"
+                color="caption"
+                className="mb-0.5 block text-[11px] font-medium"
+              >
+                특이사항
+              </Text>
+              <Text
+                variant="caption"
+                color="sub"
+                className="block line-clamp-2 leading-relaxed"
+              >
+                {note}
+              </Text>
+            </div>
           ) : null}
         </div>
         {onPrimaryAction ? (

@@ -51,7 +51,7 @@ export type SafeLostPostSharePreview = {
   sharePath: string;
 };
 
-function maskShareCoordinate(coordinate: number): number {
+export function maskShareCoordinate(coordinate: number): number {
   const gridSize = 0.05;
   if (!Number.isFinite(coordinate)) {
     throw new TypeError("Location coordinates must be finite.");

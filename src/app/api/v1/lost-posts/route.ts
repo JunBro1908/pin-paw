@@ -21,6 +21,7 @@ import { getClientIp } from "@/shared/lib/ip";
 import { createRequestLogger } from "@/shared/lib/structured-log";
 import { getIdempotencyReplay } from "@/shared/lib/idempotency";
 import { resolveApproxRegionLabel } from "@/shared/lib/approx-region-label";
+import { maskShareCoordinate } from "@/shared/lib/share-preview";
 
 const APPROXIMATE_REGION_LOOKUP_CONCURRENCY = 4;
 
@@ -310,10 +311,17 @@ export async function GET(request: Request) {
       const point = extractPointCoordinates(row.lost_location);
       let regionLookup: Promise<string | null> | null = null;
       if (point) {
-        const key = `${point.lat},${point.lng}`;
+        const approximatePoint = {
+          lat: maskShareCoordinate(point.lat),
+          lng: maskShareCoordinate(point.lng),
+        };
+        const key = `${approximatePoint.lat},${approximatePoint.lng}`;
         regionLookup = regionByCoordinates.get(key) ?? null;
         if (!regionLookup) {
-          regionLookup = resolveApproxRegionLabel(point.lat, point.lng);
+          regionLookup = resolveApproxRegionLabel(
+            approximatePoint.lat,
+            approximatePoint.lng
+          );
           regionByCoordinates.set(key, regionLookup);
         }
       }
