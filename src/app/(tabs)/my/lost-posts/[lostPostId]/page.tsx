@@ -18,6 +18,8 @@ import { cn } from "@/shared/lib/cn";
 import { trackFunnelEvent } from "@/shared/lib/funnel-client";
 import { ReportBlockSheet } from "@/features/moderation/components/ReportBlockSheet";
 import { ShareLostPostButton } from "@/features/lost-posts/components/ShareLostPostButton";
+import { formatDogSizeLabel } from "@/shared/constants/traitSizes";
+import { formatSeoulLostDateTime } from "@/shared/lib/date";
 
 function DetailField({
   label,
@@ -158,13 +160,9 @@ function LostPostDetailContent() {
   }
 
   const coverUrl = getLostPostCoverUrl(item.cover_photo_key);
-  const lostAt = item.lost_at
-    ? new Date(item.lost_at).toLocaleString("ko-KR", {
-        timeZone: "Asia/Seoul",
-      })
-    : "";
-  const colorSize = [item.trait_color, item.trait_size]
-    .filter(Boolean)
+  const lostAt = formatSeoulLostDateTime(item.lost_at);
+  const colorSize = [item.trait_color?.trim(), formatDogSizeLabel(item.trait_size)]
+    .filter((value): value is string => Boolean(value && value !== "unknown" && value !== "모름"))
     .join(" · ");
   const traitSpecies = item.trait_species?.trim() || null;
   const editHref = `/my/lost-posts/${item.id}/edit`;

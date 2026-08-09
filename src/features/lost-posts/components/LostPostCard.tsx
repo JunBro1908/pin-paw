@@ -6,6 +6,9 @@ import { Text } from "@/shared/ui/Text";
 import { createClient } from "@/shared/supabase/client";
 import { StatusBadge } from "./StatusBadge";
 import type { LostPostItem } from "../model/types";
+import { formatDogSizeLabel } from "@/shared/constants/traitSizes";
+import { formatSeoulLostDateTime } from "@/shared/lib/date";
+import { SPECIES_UNKNOWN } from "@/features/sightings/constants/breeds";
 
 interface LostPostCardProps {
   item: LostPostItem;
@@ -20,18 +23,15 @@ export function LostPostCard({ item, href }: LostPostCardProps) {
     ? ref.getPublicUrl(item.cover_photo_key).data.publicUrl
     : "";
 
-  const lostAt = item.lost_at
-    ? new Date(item.lost_at).toLocaleString("ko-KR", {
-        timeZone: "Asia/Seoul",
-        month: "short",
-        day: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "";
-
-  const traits = [item.trait_color, item.trait_size, item.trait_species]
-    .filter(Boolean)
+  const lostAt = formatSeoulLostDateTime(item.lost_at) ?? "시간 정보 없음";
+  const traits = [
+    item.trait_color?.trim(),
+    formatDogSizeLabel(item.trait_size),
+    item.trait_species?.trim() === SPECIES_UNKNOWN || item.trait_species?.trim() === "모름"
+      ? null
+      : item.trait_species?.trim(),
+  ]
+    .filter((value): value is string => Boolean(value && value !== "unknown" && value !== "모름"))
     .join(" · ");
 
   const linkHref = href ?? `/my/lost-posts/${item.id}`;
@@ -60,12 +60,12 @@ export function LostPostCard({ item, href }: LostPostCardProps) {
         <span className="mb-1 block">
           <StatusBadge status={item.status} size="sm" />
         </span>
-        <Text variant="body" className="font-semibold">
+        <Text variant="body" className="truncate font-semibold">
           {item.pet_name?.trim() || "미입력"}
         </Text>
         <Text
           variant="body"
-          className="text-sm text-gray-600 dark:text-gray-400"
+          className="truncate text-sm text-gray-600 dark:text-gray-400"
         >
           {lostAt}
         </Text>

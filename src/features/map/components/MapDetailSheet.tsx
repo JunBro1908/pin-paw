@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useCallback, useEffect, useRef } from "react";
 import type { ReactNode, Ref, SyntheticEvent } from "react";
 import { cn } from "@/shared/lib/cn";
+import { formatDogSizeLabel } from "@/shared/constants/traitSizes";
+import { formatSeoulLostDateTime } from "@/shared/lib/date";
 import { scrollablePanelClass } from "@/shared/ui/ScrollablePanel";
 import type { LostPostMapItem } from "../lib/map-data-state";
 import type { MapItem } from "../types/naver";
@@ -227,9 +229,12 @@ function LostPostDetail({
   item: LostPostMapItem;
   getImageUrl: (key: string) => string;
 }) {
-  const traits = [item.trait_color, item.trait_size, item.trait_species].filter(
-    Boolean
-  );
+  const lostAt = formatSeoulLostDateTime(item.lost_at);
+  const traits = [
+    item.trait_color?.trim(),
+    formatDogSizeLabel(item.trait_size),
+    item.trait_species?.trim(),
+  ].filter((value): value is string => Boolean(value && value !== "unknown" && value !== "모름"));
 
   return (
     <div
@@ -265,19 +270,11 @@ function LostPostDetail({
           <h2 className="text-text-main pr-12 text-lg font-semibold">
             {item.pet_name?.trim() || "이름 없음"}
           </h2>
-          {item.lost_at && (
+          {lostAt ? (
             <p className="text-text-sub mt-1 text-sm">
-              유실일:{" "}
-              {new Date(item.lost_at).toLocaleString("ko-KR", {
-                timeZone: "Asia/Seoul",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-                hour: "2-digit",
-                minute: "2-digit",
-              })}
+              유실일: {lostAt}
             </p>
-          )}
+          ) : null}
         </div>
 
         {traits.length > 0 && (

@@ -20,14 +20,15 @@ test("active case card prioritizes cover photo and detail CTA", async () => {
     "utf8"
   );
   assert.match(card, /getLostPostCoverUrl/);
-  assert.match(card, /유실 시각 :/);
+  assert.match(card, /잃어버린 시간/);
+  assert.match(card, /잃어버린 지역/);
+  assert.match(card, /시간 정보 없음/);
+  assert.match(card, /지역 정보 없음/);
   assert.match(card, /특이사항 :/);
   assert.match(card, /buildLostCaseTraitTags|traitTags/);
   assert.match(card, /trait_species|trait_size|trait_color/);
   assert.match(card, /item\.note/);
-  assert.match(card, /min-h-\[2\.5rem\]/);
   assert.match(card, /line-clamp-2/);
-  assert.match(card, /!note && "invisible"/);
   assert.doesNotMatch(card, /마지막 확인/);
   assert.match(card, /유실글 보기/);
   assert.match(card, /추천 제보 보기/);

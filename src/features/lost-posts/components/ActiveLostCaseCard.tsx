@@ -9,12 +9,12 @@ import { Toast } from "@/shared/ui/Toast";
 import { StatusBadge } from "./StatusBadge";
 import { ShareLostPostButton } from "./ShareLostPostButton";
 import {
-  formatLostCaseDateTime,
   getLostPostCoverUrl,
 } from "../lib/lost-post-cover";
 import type { LostPostItem } from "../model/types";
 import { cn } from "@/shared/lib/cn";
-import { normalizeSize, SIZE_LABELS } from "@/shared/constants/traitSizes";
+import { formatDogSizeLabel } from "@/shared/constants/traitSizes";
+import { formatSeoulLostDateTime } from "@/shared/lib/date";
 import { SPECIES_UNKNOWN } from "@/features/sightings/constants/breeds";
 
 interface ActiveLostCaseCardProps {
@@ -40,13 +40,8 @@ function buildLostCaseTraitTags(item: LostPostItem): string[] {
     tags.push(species);
   }
 
-  const sizeRaw = item.trait_size?.trim();
-  if (sizeRaw) {
-    const normalized = normalizeSize(sizeRaw);
-    if (normalized && normalized !== "unknown") {
-      tags.push(SIZE_LABELS[normalized]);
-    }
-  }
+  const size = formatDogSizeLabel(item.trait_size);
+  if (size) tags.push(size);
 
   const color = item.trait_color?.trim();
   if (color && color !== "unknown" && color !== "모름") {
@@ -70,7 +65,8 @@ export function ActiveLostCaseCard({
     type: "success" | "error";
   } | null>(null);
   const coverUrl = getLostPostCoverUrl(item.cover_photo_key);
-  const lostAt = formatLostCaseDateTime(item.lost_at);
+  const lostAt = formatSeoulLostDateTime(item.lost_at) ?? "시간 정보 없음";
+  const approximateRegion = item.approximate_region?.trim() || "지역 정보 없음";
   const traitTags = buildLostCaseTraitTags(item);
   const note = item.note?.trim() || "";
   const detailHref = `/my/lost-posts/${item.id}`;
@@ -144,15 +140,25 @@ export function ActiveLostCaseCard({
             />
           ) : null}
         </div>
-        <div>
-          <Text as="h2" variant="title" color="main" className="font-semibold">
+        <div className="min-w-0">
+          <Text
+            as="h2"
+            variant="title"
+            color="main"
+            className="truncate font-semibold"
+          >
             {item.pet_name?.trim() || "이름 미입력"}
           </Text>
-          {lostAt ? (
-            <Text variant="body" color="sub" className="mt-1 block text-sm">
-              유실 시각 : {lostAt}
-            </Text>
-          ) : null}
+          <dl className="text-text-sub mt-2 space-y-0.5 text-sm">
+            <div className="flex min-w-0 gap-2">
+              <dt className="text-text-caption shrink-0">잃어버린 시간</dt>
+              <dd className="min-w-0 truncate">{lostAt}</dd>
+            </div>
+            <div className="flex min-w-0 gap-2">
+              <dt className="text-text-caption shrink-0">잃어버린 지역</dt>
+              <dd className="min-w-0 truncate">{approximateRegion}</dd>
+            </div>
+          </dl>
           {traitTags.length > 0 ? (
             <ul className="mt-2 flex flex-wrap gap-1.5">
               {traitTags.map((label) => (
@@ -162,17 +168,15 @@ export function ActiveLostCaseCard({
               ))}
             </ul>
           ) : null}
-          <Text
-            variant="caption"
-            color="caption"
-            className={cn(
-              "mt-2 block min-h-[2.5rem] line-clamp-2",
-              !note && "invisible"
-            )}
-            aria-hidden={!note}
-          >
-            {note ? `특이사항 : ${note}` : "\u00A0"}
-          </Text>
+          {note ? (
+            <Text
+              variant="caption"
+              color="caption"
+              className="mt-2 block line-clamp-2"
+            >
+              특이사항 : {note}
+            </Text>
+          ) : null}
         </div>
         {onPrimaryAction ? (
           <Button
