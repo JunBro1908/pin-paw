@@ -25,7 +25,7 @@ test("maps each public priority to an intuitive Korean band label", () => {
   );
 });
 
-test("exposes matchPercent and trait summary without raw similarity keys", () => {
+test("exposes a display-only fit score and grouped evidence without raw similarity keys", () => {
   const result = toRecommendationPresentation({
     similarity: 0.76,
     distanceKm: 1.4,
@@ -35,7 +35,7 @@ test("exposes matchPercent and trait summary without raw similarity keys", () =>
 
   assert.deepEqual(result, {
     priority: "high",
-    matchPercent: 76,
+    displayMatchPercent: 96,
     matchSummary: "색상·특이사항 일치",
     distanceKm: 1.4,
     timeDeltaHours: 5.2,
@@ -46,6 +46,16 @@ test("exposes matchPercent and trait summary without raw similarity keys", () =>
       size: 0,
       color: 0,
       distinctiveTrait: 0,
+    },
+    scoreGroups: {
+      locationTime: 0.76,
+      appearance: 0,
+      distinctive: 0,
+      appearanceDetail: {
+        species: 0,
+        size: 0,
+        color: 0,
+      },
     },
   });
   assert.equal("similarity" in result, false);
@@ -119,7 +129,7 @@ test("sanitizes non-finite and negative numeric evidence inputs", () => {
 
   assert.deepEqual(result, {
     priority: "within-range",
-    matchPercent: 0,
+    displayMatchPercent: 0,
     matchSummary: "색상 일치",
     distanceKm: 0,
     timeDeltaHours: 0,
@@ -130,6 +140,16 @@ test("sanitizes non-finite and negative numeric evidence inputs", () => {
       size: 0,
       color: 0,
       distinctiveTrait: 0,
+    },
+    scoreGroups: {
+      locationTime: 0,
+      appearance: 0,
+      distinctive: 0,
+      appearanceDetail: {
+        species: 0,
+        size: 0,
+        color: 0,
+      },
     },
   });
 });

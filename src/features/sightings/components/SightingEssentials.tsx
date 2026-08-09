@@ -158,7 +158,9 @@ export function SightingEssentials({
             variant="body"
             className={cn(
               "min-w-0 truncate font-medium",
-              locationStatus === "ready" ? "text-text-main" : "text-text-sub"
+              locationStatus === "geolocation" || locationStatus === "selected"
+                ? "text-text-main"
+                : "text-text-sub"
             )}
           >
             {formatSightingLocationStatus(locationStatus)}

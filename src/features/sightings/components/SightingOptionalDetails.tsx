@@ -173,7 +173,7 @@ export function SightingOptionalDetails({
               htmlFor={descriptionId}
               className="text-text-main block font-semibold"
             >
-              메모 (확인용, 추천 점수에 반영하지 않음)
+              메모
             </label>
             <textarea
               id={descriptionId}

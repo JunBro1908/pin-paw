@@ -76,10 +76,7 @@ test("recommend map deep link forces default layer before focus", async () => {
     /const mapHref = buildRecommendationMapHref\(item\.sightingId,\s*lostPostId\);/
   );
   assert.match(card, /router\.push\(mapHref\)/);
-  assert.doesNotMatch(
-    card,
-    /\/map\?lat=\$\{item\.lat\}&lng=\$\{item\.lng\}/
-  );
+  assert.doesNotMatch(card, /\/map\?lat=\$\{item\.lat\}&lng=\$\{item\.lng\}/);
 
   assert.match(
     map,
@@ -89,6 +86,14 @@ test("recommend map deep link forces default layer before focus", async () => {
   assert.match(map, /buildFocusedSightingFromDetail/);
   assert.match(map, /findFocusedPointInItems/);
   assert.match(map, /panMapToDeepLinkCenter/);
+  assert.match(
+    map,
+    /pendingDeepLinkCenterRef\.current = center;\s*if \(!mapInstanceRef\.current \|\| !window\.naver\?\.maps\) return;/
+  );
+  assert.match(
+    map,
+    /if \(pendingDeepLinkCenterRef\.current\) \{\s*panMapToDeepLinkCenter\(pendingDeepLinkCenterRef\.current\);/
+  );
   assert.match(
     map,
     /\/api\/v1\/auth\/sightings\/\$\{encodeURIComponent\(focusId\)\}/
@@ -101,10 +106,7 @@ test("recommend map deep link forces default layer before focus", async () => {
   );
 
   // Viewport fallback must still run when URL center is present.
-  assert.doesNotMatch(
-    map,
-    /itemsInView\.length === 0 \|\|\s*initialCenter/
-  );
+  assert.doesNotMatch(map, /itemsInView\.length === 0 \|\|\s*initialCenter/);
 
   assert.match(focusLib, /Prefer precise coords from auth detail RPC/);
   assert.match(focusLib, /DEEP_LINK_FOCUS_ZOOM = 16/);
@@ -112,10 +114,7 @@ test("recommend map deep link forces default layer before focus", async () => {
     focusLib,
     /const params = new URLSearchParams\(\{\s*sightingId:/
   );
-  assert.doesNotMatch(
-    focusLib,
-    /params\.(?:set|append)\(["'](?:lat|lng)["']/
-  );
+  assert.doesNotMatch(focusLib, /params\.(?:set|append)\(["'](?:lat|lng)["']/);
 });
 
 test("NaverMap refetches bookmark layer after claim mutations succeed", async () => {

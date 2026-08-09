@@ -11,26 +11,27 @@ import { buildRecommendationMapHref } from "@/features/map/lib/map-deep-link-foc
 import { RecommendationItem } from "../model/types";
 
 const SIMILARITY_DISCLAIMER =
-  "점수 막대는 이동 가능성, 외형 정보, 특이사항의 실제 점수 기여도입니다. 동일한 동물임을 보장하지 않습니다.";
+  "후보 적합도는 추천 후보를 비교하기 위한 표시용 점수입니다. 동일한 동물임을 보장하지 않습니다.";
 
 const SCORE_SEGMENTS = [
-  { key: "movement", label: "목격 정보", color: "bg-action-primary" },
-  { key: "species", label: "종", color: "bg-sky-500" },
-  { key: "size", label: "크기", color: "bg-amber-500" },
-  { key: "color", label: "색상·무늬", color: "bg-rose-500" },
+  { key: "locationTime", label: "위치·시간", color: "bg-action-primary" },
+  { key: "appearance", label: "외형 특징", color: "bg-sky-500" },
   {
-    key: "distinctiveTrait",
-    label: "특이사항 보너스",
+    key: "distinctive",
+    label: "특이사항",
     color: "bg-violet-500",
   },
 ] as const;
 
 function ScoreBreakdownBar({ item }: { item: RecommendationItem }) {
+  const [expanded, setExpanded] = useState<
+    "appearance" | "locationTime" | "distinctive" | null
+  >(null);
   const segments = SCORE_SEGMENTS.map((segment) => ({
     ...segment,
-    value: Math.max(0, Math.min(item.scoreBreakdown[segment.key], 1)),
+    value: Math.max(0, Math.min(item.scoreGroups[segment.key], 1)),
   })).filter((segment) => segment.value > 0);
-  const radius = item.scoreBreakdown.movementRadiusKm;
+  const radius = item.scoreGroups.movementRadiusKm;
 
   return (
     <div className="mt-2.5" onClick={(event) => event.stopPropagation()}>
@@ -39,17 +40,21 @@ function ScoreBreakdownBar({ item }: { item: RecommendationItem }) {
           점수 구성
         </Text>
         {radius ? (
-          <Text variant="caption" className="text-text-caption text-[11px]">
-            현재 이동 반경 약 {radius}km
-          </Text>
+          <span title="유실 후 경과 시간에 따라 계산한 이동 가능 반경이며, 점수 자체는 아닙니다.">
+            <Text variant="caption" className="text-text-caption text-[11px]">
+              현재 이동 가능 반경 약 {radius}km
+            </Text>
+          </span>
         ) : null}
       </div>
       <div
         role="progressbar"
-        aria-label="유사도 점수 구성"
+        aria-label="추천 점수 구성: 위치와 시간, 외형 특징, 특이사항"
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-valuenow={item.matchPercent}
+        aria-valuenow={Math.round(
+          segments.reduce((total, segment) => total + segment.value, 0) * 100
+        )}
         className="bg-surface-soft flex h-2 overflow-hidden rounded-full"
       >
         {segments.map((segment) => (
@@ -63,22 +68,58 @@ function ScoreBreakdownBar({ item }: { item: RecommendationItem }) {
         ))}
       </div>
       <ul
-        className="mt-1.5 flex flex-wrap gap-x-2.5 gap-y-1"
+        className="mt-1.5 flex flex-wrap gap-x-1 gap-y-1"
         aria-label="점수 상세"
       >
         {segments.map((segment) => (
-          <li
-            key={segment.key}
-            className="text-text-caption inline-flex items-center gap-1 text-[11px]"
-          >
-            <span
-              className={`${segment.color} h-1.5 w-1.5 rounded-full`}
-              aria-hidden
-            />
-            {segment.label} {Math.round(segment.value * 100)}점
+          <li key={segment.key}>
+            <button
+              type="button"
+              aria-expanded={expanded === segment.key}
+              onClick={() =>
+                setExpanded((current) =>
+                  current === segment.key ? null : segment.key
+                )
+              }
+              className="text-text-caption focus-visible:outline-action-primary inline-flex min-h-11 items-center gap-1 rounded-lg px-1.5 text-[11px] focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              <span
+                className={`${segment.color} h-1.5 w-1.5 rounded-full`}
+                aria-hidden
+              />
+              {segment.label} {Math.round(segment.value * 100)}점
+            </button>
           </li>
         ))}
       </ul>
+      {expanded === "appearance" ? (
+        <Text
+          variant="caption"
+          className="text-text-sub mt-1 block text-[11px]"
+        >
+          외형 특징 {Math.round(item.scoreGroups.appearance * 100)}/50점: 종{" "}
+          {Math.round(item.scoreGroups.appearanceDetail.species * 100)}/15, 크기{" "}
+          {Math.round(item.scoreGroups.appearanceDetail.size * 100)}/10,
+          색상·무늬 {Math.round(item.scoreGroups.appearanceDetail.color * 100)}
+          /25
+        </Text>
+      ) : null}
+      {expanded === "locationTime" ? (
+        <Text
+          variant="caption"
+          className="text-text-sub mt-1 block text-[11px]"
+        >
+          유실 후 경과 시간과 목격 위치의 거리를 함께 반영한 점수입니다.
+        </Text>
+      ) : null}
+      {expanded === "distinctive" ? (
+        <Text
+          variant="caption"
+          className="text-text-sub mt-1 block text-[11px]"
+        >
+          일치하는 특이사항이 있을 때 더해지는 보너스 점수입니다.
+        </Text>
+      ) : null}
     </div>
   );
 }
@@ -365,9 +406,9 @@ export function RecommendationCard({
                   as="p"
                   variant="caption"
                   className="text-action-primary text-sm font-medium"
-                  aria-label={`유사도 ${item.matchPercent}퍼센트`}
+                  aria-label={`후보 적합도 ${item.displayMatchPercent}점`}
                 >
-                  {item.matchPercent}%
+                  후보 적합도 {item.displayMatchPercent}점
                 </Text>
                 <SimilarityInfoTip />
               </div>

@@ -119,6 +119,7 @@ export interface ClusterPoint {
   trait_color?: string;
   trait_size?: string;
   trait_species?: string;
+  trait_tags?: string[];
   author_type?: "anon" | "user";
   nickname?: string;
 }

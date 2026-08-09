@@ -128,7 +128,7 @@ test("public recommendation mapping omits raw evidence fields after masking loca
     locationPrecision: "approximate",
     claimedAsMyDog: true,
     priority: "high",
-    matchPercent: 80,
+    displayMatchPercent: 100,
     matchSummary: "색상 일치",
     distanceKm: 1.4,
     timeDeltaHours: 0.4,
@@ -139,6 +139,16 @@ test("public recommendation mapping omits raw evidence fields after masking loca
       size: 0,
       color: 0,
       distinctiveTrait: 0,
+    },
+    scoreGroups: {
+      locationTime: 0.8,
+      appearance: 0,
+      distinctive: 0,
+      appearanceDetail: {
+        species: 0,
+        size: 0,
+        color: 0,
+      },
     },
   });
   assert.equal("similarity" in result, false);

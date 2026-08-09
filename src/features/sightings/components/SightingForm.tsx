@@ -15,6 +15,7 @@ import {
   toLocalDateTimeInputValue,
   type SightingLocationStatus,
 } from "../lib/sighting-form-presentation";
+import type { LocationInputSource } from "@/shared/lib/location-input-presentation";
 import { parseSeoulDateTimeLocal } from "@/shared/lib/date";
 import { SightingEssentials } from "./SightingEssentials";
 import { SightingOptionalDetails } from "./SightingOptionalDetails";
@@ -43,13 +44,15 @@ export function SightingForm() {
   });
 
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitPhase, setSubmitPhase] = useState<"idle" | "sending" | "success">(
-    "idle"
-  );
+  const [submitPhase, setSubmitPhase] = useState<
+    "idle" | "sending" | "success"
+  >("idle");
   const [sendProgress, setSendProgress] = useState(8);
   const [showErrors, setShowErrors] = useState(false);
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isLocationSet, setIsLocationSet] = useState(false);
+  const [locationSource, setLocationSource] =
+    useState<LocationInputSource | null>(null);
   const [geolocationErrorKind, setGeolocationErrorKind] =
     useState<Exclude<SightingLocationStatus, "ready">>("locating");
   const [toast, setToast] = useState<{
@@ -58,6 +61,7 @@ export function SightingForm() {
   } | null>(null);
 
   const submissionAttemptRef = useRef<FormSubmissionAttempt | null>(null);
+  const locationSourceRef = useRef<LocationInputSource | null>(null);
   const closeConfirmation = () => {
     setSubmitPhase("idle");
     setSendProgress(8);
@@ -71,7 +75,9 @@ export function SightingForm() {
   const lat = isLocationSet ? formData.lat : null;
   const lng = isLocationSet ? formData.lng : null;
   const locationStatus: SightingLocationStatus =
-    lat !== null && lng !== null ? "ready" : geolocationErrorKind;
+    lat !== null && lng !== null && locationSource
+      ? locationSource
+      : geolocationErrorKind;
 
   // 초기 렌더링 시 현재 위치 가져오기
   useEffect(() => {
@@ -82,12 +88,15 @@ export function SightingForm() {
 
     setGeolocationErrorKind("locating");
     const onSuccess = (position: GeolocationPosition) => {
+      if (locationSourceRef.current === "selected") return;
       setFormData((prev) => ({
         ...prev,
         lat: position.coords.latitude,
         lng: position.coords.longitude,
       }));
       setIsLocationSet(true);
+      locationSourceRef.current = "geolocation";
+      setLocationSource("geolocation");
     };
     const onError = (error: GeolocationPositionError, retried: boolean) => {
       if (error.code === error.TIMEOUT && !retried) {
@@ -163,7 +172,9 @@ export function SightingForm() {
         : undefined;
   const timeError = showErrors ? errors.time : undefined;
   const isValid =
-    Object.keys(errors).length === 0 && isLocationSet && Boolean(formData.photo);
+    Object.keys(errors).length === 0 &&
+    isLocationSet &&
+    Boolean(formData.photo);
 
   const firstValidationMessage = (): string => {
     if (!formData.photo) return "사진을 등록해주세요.";
@@ -174,123 +185,120 @@ export function SightingForm() {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (isSubmitting) return;
+    if (isSubmitting) return;
 
-  if (!isValid || !formData.photo) {
-    setShowErrors(true);
-    setToast({
-      message: firstValidationMessage(),
-      type: "error",
-    });
-    return;
-  }
-
-  if (typeof window !== "undefined" && !window.navigator.onLine) {
-    setToast({
-      message: "이미지 업로드에 실패했습니다.",
-      type: "error",
-    });
-    return;
-  }
-
-  const photo = formData.photo;
-
-  const domainPayload = {
-    location: {
-      lat: formData.lat,
-      lng: formData.lng,
-    },
-    occurredAt: (() => {
-      const occurredAt = parseSeoulDateTimeLocal(formData.time);
-
-      if (!occurredAt) {
-        throw new Error("invalid_sighting_time");
-      }
-
-      return occurredAt.toISOString();
-    })(),
-    traitColor: formData.traitColor?.trim() || null,
-    traitSize: formData.traitSize,
-    traitSpecies: formData.traitSpecies,
-    traitTags: formData.traitTags?.length ? formData.traitTags : null,
-    note: formData.description?.trim() || null,
-  };
-
-  // 2.5초 동안 전송 연출을 표시한 뒤 완료 화면으로 전환한다.
-  // 실제 등록은 별도로 진행하고 실패한 경우에만 오류 토스트를 표시한다.
-  setIsSubmitting(true);
-  setSubmitPhase("sending");
-  setSendProgress(12);
-  setToast(null);
-  resetForm();
-
-  const progressTimer = window.setInterval(() => {
-    setSendProgress((prev) =>
-      Math.min(prev + 8 + Math.random() * 12, 90)
-    );
-  }, 160);
-
-  const holdMs = 2500;
-
-  const networkWork = (async () => {
-    try {
-      const payloadFingerprint = JSON.stringify({
-        file: await fingerprintUploadFile(photo),
-        domainPayload,
-      });
-
-      const attempt = prepareSubmission(
-        submissionAttemptRef.current,
-        payloadFingerprint,
-        () => crypto.randomUUID()
-      );
-
-      submissionAttemptRef.current = attempt;
-
-      const fileKey = await uploadPhoto(photo, attempt);
-      const currentAttempt =
-        submissionAttemptRef.current ?? attempt;
-
-      await registerSighting(
-        fileKey,
-        domainPayload,
-        currentAttempt.submissionIdempotencyKey
-      );
-
-      submissionAttemptRef.current = completeSubmission();
-
-      runBestEffort(async () => {
-        const { invalidateMySightingsCache } =
-          await import("@/features/sightings/hooks/useMySightings");
-
-        invalidateMySightingsCache();
-      });
-    } catch (err) {
-      // 완료 화면 상태는 변경하지 않고 오류만 독립적으로 알린다.
+    if (!isValid || !formData.photo) {
+      setShowErrors(true);
       setToast({
-        message:
-          err instanceof Error && err.message
-            ? err.message
-            : "제보 등록에 실패했습니다.",
+        message: firstValidationMessage(),
         type: "error",
       });
+      return;
     }
-  })();
 
-  await new Promise<void>((resolve) => {
-    window.setTimeout(resolve, holdMs);
-  });
+    if (typeof window !== "undefined" && !window.navigator.onLine) {
+      setToast({
+        message: "이미지 업로드에 실패했습니다.",
+        type: "error",
+      });
+      return;
+    }
 
-  window.clearInterval(progressTimer);
-  setSendProgress(100);
-  setSubmitPhase("success");
-  setIsSubmitting(false);
+    const photo = formData.photo;
 
-  // 등록 작업은 성공 화면 표시 이후에도 계속될 수 있다.
-  void networkWork;
-};
+    const domainPayload = {
+      location: {
+        lat: formData.lat,
+        lng: formData.lng,
+      },
+      occurredAt: (() => {
+        const occurredAt = parseSeoulDateTimeLocal(formData.time);
+
+        if (!occurredAt) {
+          throw new Error("invalid_sighting_time");
+        }
+
+        return occurredAt.toISOString();
+      })(),
+      traitColor: formData.traitColor?.trim() || null,
+      traitSize: formData.traitSize,
+      traitSpecies: formData.traitSpecies,
+      traitTags: formData.traitTags?.length ? formData.traitTags : null,
+      note: formData.description?.trim() || null,
+    };
+
+    // 2.5초 동안 전송 연출을 표시한 뒤 완료 화면으로 전환한다.
+    // 실제 등록은 별도로 진행하고 실패한 경우에만 오류 토스트를 표시한다.
+    setIsSubmitting(true);
+    setSubmitPhase("sending");
+    setSendProgress(12);
+    setToast(null);
+    resetForm();
+
+    const progressTimer = window.setInterval(() => {
+      setSendProgress((prev) => Math.min(prev + 8 + Math.random() * 12, 90));
+    }, 160);
+
+    const holdMs = 2500;
+
+    const networkWork = (async () => {
+      try {
+        const payloadFingerprint = JSON.stringify({
+          file: await fingerprintUploadFile(photo),
+          domainPayload,
+        });
+
+        const attempt = prepareSubmission(
+          submissionAttemptRef.current,
+          payloadFingerprint,
+          () => crypto.randomUUID()
+        );
+
+        submissionAttemptRef.current = attempt;
+
+        const fileKey = await uploadPhoto(photo, attempt);
+        const currentAttempt = submissionAttemptRef.current ?? attempt;
+
+        await registerSighting(
+          fileKey,
+          domainPayload,
+          currentAttempt.submissionIdempotencyKey
+        );
+
+        submissionAttemptRef.current = completeSubmission();
+
+        runBestEffort(async () => {
+          const { invalidateMySightingsCache } =
+            await import("@/features/sightings/hooks/useMySightings");
+
+          invalidateMySightingsCache();
+        });
+      } catch (err) {
+        // 완료 화면 상태는 변경하지 않고 오류만 독립적으로 알린다.
+        setToast({
+          message:
+            err instanceof Error && err.message
+              ? err.message
+              : "제보 등록에 실패했습니다.",
+          type: "error",
+        });
+      }
+    })();
+
+    await new Promise<void>((resolve) => {
+      window.setTimeout(resolve, holdMs);
+    });
+
+    window.clearInterval(progressTimer);
+    setSendProgress(100);
+    setSubmitPhase("success");
+    setIsSubmitting(false);
+
+    // 등록 작업은 성공 화면 표시 이후에도 계속될 수 있다.
+    void networkWork;
+  };
 
   /**
    * 사진을 업로드하고 fileKey를 반환합니다.
@@ -577,6 +585,8 @@ export function SightingForm() {
             onSelect={(lat, lng) => {
               setFormData((prev) => ({ ...prev, lat, lng }));
               setIsLocationSet(true);
+              locationSourceRef.current = "selected";
+              setLocationSource("selected");
             }}
             onClose={() => setIsMapOpen(false)}
             title="목격 위치 선택"

@@ -16,6 +16,7 @@ export type SightingDetailPayload = {
   trait_color?: unknown;
   trait_size?: unknown;
   trait_species?: unknown;
+  trait_tags?: unknown;
   note?: unknown;
 };
 
@@ -114,25 +115,24 @@ export function buildFocusedSightingFromDetail(
         ) as string[])
       : undefined,
     occurred_at:
-      typeof detail.occurred_at === "string"
-        ? detail.occurred_at
-        : undefined,
+      typeof detail.occurred_at === "string" ? detail.occurred_at : undefined,
     author_type:
       detail.author_type === "anon" || detail.author_type === "user"
         ? detail.author_type
         : undefined,
     trait_color:
-      typeof detail.trait_color === "string"
-        ? detail.trait_color
-        : undefined,
+      typeof detail.trait_color === "string" ? detail.trait_color : undefined,
     trait_size:
-      typeof detail.trait_size === "string"
-        ? detail.trait_size
-        : undefined,
+      typeof detail.trait_size === "string" ? detail.trait_size : undefined,
     trait_species:
       typeof detail.trait_species === "string"
         ? detail.trait_species
         : undefined,
+    trait_tags: Array.isArray(detail.trait_tags)
+      ? detail.trait_tags.filter(
+          (tag): tag is string => typeof tag === "string"
+        )
+      : undefined,
     note: typeof detail.note === "string" ? detail.note : undefined,
   };
 }

@@ -7,6 +7,7 @@ import { Icon } from "@/shared/ui/Icon";
 import { cn } from "@/shared/lib/cn";
 import { scrollablePanelClass } from "@/shared/ui/ScrollablePanel";
 import { useAuth } from "@/features/auth/hooks/useAuth";
+import { getSightingDetailFields } from "../lib/sighting-detail-presentation";
 
 /** 지도 상세 카드/추천 모달과 동일한 형식의 제보 상세 (API get_sighting_detail 응답과 호환) */
 export interface SightingDetailData {
@@ -18,6 +19,7 @@ export interface SightingDetailData {
   trait_color?: string;
   trait_size?: string;
   trait_species?: string;
+  trait_tags?: string[];
   note?: string;
   source_type?: "sighting" | "shelter";
 }
@@ -102,9 +104,11 @@ function SourceInfoTip({ tip }: { tip: string }) {
         aria-expanded={open}
         aria-describedby={open ? tipId : undefined}
         onClick={() => setOpen((value) => !value)}
-        className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary inline-flex h-5 w-5 items-center justify-center rounded-full border border-current focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+        className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
-        <Icon name="info" size={12} />
+        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-current">
+          <Icon name="info" size={12} />
+        </span>
       </button>
       {open ? (
         <span
@@ -130,6 +134,7 @@ export function SightingDetailCard({
 }: SightingDetailCardProps) {
   const { user } = useAuth();
   const sourceKind = resolveSourceKind(sighting, user?.id);
+  const detailFields = getSightingDetailFields(sighting);
 
   return (
     <div
@@ -158,7 +163,9 @@ export function SightingDetailCard({
         </button>
       )}
 
-      <div className={cn(scrollablePanelClass.sheet, "max-h-[min(70vh,32rem)]")}>
+      <div
+        className={cn(scrollablePanelClass.sheet, "max-h-[min(70vh,32rem)]")}
+      >
         <div className="flex flex-col">
           {sighting.photo_keys?.[0] && (
             <div className="relative aspect-[4/3] max-h-56 w-full overflow-hidden bg-gray-100 sm:max-h-64 dark:bg-gray-800">
@@ -178,7 +185,10 @@ export function SightingDetailCard({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <Text variant="title" className="text-lg font-bold sm:text-xl">
+                  <Text
+                    variant="title"
+                    className="text-lg font-bold sm:text-xl"
+                  >
                     {sourceKind.label}
                   </Text>
                   <SourceInfoTip tip={sourceKind.tip} />
@@ -199,45 +209,19 @@ export function SightingDetailCard({
               {rightSlot != null && <div className="shrink-0">{rightSlot}</div>}
             </div>
 
-            {(sighting.trait_color ||
-              sighting.trait_size ||
-              sighting.trait_species) && (
-              <div>
-                <p className="mb-2 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  색상 · 크기 · 종
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {sighting.trait_color && (
-                    <span className="bg-primary/10 text-primary rounded-lg px-2.5 py-1 text-xs font-medium">
-                      {sighting.trait_color}
-                    </span>
-                  )}
-                  {sighting.trait_size && (
-                    <span className="rounded-lg bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                      {sighting.trait_size}
-                    </span>
-                  )}
-                  {sighting.trait_species && (
-                    <span className="rounded-lg bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
-                      {sighting.trait_species}
-                    </span>
-                  )}
+            <dl className="border-border-subtle divide-border-subtle divide-y rounded-xl border">
+              {detailFields.map((field) => (
+                <div
+                  key={field.label}
+                  className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 px-4 py-3 text-sm"
+                >
+                  <dt className="text-text-caption font-medium">
+                    {field.label}
+                  </dt>
+                  <dd className="text-text-main break-words">{field.value}</dd>
                 </div>
-              </div>
-            )}
-
-            {sighting.note?.trim() ? (
-              <div>
-                <p className="mb-1.5 text-sm font-medium text-gray-500 dark:text-gray-400">
-                  추가 설명
-                </p>
-                <div className="rounded-xl border border-gray-200 bg-gray-50 p-3.5 sm:p-4 dark:border-gray-600 dark:bg-gray-900/50">
-                  <p className="text-[15px] leading-relaxed break-words text-gray-800 dark:text-gray-200">
-                    {sighting.note}
-                  </p>
-                </div>
-              </div>
-            ) : null}
+              ))}
+            </dl>
 
             {footer != null && <div className="pt-1">{footer}</div>}
           </div>

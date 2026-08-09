@@ -28,14 +28,11 @@ test("sighting presentation delegates datetime-local formatting to Seoul helper"
   assert.doesNotMatch(source, /getHours\(\)|toISOString\(\)\.slice/);
 });
 
-test("location status copy stays coordinate-free", async () => {
+test("sighting presentation delegates location copy to the shared formatter", async () => {
   const source = await readFile(
     "src/features/sightings/lib/sighting-form-presentation.ts",
     "utf8"
   );
-  assert.match(source, /현재 위치를 확인하고 있어요/);
-  assert.match(source, /현재 위치가 입력되었어요/);
-  assert.match(source, /위치 권한을 허용하거나 지도에서 선택해 주세요/);
-  assert.match(source, /위치를 확인하지 못했어요\. 지도에서 선택해 주세요/);
-  assert.doesNotMatch(source, /lat|lng|좌표/);
+  assert.match(source, /formatLocationInputStatus/);
+  assert.match(source, /LocationInputStatus/);
 });

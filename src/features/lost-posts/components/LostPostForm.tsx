@@ -36,14 +36,18 @@ import {
   type FormSubmissionAttempt,
 } from "@/shared/lib/form-submission-lifecycle";
 import { trackFunnelEvent } from "@/shared/lib/funnel-client";
+import {
+  formatLocationInputStatus,
+  type LocationInputSource,
+} from "@/shared/lib/location-input-presentation";
 
 const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
 const MAX_TAG_SELECT_LOST_POST = 8;
 
 const inputBase =
-  "border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 outline-none focus:ring-2";
+  "border-border-subtle focus:border-action-primary focus:ring-action-primary/20 w-full rounded-xl border bg-surface px-4 py-3 text-text-main shadow-sm outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60";
 const selectBase =
-  "border-border-subtle focus:border-primary focus:ring-primary/20 w-full rounded-xl border bg-white px-4 py-3 pr-10 appearance-none cursor-pointer outline-none focus:ring-2 bg-no-repeat bg-[length:1.25rem] bg-[right_0.75rem_center] bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]";
+  "border-border-subtle focus:border-action-primary focus:ring-action-primary/20 w-full cursor-pointer appearance-none rounded-xl border bg-surface bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat px-4 py-3 pr-10 text-text-main shadow-sm outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60 bg-[url('data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 24 24%27 stroke=%27%236b7280%27%3E%3Cpath stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%272%27 d=%27m19 9-7 7-7-7%27/%3E%3C/svg%3E')]";
 
 const getInitialFormData = (): LostPostFormData => ({
   photo: null,
@@ -69,18 +73,22 @@ export function LostPostForm() {
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [isLocating, setIsLocating] = useState(false);
   const [isLocationSet, setIsLocationSet] = useState(false);
+  const [locationSource, setLocationSource] =
+    useState<LocationInputSource | null>(null);
   const [toast, setToast] = useState<{
     message: string;
     type: "success" | "error";
   } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const submissionAttemptRef = useRef<FormSubmissionAttempt | null>(null);
+  const locationSourceRef = useRef<LocationInputSource | null>(null);
 
   useEffect(() => {
     if (!("geolocation" in navigator)) return;
 
     setIsLocating(true);
     const onSuccess = (position: GeolocationPosition) => {
+      if (locationSourceRef.current === "selected") return;
       setFormData((prev) => ({
         ...prev,
         lat: position.coords.latitude,
@@ -88,6 +96,8 @@ export function LostPostForm() {
       }));
       setIsLocationSet(true);
       setIsLocating(false);
+      locationSourceRef.current = "geolocation";
+      setLocationSource("geolocation");
     };
     const onError = (error: GeolocationPositionError, retried: boolean) => {
       if (error.code === error.TIMEOUT && !retried) {
@@ -373,7 +383,7 @@ export function LostPostForm() {
               }
               setIsMapOpen(true);
             }}
-            className="border-border-subtle hover:border-primary/50 focus:ring-primary/10 flex w-full items-center justify-between rounded-xl border bg-white px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2 active:scale-[0.99]"
+            className="border-border-subtle hover:border-action-primary/50 focus:ring-action-primary/10 bg-surface text-text-main flex w-full items-center justify-between rounded-xl border px-4 py-4 text-base shadow-sm transition-all outline-none focus:ring-2 active:scale-[0.99]"
           >
             <div className="flex items-center gap-2">
               <Text
@@ -388,8 +398,8 @@ export function LostPostForm() {
               >
                 {isLocating
                   ? "위치 확인 중..."
-                  : isLocationSet
-                    ? "현재 위치가 설정되었습니다"
+                  : isLocationSet && locationSource
+                    ? formatLocationInputStatus(locationSource)
                     : "위치를 설정해주세요"}
               </Text>
             </div>
@@ -409,6 +419,8 @@ export function LostPostForm() {
             onSelect={(lat, lng) => {
               setFormData((prev) => ({ ...prev, lat, lng }));
               setIsLocationSet(true);
+              locationSourceRef.current = "selected";
+              setLocationSource("selected");
             }}
             onClose={() => setIsMapOpen(false)}
             title="유실 위치 선택"
@@ -426,7 +438,7 @@ export function LostPostForm() {
             value={formData.lostAt}
             max={maxLostAt}
             onChange={handleChange}
-            className="border-border-subtle focus:border-primary focus:ring-primary/20 min-h-12 w-full appearance-none rounded-xl border bg-white px-4 py-3 text-base leading-normal [color-scheme:light] outline-none focus:ring-2 [&::-webkit-calendar-picker-indicator]:h-5 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-datetime-edit]:m-0 [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0"
+            className={`${inputBase} min-h-12 appearance-none py-3 text-base leading-normal [color-scheme:light_dark] [&::-webkit-calendar-picker-indicator]:h-5 [&::-webkit-calendar-picker-indicator]:w-5 [&::-webkit-datetime-edit]:m-0 [&::-webkit-datetime-edit]:p-0 [&::-webkit-datetime-edit-fields-wrapper]:p-0`}
           />
         </section>
 
@@ -552,7 +564,7 @@ export function LostPostForm() {
               </div>
               <div className="space-y-2 pt-1">
                 <Text variant="body" className="font-bold">
-                  메모 (확인용, 추천 점수에 반영하지 않음)
+                  메모
                 </Text>
                 <textarea
                   name="description"

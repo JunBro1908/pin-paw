@@ -94,7 +94,7 @@ export function SightingEditForm({ sightingId }: { sightingId: string }) {
   if (!item) return <Text color="caption">불러오는 중...</Text>;
 
   const photoUrl = photos[0]?.url ?? null;
-  const locationStatus: SightingLocationStatus = "ready";
+  const locationStatus: SightingLocationStatus = "selected";
   const photoError =
     showErrors && photos.length !== MAX_EDIT_PHOTOS
       ? "사진을 등록해주세요."

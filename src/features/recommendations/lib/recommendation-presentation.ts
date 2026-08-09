@@ -2,6 +2,7 @@ import type {
   RecommendationItem,
   RecommendationPriority,
   RecommendationScoreBreakdown,
+  RecommendationScoreGroups,
 } from "../model/types";
 
 const TRAIT_LABELS = {
@@ -23,12 +24,13 @@ export interface RawRecommendationEvidence {
 
 export interface RecommendationPresentation {
   priority: RecommendationPriority;
-  matchPercent: number;
+  displayMatchPercent: number;
   matchSummary: string;
   distanceKm: number;
   timeDeltaHours: number;
   contextChips: string[];
   scoreBreakdown: RecommendationScoreBreakdown;
+  scoreGroups: RecommendationScoreGroups;
 }
 
 export type ProtectedRawRecommendationItem = RawRecommendationEvidence & {
@@ -87,6 +89,36 @@ export function toMatchPercent(similarity: number): number {
   return Math.round(sanitizeSimilarity(similarity) * 100);
 }
 
+/**
+ * Stable display-only affine scaling. Unlike min-max scaling, adding or
+ * removing another candidate never changes this candidate's displayed score.
+ */
+export function toDisplayMatchPercent(similarity: number): number {
+  if (!Number.isFinite(similarity)) return 0;
+  return Math.round(Math.min(sanitizeSimilarity(similarity) * 110 + 12, 100));
+}
+
+export function groupRecommendationScoreBreakdown(
+  breakdown: RecommendationScoreBreakdown
+): RecommendationScoreGroups {
+  const groups: RecommendationScoreGroups = {
+    locationTime: sanitizeContribution(breakdown.movement),
+    appearance: sanitizeContribution(
+      breakdown.species + breakdown.size + breakdown.color
+    ),
+    distinctive: sanitizeContribution(breakdown.distinctiveTrait),
+    appearanceDetail: {
+      species: sanitizeContribution(breakdown.species),
+      size: sanitizeContribution(breakdown.size),
+      color: sanitizeContribution(breakdown.color),
+    },
+  };
+  if (typeof breakdown.movementRadiusKm === "number") {
+    groups.movementRadiusKm = breakdown.movementRadiusKm;
+  }
+  return groups;
+}
+
 function toPriority(similarity: number): RecommendationPriority {
   if (similarity >= 0.72) return "high";
   if (similarity >= 0.45) return "medium";
@@ -134,7 +166,7 @@ function buildContextChips(
  * Review order after RPC (similarity desc):
  * 1) claimed bookmarks stay pinned
  * 2) nearer distance bands first
- * 3) higher matchPercent within a band
+ * 3) higher raw similarity within a band
  * 4) sooner time delta as tie-break
  */
 export function distanceBand(distanceKm: number): number {
@@ -185,15 +217,17 @@ export function toRecommendationPresentation(
   const similarity = sanitizeSimilarity(raw.similarity);
   const distanceKm = sanitizeNonNegative(raw.distanceKm);
   const timeDeltaHours = sanitizeNonNegative(raw.timeDeltaHours);
+  const scoreBreakdown = toScoreBreakdown(raw.scoreBreakdown, similarity);
 
   return {
     priority: toPriority(similarity),
-    matchPercent: toMatchPercent(similarity),
+    displayMatchPercent: toDisplayMatchPercent(raw.similarity),
     matchSummary: buildMatchSummary(raw.matchedTraits),
     distanceKm,
     timeDeltaHours,
     contextChips: buildContextChips(distanceKm, timeDeltaHours),
-    scoreBreakdown: toScoreBreakdown(raw.scoreBreakdown, similarity),
+    scoreBreakdown,
+    scoreGroups: groupRecommendationScoreBreakdown(scoreBreakdown),
   };
 }
 
@@ -217,11 +251,12 @@ export function toPublicRecommendationItem(
     locationPrecision: raw.locationPrecision,
     claimedAsMyDog: raw.claimedAsMyDog,
     priority: presentation.priority,
-    matchPercent: presentation.matchPercent,
+    displayMatchPercent: presentation.displayMatchPercent,
     matchSummary: presentation.matchSummary,
     distanceKm: presentation.distanceKm,
     timeDeltaHours: presentation.timeDeltaHours,
     contextChips: presentation.contextChips,
     scoreBreakdown: presentation.scoreBreakdown,
+    scoreGroups: presentation.scoreGroups,
   };
 }

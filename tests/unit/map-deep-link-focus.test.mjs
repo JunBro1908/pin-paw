@@ -39,6 +39,7 @@ test("buildFocusedSightingFromDetail builds a point for the detail sheet", () =>
       occurred_at: "2026-08-02T00:00:00Z",
       author_type: "user",
       trait_color: "brown",
+      trait_tags: ["collar", 1],
       note: "near park",
     },
     center
@@ -50,6 +51,7 @@ test("buildFocusedSightingFromDetail builds a point for the detail sheet", () =>
   assert.equal(focused.lng, center.lng);
   assert.equal(focused.source_type, "shelter");
   assert.deepEqual(focused.photo_keys, ["a.jpg"]);
+  assert.deepEqual(focused.trait_tags, ["collar"]);
   assert.equal(focused.author_type, "user");
   assert.equal(DEEP_LINK_FOCUS_ZOOM, 16);
 });

@@ -5,13 +5,13 @@ import test from "node:test";
 const cardPath =
   "src/features/recommendations/components/RecommendationCard.tsx";
 
-test("confirmation card leads with distance-time chips, date, match percent tip, and map CTA", async () => {
+test("confirmation card leads with distance-time chips, display fit score, grouped evidence, and map CTA", async () => {
   const card = await readFile(cardPath, "utf8");
 
   // Two-column: photo left, chips/date/%/CTA in the right column (not full-bleed above).
   assert.match(
     card,
-    /relative h-20 w-20[\s\S]*aria-label="거리·시간"[\s\S]*\{item\.matchPercent\}%[\s\S]*지도에서 보기/
+    /relative h-20 w-20[\s\S]*aria-label="거리·시간"[\s\S]*item\.displayMatchPercent[\s\S]*지도에서 보기/
   );
   assert.match(card, /items-stretch/);
   assert.match(card, /mt-auto[\s\S]*지도에서 보기/);
@@ -19,7 +19,7 @@ test("confirmation card leads with distance-time chips, date, match percent tip,
   assert.match(card, /variant="caption"[\s\S]*text-xs[\s\S]*\{occurredAt\}/);
   assert.match(
     card,
-    /variant="caption"[\s\S]*text-sm[\s\S]*\{item\.matchPercent\}%/
+    /variant="caption"[\s\S]*text-sm[\s\S]*후보 적합도 \{item\.displayMatchPercent\}점/
   );
   assert.match(card, /items-center gap-1\.5/);
   assert.match(card, /rounded-full border border-current/);
@@ -33,13 +33,19 @@ test("confirmation card leads with distance-time chips, date, match percent tip,
   assert.match(card, /h-5 w-5 text-yellow-500/);
   assert.match(
     card,
-    /점수 막대는 이동 가능성, 외형 정보, 특이사항의 실제 점수 기여도입니다\. 동일한 동물임을 보장하지 않습니다\./
+    /후보 적합도는 추천 후보를 비교하기 위한 표시용 점수입니다\. 동일한 동물임을 보장하지 않습니다\./
   );
   assert.match(card, /role="tooltip"/);
   assert.match(card, /function ScoreBreakdownBar/);
-  assert.match(card, /aria-label="유사도 점수 구성"/);
-  assert.match(card, /현재 이동 반경 약/);
-  assert.match(card, /특이사항 보너스/);
+  assert.match(
+    card,
+    /aria-label="추천 점수 구성: 위치와 시간, 외형 특징, 특이사항"/
+  );
+  assert.match(card, /현재 이동 가능 반경 약/);
+  assert.match(card, /위치·시간/);
+  assert.match(card, /외형 특징/);
+  assert.match(card, /특이사항/);
+  assert.match(card, /item\.scoreGroups/);
 
   assert.match(card, /지도에서 보기/);
   assert.match(
@@ -61,7 +67,7 @@ test("confirmation card leads with distance-time chips, date, match percent tip,
   assert.doesNotMatch(card, /상세 보기/);
   assert.doesNotMatch(card, /item\.matchSummary/);
   assert.doesNotMatch(card, /RECOMMENDATION_PRIORITY_LABELS/);
-  assert.doesNotMatch(card, /후보|유력|참고/);
+  assert.doesNotMatch(card, /유력|참고/);
   assert.doesNotMatch(card, /openModal|SightingDetailCard|ReportBlockSheet/);
   assert.doesNotMatch(
     card,
