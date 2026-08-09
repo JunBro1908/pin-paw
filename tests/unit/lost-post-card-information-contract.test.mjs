@@ -40,6 +40,19 @@ test("lost-post presentation surfaces reuse the shared dog size formatter", asyn
   }
 });
 
+test("owner and map lost-post details hide unknown species sentinels", async () => {
+  const [detailPage, mapDetail] = await Promise.all([
+    readFile(detailPagePath, "utf8"),
+    readFile(mapDetailPath, "utf8"),
+  ]);
+
+  assert.match(detailPage, /rawTraitSpecies !== SPECIES_UNKNOWN/);
+  assert.match(detailPage, /rawTraitSpecies !== "모름"/);
+  assert.match(mapDetail, /SPECIES_UNKNOWN/);
+  assert.match(mapDetail, /rawTraitSpecies !== SPECIES_UNKNOWN/);
+  assert.match(mapDetail, /rawTraitSpecies !== "모름"/);
+});
+
 test("lost-post cards keep actions while protecting compact mobile metadata", async () => {
   const [activeCard, compactCard, detailPage] = await Promise.all([
     readFile(activeCardPath, "utf8"),

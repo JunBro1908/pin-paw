@@ -20,6 +20,7 @@ import { ReportBlockSheet } from "@/features/moderation/components/ReportBlockSh
 import { ShareLostPostButton } from "@/features/lost-posts/components/ShareLostPostButton";
 import { formatDogSizeLabel } from "@/shared/constants/traitSizes";
 import { formatSeoulLostDateTime } from "@/shared/lib/date";
+import { SPECIES_UNKNOWN } from "@/features/sightings/constants/breeds";
 
 function DetailField({
   label,
@@ -164,7 +165,13 @@ function LostPostDetailContent() {
   const colorSize = [item.trait_color?.trim(), formatDogSizeLabel(item.trait_size)]
     .filter((value): value is string => Boolean(value && value !== "unknown" && value !== "모름"))
     .join(" · ");
-  const traitSpecies = item.trait_species?.trim() || null;
+  const rawTraitSpecies = item.trait_species?.trim();
+  const traitSpecies =
+    rawTraitSpecies &&
+    rawTraitSpecies !== SPECIES_UNKNOWN &&
+    rawTraitSpecies !== "모름"
+      ? rawTraitSpecies
+      : null;
   const editHref = `/my/lost-posts/${item.id}/edit`;
 
   return (

@@ -6,6 +6,7 @@ import type { ReactNode, Ref, SyntheticEvent } from "react";
 import { cn } from "@/shared/lib/cn";
 import { formatDogSizeLabel } from "@/shared/constants/traitSizes";
 import { formatSeoulLostDateTime } from "@/shared/lib/date";
+import { SPECIES_UNKNOWN } from "@/features/sightings/constants/breeds";
 import { scrollablePanelClass } from "@/shared/ui/ScrollablePanel";
 import type { LostPostMapItem } from "../lib/map-data-state";
 import type { MapItem } from "../types/naver";
@@ -230,10 +231,17 @@ function LostPostDetail({
   getImageUrl: (key: string) => string;
 }) {
   const lostAt = formatSeoulLostDateTime(item.lost_at);
+  const rawTraitSpecies = item.trait_species?.trim();
+  const traitSpecies =
+    rawTraitSpecies &&
+    rawTraitSpecies !== SPECIES_UNKNOWN &&
+    rawTraitSpecies !== "모름"
+      ? rawTraitSpecies
+      : null;
   const traits = [
     item.trait_color?.trim(),
     formatDogSizeLabel(item.trait_size),
-    item.trait_species?.trim(),
+    traitSpecies,
   ].filter((value): value is string => Boolean(value && value !== "unknown" && value !== "모름"));
 
   return (
