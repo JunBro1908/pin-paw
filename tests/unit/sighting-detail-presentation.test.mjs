@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 
 import { getSightingDetailFields } from "../../src/features/sightings/lib/sighting-detail-presentation.ts";
@@ -28,4 +29,16 @@ test("formats sighting detail fields in a fixed order with explicit empty states
     { label: "특이사항", value: "없음" },
     { label: "메모", value: "없음" },
   ]);
+});
+
+test("sighting detail separates the header and keeps the info target larger than its glyph", async () => {
+  const source = await readFile(
+    "src/features/sightings/components/SightingDetailCard.tsx",
+    "utf8"
+  );
+
+  assert.match(source, /min-h-11 min-w-11/);
+  assert.match(source, /h-4 w-4/);
+  assert.match(source, /<Icon name="info" size=\{10\}/);
+  assert.match(source, /border-t border-border-subtle/);
 });

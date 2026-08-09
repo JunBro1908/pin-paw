@@ -106,8 +106,8 @@ function SourceInfoTip({ tip }: { tip: string }) {
         onClick={() => setOpen((value) => !value)}
         className="text-text-caption hover:text-text-sub focus-visible:outline-action-primary inline-flex min-h-11 min-w-11 items-center justify-center rounded-full focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
       >
-        <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-current">
-          <Icon name="info" size={12} />
+        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-current">
+          <Icon name="info" size={10} />
         </span>
       </button>
       {open ? (
@@ -184,7 +184,7 @@ export function SightingDetailCard({
           <div className="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-0.5">
                   <Text
                     variant="title"
                     className="text-lg font-bold sm:text-xl"
@@ -209,19 +209,23 @@ export function SightingDetailCard({
               {rightSlot != null && <div className="shrink-0">{rightSlot}</div>}
             </div>
 
-            <dl className="border-border-subtle divide-border-subtle divide-y rounded-xl border">
-              {detailFields.map((field) => (
-                <div
-                  key={field.label}
-                  className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 px-4 py-3 text-sm"
-                >
-                  <dt className="text-text-caption font-medium">
-                    {field.label}
-                  </dt>
-                  <dd className="text-text-main break-words">{field.value}</dd>
-                </div>
-              ))}
-            </dl>
+            <div className="border-t border-border-subtle pt-4">
+              <dl className="border-border-subtle divide-border-subtle divide-y rounded-xl border">
+                {detailFields.map((field) => (
+                  <div
+                    key={field.label}
+                    className="grid grid-cols-[5.5rem_minmax(0,1fr)] gap-3 px-4 py-3 text-sm"
+                  >
+                    <dt className="text-text-caption font-medium">
+                      {field.label}
+                    </dt>
+                    <dd className="text-text-main break-words">
+                      {field.value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
 
             {footer != null && <div className="pt-1">{footer}</div>}
           </div>

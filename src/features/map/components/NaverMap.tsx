@@ -31,7 +31,6 @@ import type { MapLayer, SightingFeedbackMap } from "../lib/map-domain";
 import {
   buildFocusedSightingFromDetail,
   DEEP_LINK_FOCUS_ZOOM,
-  findFocusedPointInItems,
   resolveDeepLinkCenter,
   type SightingDetailPayload,
 } from "../lib/map-deep-link-focus";
@@ -67,6 +66,11 @@ interface NaverMapProps {
   initialLostPostId?: string;
 }
 
+type PendingDeepLinkFocus = {
+  center: { lat: number; lng: number };
+  sighting: MapItem;
+};
+
 export function NaverMap({
   clientId,
   initialCenter,
@@ -87,10 +91,8 @@ export function NaverMap({
   const accessToken = session?.access_token;
   const hasCenteredSightingRef = useRef(false);
   const hasAutoFocusedRef = useRef(false);
-  /** Precise center from auth detail — applied when map becomes ready after fetch. */
-  const pendingDeepLinkCenterRef = useRef<{ lat: number; lng: number } | null>(
-    null
-  );
+  /** Detail and map movement complete together once the SDK map is available. */
+  const pendingDeepLinkFocusRef = useRef<PendingDeepLinkFocus | null>(null);
   const isAuthenticated = Boolean(accessToken);
 
   // 맵 인스턴스와 마커를 ref로 관리하여 리렌더링 시에도 유지
@@ -105,16 +107,31 @@ export function NaverMap({
   const autoLocateAttemptedRef = useRef(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const panMapToDeepLinkCenter = useCallback(
-    (center: { lat: number; lng: number }) => {
-      pendingDeepLinkCenterRef.current = center;
-      if (!mapInstanceRef.current || !window.naver?.maps) return;
-      const latLng = new window.naver.maps.LatLng(center.lat, center.lng);
-      mapInstanceRef.current.panTo(latLng);
-      mapInstanceRef.current.setZoom(DEEP_LINK_FOCUS_ZOOM);
-      hasCenteredSightingRef.current = true;
+  const applyPendingDeepLinkFocus = useCallback(() => {
+    const pending = pendingDeepLinkFocusRef.current;
+    if (!pending || !mapInstanceRef.current || !window.naver?.maps) {
+      return false;
+    }
+
+    const latLng = new window.naver.maps.LatLng(
+      pending.center.lat,
+      pending.center.lng
+    );
+    mapInstanceRef.current.panTo(latLng);
+    mapInstanceRef.current.setZoom(DEEP_LINK_FOCUS_ZOOM);
+    setSelectedSighting(pending.sighting);
+    hasAutoFocusedRef.current = true;
+    hasCenteredSightingRef.current = true;
+    pendingDeepLinkFocusRef.current = null;
+    return true;
+  }, []);
+
+  const queueDeepLinkFocus = useCallback(
+    (center: { lat: number; lng: number }, sighting: MapItem) => {
+      pendingDeepLinkFocusRef.current = { center, sighting };
+      return applyPendingDeepLinkFocus();
     },
-    []
+    [applyPendingDeepLinkFocus]
   );
 
   // 선택된 제보 정보 (팝업용)
@@ -385,7 +402,8 @@ export function NaverMap({
         initialCenter ||
         initialCenterSightingId ||
         initialFocusSightingId ||
-        pendingDeepLinkCenterRef.current
+        pendingDeepLinkFocusRef.current ||
+        hasAutoFocusedRef.current
       ) {
         return;
       }
@@ -525,7 +543,7 @@ export function NaverMap({
     try {
       const warmedCenter = getCachedUserMapCenter();
       const deepLinkCenter =
-        pendingDeepLinkCenterRef.current ?? initialCenter ?? null;
+        pendingDeepLinkFocusRef.current?.center ?? initialCenter ?? null;
       const center = deepLinkCenter ?? warmedCenter ?? DEFAULT_MAP_CENTER;
       const mapOptions = {
         center: new window.naver.maps.LatLng(center.lat, center.lng),
@@ -564,8 +582,8 @@ export function NaverMap({
 
       setIsLoaded(true);
 
-      if (pendingDeepLinkCenterRef.current) {
-        panMapToDeepLinkCenter(pendingDeepLinkCenterRef.current);
+      if (pendingDeepLinkFocusRef.current) {
+        applyPendingDeepLinkFocus();
       } else if (warmedCenter && !initialCenter) {
         placeMyLocationMarker(warmedCenter.lat, warmedCenter.lng);
       } else if (!initialCenter && !initialCenterSightingId) {
@@ -580,7 +598,7 @@ export function NaverMap({
     handleMapIdle,
     silentFollowUserLocation,
     placeMyLocationMarker,
-    panMapToDeepLinkCenter,
+    applyPendingDeepLinkFocus,
     initialCenter,
     initialCenterSightingId,
   ]);
@@ -629,7 +647,7 @@ export function NaverMap({
   // initialFocusSightingId 변경 시 자동 포커스 리셋
   useEffect(() => {
     hasAutoFocusedRef.current = false;
-    pendingDeepLinkCenterRef.current = null;
+    pendingDeepLinkFocusRef.current = null;
   }, [initialFocusSightingId]);
 
   // 7-5: 지도에서 제보 링크로 진입 시 "본 적 있음" 기록
@@ -675,9 +693,7 @@ export function NaverMap({
         if (!center) return;
         const focused = buildFocusedSightingFromDetail(detail, center);
         if (!focused) return;
-        hasAutoFocusedRef.current = true;
-        setSelectedSighting(focused);
-        panMapToDeepLinkCenter(center);
+        queueDeepLinkFocus(center, focused);
       })
       .catch(() => {});
 
@@ -689,28 +705,8 @@ export function NaverMap({
     initialCenter,
     accessToken,
     isAuthLoading,
-    panMapToDeepLinkCenter,
+    queueDeepLinkFocus,
   ]);
-
-  // 상세 fetch 실패/지연 시: 뷰포트에 핀이 보이면 시트를 연다 (URL center 유무와 무관).
-  useEffect(() => {
-    if (
-      !initialFocusSightingId ||
-      hasAutoFocusedRef.current ||
-      itemsInView.length === 0
-    ) {
-      return;
-    }
-    const point = findFocusedPointInItems(itemsInView, initialFocusSightingId);
-    if (!point) return;
-    const frameId = requestAnimationFrame(() => {
-      if (hasAutoFocusedRef.current) return;
-      hasAutoFocusedRef.current = true;
-      setSelectedSighting(point);
-      panMapToDeepLinkCenter({ lat: point.lat, lng: point.lng });
-    });
-    return () => cancelAnimationFrame(frameId);
-  }, [initialFocusSightingId, itemsInView, panMapToDeepLinkCenter]);
 
   // URL lat/lng만으로 먼저 들어온 경우 맵이 준비되면 provisional pan (정밀 좌표로 덮어쓸 수 있음).
   // 추천 「지도에서 보기」는 sightingId만 전달하고 auth detail로 정밀 좌표를 받는다.
@@ -720,7 +716,7 @@ export function NaverMap({
       !initialCenter ||
       !mapInstanceRef.current ||
       !window.naver?.maps ||
-      pendingDeepLinkCenterRef.current ||
+      pendingDeepLinkFocusRef.current ||
       hasCenteredSightingRef.current
     ) {
       return;

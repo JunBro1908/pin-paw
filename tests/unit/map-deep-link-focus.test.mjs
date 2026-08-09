@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   buildFocusedSightingFromDetail,
@@ -81,4 +82,33 @@ test("findFocusedPointInItems matches normalized sighting ids", () => {
   assert.equal(found.type, "point");
   assert.equal(found.id, id.toLowerCase());
   assert.equal(findFocusedPointInItems(items, "missing"), null);
+});
+
+test("map applies a resolved deep-link target only after its map instance is ready", async () => {
+  const source = await readFile(
+    "src/features/map/components/NaverMap.tsx",
+    "utf8"
+  );
+
+  assert.match(source, /pendingDeepLinkFocusRef/);
+  assert.match(source, /queueDeepLinkFocus/);
+  assert.match(source, /applyPendingDeepLinkFocus/);
+  assert.match(source, /pendingDeepLinkFocusRef\.current\?\.center/);
+
+  const apply = source.slice(
+    source.indexOf("const applyPendingDeepLinkFocus"),
+    source.indexOf("// 선택된 제보 정보")
+  );
+  assert.match(apply, /mapInstanceRef\.current\.panTo/);
+  assert.match(apply, /mapInstanceRef\.current\.setZoom\(DEEP_LINK_FOCUS_ZOOM\)/);
+  assert.match(apply, /setSelectedSighting\(pending\.sighting\)/);
+  assert.match(apply, /hasAutoFocusedRef\.current = true/);
+  assert.match(apply, /hasCenteredSightingRef\.current = true/);
+
+  const silentFollow = source.slice(
+    source.indexOf("const silentFollowUserLocation"),
+    source.indexOf("const renderClusters")
+  );
+  assert.match(silentFollow, /hasAutoFocusedRef\.current/);
+  assert.match(silentFollow, /pendingDeepLinkFocusRef\.current/);
 });
