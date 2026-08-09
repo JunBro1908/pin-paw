@@ -51,9 +51,9 @@ test("confirmation card leads with distance-time chips, display fit score, group
   assert.match(card, /외형 특징/);
   assert.match(card, /특이사항/);
   assert.match(card, /item\.scoreGroups/);
-  assert.match(card, /segment\.value >= 0\.12/);
-  assert.match(card, /유실·목격 시각 차이와 목격 위치까지의 거리를 함께 반영/);
-  assert.match(card, /종, 크기, 색상·무늬가 얼마나 비슷한지 반영/);
+  assert.match(card, /min-w-9/);
+  assert.match(card, /유실·목격 시각 차이와 목격 위치까지의 거리/);
+  assert.match(card, /종, 크기, 색상·무늬의 유사도/);
   assert.doesNotMatch(scoreBreakdown, /aria-expanded/);
   assert.doesNotMatch(scoreBreakdown, /onClick/);
 

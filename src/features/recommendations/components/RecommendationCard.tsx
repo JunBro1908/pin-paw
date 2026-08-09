@@ -46,14 +46,12 @@ function ScoreBreakdownBar({ item }: { item: RecommendationItem }) {
             key={segment.key}
             title={`${segment.label} ${Math.round(segment.value * 100)}점`}
             aria-label={`${segment.label} ${Math.round(segment.value * 100)}점`}
-            className={`${segment.color} flex h-full min-w-0 items-center justify-center first:rounded-l-full last:rounded-r-full`}
-            style={{ width: `${segment.value * 100}%` }}
+            className={`${segment.color} flex h-full min-w-9 items-center justify-center first:rounded-l-full last:rounded-r-full`}
+            style={{ flex: segment.value }}
           >
-            {segment.value >= 0.12 ? (
-              <span className="text-[10px] font-semibold text-white">
-                {Math.round(segment.value * 100)}점
-              </span>
-            ) : null}
+            <span className="text-[10px] font-semibold whitespace-nowrap text-white">
+              {Math.round(segment.value * 100)}점
+            </span>
           </span>
         ))}
       </div>
@@ -71,7 +69,7 @@ interface RecommendationCardProps {
   accessToken?: string;
 }
 
-function SimilarityInfoTip({ item }: { item: RecommendationItem }) {
+function SimilarityInfoTip() {
   const [open, setOpen] = useState(false);
   const tipId = useId();
   const rootRef = useRef<HTMLSpanElement>(null);
@@ -120,11 +118,11 @@ function SimilarityInfoTip({ item }: { item: RecommendationItem }) {
         >
           <ul className="space-y-2">
             {SCORE_SEGMENTS.map((segment) => (
-              <li key={segment.key} className="flex gap-2">
-                <span className={`${segment.color} mt-1 h-2 w-2 shrink-0 rounded-full`} />
+              <li key={segment.key} className="flex items-start gap-2">
+                <span className={`${segment.color} mt-1 h-2.5 w-2.5 shrink-0 rounded-full`} />
                 <span>
-                  <strong>{segment.label} ({Math.round(item.scoreGroups[segment.key] * 100)}점)</strong>
-                  {segment.key === "locationTime" ? " 유실·목격 시각 차이와 목격 위치까지의 거리를 함께 반영" : segment.key === "appearance" ? " 종, 크기, 색상·무늬가 얼마나 비슷한지 반영" : " 목줄, 흉터 등 선택한 특징이 일치하는 경우"}
+                  <strong>{segment.label}:</strong>{" "}
+                  {segment.key === "locationTime" ? "유실·목격 시각 차이와 목격 위치까지의 거리" : segment.key === "appearance" ? "종, 크기, 색상·무늬의 유사도" : "목줄, 흉터 등 선택한 특징의 일치"}
                 </span>
               </li>
             ))}
@@ -365,7 +363,7 @@ export function RecommendationCard({
                 >
                   {item.displayMatchPercent}점
                 </Text>
-                    <SimilarityInfoTip item={item} />
+                    <SimilarityInfoTip />
               </div>
               <ScoreBreakdownBar item={item} />
             </div>

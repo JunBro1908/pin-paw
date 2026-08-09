@@ -58,6 +58,7 @@ test("recommendation card presents a static score breakdown without model-only c
   assert.doesNotMatch(scoreBar, /<button|type="button"/);
   assert.match(scoreBar, /role="progressbar"/);
   assert.match(scoreBar, /h-5 overflow-hidden/);
-  assert.match(scoreBar, /segment\.value >= 0\.12/);
+  assert.match(scoreBar, /min-w-9/);
+  assert.match(scoreBar, /style=\{\{ flex: segment\.value \}\}/);
   assert.doesNotMatch(scoreBar, /aria-label="점수 상세"/);
 });
