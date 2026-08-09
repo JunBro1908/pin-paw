@@ -85,9 +85,67 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
     }
   };
 
+  const actionButtons = (
+    <div className="flex shrink-0 items-center">
+      <Link
+        href={`/my/sightings/${item.id}/edit`}
+        className={`${quietIconClass} text-text-main hover:bg-surface-soft`}
+        aria-label="제보 수정"
+      >
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden
+        >
+          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+          <path d="m15 5 4 4" />
+        </svg>
+      </Link>
+      {session ? (
+        <>
+          <span
+            className="bg-border-subtle mx-0.5 h-5 w-px shrink-0"
+            aria-hidden
+          />
+          <button
+            type="button"
+            onClick={() => setShowConfirm(true)}
+            disabled={deleting}
+            className={`${quietIconClass} text-text-caption hover:bg-surface-soft hover:text-error`}
+            aria-label="삭제"
+          >
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden
+            >
+              <path d="M3 6h18" />
+              <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+              <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+              <line x1="10" y1="11" x2="10" y2="17" />
+              <line x1="14" y1="11" x2="14" y2="17" />
+            </svg>
+          </button>
+        </>
+      ) : null}
+    </div>
+  );
+
   return (
     <div className="border-border-subtle bg-surface rounded-2xl border p-3.5 shadow-sm">
-      <div className="grid grid-cols-[6rem_minmax(0,1fr)_auto] gap-3">
+      <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3">
       <div className="relative h-24 w-24 overflow-hidden rounded-xl bg-gray-100">
         {thumbUrl ? (
           <Image
@@ -105,15 +163,26 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
       </div>
 
       <div className="min-w-0">
-        <Text variant="body" color="main" className="font-semibold">
-          목격 제보
-        </Text>
-        {occurredAt ? <Text variant="caption" color="caption" className="mt-0.5 block">{occurredAt}</Text> : null}
-        {approximateRegion ? <Text variant="caption" color="caption" className="block">{approximateRegion}</Text> : null}
+        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-1">
+          <Text variant="body" color="main" className="font-semibold">
+            목격 제보
+          </Text>
+          {actionButtons}
+        </div>
+        {occurredAt ? (
+          <Text variant="caption" color="caption" className="mt-0.5 block">
+            {occurredAt}
+          </Text>
+        ) : null}
+        {approximateRegion ? (
+          <Text variant="caption" color="caption" className="block">
+            {approximateRegion}
+          </Text>
+        ) : null}
         {traitTags.length > 0 ? (
-          <div className="mt-2 flex flex-wrap gap-1">
+          <div className="mt-2 flex flex-nowrap gap-1 overflow-hidden">
             {traitTags.map((tag) => (
-              <span key={tag} className={traitChipClass}>
+              <span key={tag} className={`${traitChipClass} shrink-0`}>
                 {tag}
               </span>
             ))}
@@ -121,61 +190,6 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
         ) : null}
       </div>
 
-      <div className="flex shrink-0 items-start self-start">
-        <Link
-          href={`/my/sightings/${item.id}/edit`}
-          className={`${quietIconClass} text-text-main hover:bg-surface-soft`}
-          aria-label="제보 수정"
-        >
-          <svg
-            width="18"
-            height="18"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-          >
-            <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-            <path d="m15 5 4 4" />
-          </svg>
-        </Link>
-        {session ? (
-          <>
-            <span
-              className="bg-border-subtle mx-0.5 h-5 w-px shrink-0"
-              aria-hidden
-            />
-            <button
-              type="button"
-              onClick={() => setShowConfirm(true)}
-              disabled={deleting}
-              className={`${quietIconClass} text-text-caption hover:bg-surface-soft hover:text-error`}
-              aria-label="삭제"
-            >
-              <svg
-                width="18"
-                height="18"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden
-              >
-                <path d="M3 6h18" />
-                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                <line x1="10" y1="11" x2="10" y2="17" />
-                <line x1="14" y1="11" x2="14" y2="17" />
-              </svg>
-            </button>
-          </>
-        ) : null}
-      </div>
       </div>
       <Link
         href={item.lat != null && item.lng != null ? `/map?lat=${item.lat}&lng=${item.lng}&sightingId=${item.id}` : `/map?sightingId=${item.id}`}

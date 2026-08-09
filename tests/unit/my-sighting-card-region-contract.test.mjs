@@ -12,7 +12,9 @@ test("my sighting card shows occurred time, coarse region, and normalized size",
   assert.match(card, /formatSeoulLostDateTime\(item\.occurred_at\)/);
   assert.match(card, /approximate_region/);
   assert.match(card, /formatDogSizeLabel/);
-  assert.match(card, /grid-cols-\[6rem_minmax\(0,1fr\)_auto\]/);
+  assert.match(card, /grid-cols-\[6rem_minmax\(0,1fr\)\]/);
+  assert.match(card, /grid-cols-\[minmax\(0,1fr\)_auto\] items-start gap-1/);
+  assert.match(card, /flex flex-nowrap gap-1 overflow-hidden/);
   assert.match(card, /min-h-10 w-full items-center justify-center/);
   assert.doesNotMatch(card, /truncate/);
   assert.doesNotMatch(card, /SIZE_LABELS/);
