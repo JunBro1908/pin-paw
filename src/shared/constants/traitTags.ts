@@ -54,6 +54,8 @@ export const TRAIT_TAGS: TraitTagDef[] = [
 ];
 
 export const TRAIT_TAG_IDS = TRAIT_TAGS.map((t) => t.id);
+/** Keep optional trait data focused and readable across every report flow. */
+export const TRAIT_TAGS_MAX = 5;
 const TAG_BY_ID = Object.fromEntries(TRAIT_TAGS.map((t) => [t.id, t]));
 
 export function getTagById(id: string): TraitTagDef | undefined {

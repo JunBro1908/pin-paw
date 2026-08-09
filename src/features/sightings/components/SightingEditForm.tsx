@@ -19,6 +19,7 @@ import {
   type SightingLocationStatus,
 } from "../lib/sighting-form-presentation";
 import { parseSeoulDateTimeLocal } from "@/shared/lib/date";
+import { TRAIT_TAGS_MAX } from "@/shared/constants/traitTags";
 import type { EditableSighting } from "../model/types";
 import { SightingEssentials } from "./SightingEssentials";
 import { SightingOptionalDetails } from "./SightingOptionalDetails";
@@ -73,7 +74,7 @@ export function SightingEditForm({ sightingId }: { sightingId: string }) {
         setTraitColor(data.trait_color ?? "");
         setTraitSize(data.trait_size ?? "unknown");
         setTraitSpecies(data.trait_species ?? SPECIES_UNKNOWN);
-        setTraitTags(data.trait_tags ?? []);
+        setTraitTags((data.trait_tags ?? []).slice(0, TRAIT_TAGS_MAX));
         setDescription(data.note ?? "");
         setPhotos(
           data.photo_keys.slice(0, MAX_EDIT_PHOTOS).map((key) => ({
@@ -139,7 +140,7 @@ export function SightingEditForm({ sightingId }: { sightingId: string }) {
     setTraitTags((current) =>
       current.includes(tagId)
         ? current.filter((id) => id !== tagId)
-        : current.length >= 5
+        : current.length >= TRAIT_TAGS_MAX
           ? current
           : [...current, tagId]
     );

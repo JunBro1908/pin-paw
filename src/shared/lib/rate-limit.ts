@@ -200,7 +200,7 @@ export const RateLimitPresets = {
     {
       windowMs: 15 * 1000, // 15초
       maxRequests: 1,
-      message: "잠시 후 다시 시도해주세요. (15초 쿨다운)",
+      message: "제보를 연속으로 등록할 수 없어요. 잠시 후 다시 시도해 주세요.",
       priority: 3, // 최하위
       // fixed-window 경계에서는 벽시계 15초 안에 2회가 통과할 수 있어 cooldown 사용
       strategy: "cooldown",

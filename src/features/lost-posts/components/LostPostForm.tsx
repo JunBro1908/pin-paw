@@ -26,7 +26,7 @@ import {
   SIZE_VALUES,
   type SizeValue,
 } from "@/shared/constants/traitSizes";
-import { TRAIT_TAGS } from "@/shared/constants/traitTags";
+import { TRAIT_TAGS, TRAIT_TAGS_MAX } from "@/shared/constants/traitTags";
 import {
   completeSubmission,
   fingerprintUploadFile,
@@ -42,8 +42,6 @@ import {
 } from "@/shared/lib/location-input-presentation";
 
 const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
-const MAX_TAG_SELECT_LOST_POST = 8;
-
 const inputBase =
   "border-border-subtle focus:border-action-primary focus:ring-action-primary/20 w-full rounded-xl border bg-surface px-4 py-3 text-text-main shadow-sm outline-none focus:ring-2 disabled:cursor-not-allowed disabled:opacity-60";
 const selectBase =
@@ -518,15 +516,23 @@ export function LostPostForm() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Text variant="caption" color="caption">
-                    특이사항 (선택, 최대 {MAX_TAG_SELECT_LOST_POST}개)
-                  </Text>
+                  <div>
+                    <Text variant="body" className="font-bold">
+                      특이사항
+                    </Text>
+                    <Text
+                      variant="caption"
+                      className="text-text-caption mt-0.5 block text-xs"
+                    >
+                      최대 {TRAIT_TAGS_MAX}개
+                    </Text>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {TRAIT_TAGS.map((tag) => {
                       const selected = formData.traitTags.includes(tag.id);
                       const disabled =
                         !selected &&
-                        formData.traitTags.length >= MAX_TAG_SELECT_LOST_POST;
+                        formData.traitTags.length >= TRAIT_TAGS_MAX;
                       return (
                         <button
                           key={tag.id}
@@ -572,7 +578,10 @@ export function LostPostForm() {
                   onChange={handleChange}
                   placeholder="발견 당시 상황 등 확인에 필요한 내용을 입력해주세요"
                   rows={4}
-                  className="border-border-subtle focus:border-primary focus:ring-primary/20 w-full resize-none rounded-xl border bg-white px-4 py-4 outline-none focus:ring-2"
+                  className={cn(
+                    inputBase,
+                    "resize-none py-4 placeholder:text-text-caption autofill:bg-surface autofill:text-text-main"
+                  )}
                 />
               </div>
             </ScrollablePanel>

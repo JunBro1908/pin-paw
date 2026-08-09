@@ -17,6 +17,7 @@ import {
 } from "../lib/sighting-form-presentation";
 import type { LocationInputSource } from "@/shared/lib/location-input-presentation";
 import { parseSeoulDateTimeLocal } from "@/shared/lib/date";
+import { TRAIT_TAGS_MAX } from "@/shared/constants/traitTags";
 import { SightingEssentials } from "./SightingEssentials";
 import { SightingOptionalDetails } from "./SightingOptionalDetails";
 import {
@@ -153,12 +154,16 @@ export function SightingForm() {
   };
 
   const handleToggleTag = (tagId: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      traitTags: prev.traitTags.includes(tagId)
-        ? prev.traitTags.filter((id) => id !== tagId)
-        : [...prev.traitTags, tagId],
-    }));
+    setFormData((prev) => {
+      const selected = prev.traitTags.includes(tagId);
+      if (!selected && prev.traitTags.length >= TRAIT_TAGS_MAX) return prev;
+      return {
+        ...prev,
+        traitTags: selected
+          ? prev.traitTags.filter((id) => id !== tagId)
+          : [...prev.traitTags, tagId],
+      };
+    });
   };
 
   const errors = validateSightingForm(formData);

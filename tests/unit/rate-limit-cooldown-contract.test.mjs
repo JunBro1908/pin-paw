@@ -93,7 +93,14 @@ test("sighting 15s preset uses cooldown RPC wiring", async () => {
     source,
     /windowMs:\s*15\s*\*\s*1000[\s\S]*strategy:\s*"cooldown"/
   );
-  assert.match(source, /\(15초 쿨다운\)/);
+  assert.match(
+    source,
+    /제보를 연속으로 등록할 수 없어요\. 잠시 후 다시 시도해 주세요\./
+  );
+  assert.doesNotMatch(
+    source,
+    /message:\s*"잠시 후 다시 시도해주세요\. \(15초 쿨다운\)"/
+  );
 });
 
 test("cooldown missing RPC fails closed instead of fixed-window fallback", async () => {

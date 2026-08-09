@@ -1,3 +1,5 @@
+import { TRAIT_TAGS_MAX } from "../constants/traitTags.ts";
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const UUID =
   "[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}";
@@ -156,7 +158,7 @@ export function parseSightingCreateRequest(
   const traitSize = boundedString(input.traitSize, 50);
   const traitSpecies = boundedString(input.traitSpecies, 100);
   const note = boundedString(input.note, 2000);
-  const traitTags = tags(input.traitTags, 5);
+  const traitTags = tags(input.traitTags, TRAIT_TAGS_MAX);
   if (
     !location ||
     !occurredAt ||
@@ -239,7 +241,7 @@ export function parseLostPostCreateRequest(
   const traitSize = boundedString(input.traitSize, 50);
   const traitSpecies = boundedString(input.traitSpecies, 100);
   const note = boundedString(input.note, 2000);
-  const traitTags = tags(input.traitTags, 8);
+  const traitTags = tags(input.traitTags, TRAIT_TAGS_MAX);
   if (
     !coverPhotoKey ||
     !lostAt ||
@@ -496,7 +498,7 @@ export function parseLostPostUpdateRequest(
   }
 
   if (owns(input, "traitTags")) {
-    const traitTags = tags(input.traitTags, 8);
+    const traitTags = tags(input.traitTags, TRAIT_TAGS_MAX);
     if (!traitTags) return { ok: false, reason: "invalid_trait_tags" };
     result.traitTags = traitTags;
   }

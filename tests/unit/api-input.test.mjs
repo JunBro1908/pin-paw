@@ -160,6 +160,20 @@ test("lost-post schema requires bounded owner data and a lost-cover key", () => 
   );
 });
 
+test("lost-post trait tags reject more than five selections", () => {
+  assert.equal(
+    parseLostPostCreateRequest({
+      coverPhotoKey:
+        "lost_cover/20260725/123e4567-e89b-42d3-a456-426614174000.png",
+      lostAt: "2026-07-25T12:00:00+09:00",
+      lostLocation: { lat: 37.5665, lng: 126.978 },
+      petName: "보리",
+      traitTags: ["a", "b", "c", "d", "e", "f"],
+    }).ok,
+    false
+  );
+});
+
 test("idempotency keys must be canonical UUID values", () => {
   assert.equal(isValidUuid?.("123e4567-e89b-42d3-a456-426614174000"), true);
   assert.equal(isValidUuid?.("not-a-uuid"), false);

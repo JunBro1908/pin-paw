@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { SightingOptionalDetails } from "@/features/sightings/components/SightingOptionalDetails";
 import { SPECIES_UNKNOWN } from "@/features/sightings/constants/breeds";
+import { TRAIT_TAGS_MAX } from "@/shared/constants/traitTags";
 import { cn } from "@/shared/lib/cn";
 import {
   completeSubmission,
@@ -21,8 +22,6 @@ import { Text } from "@/shared/ui/Text";
 import { getLostPostCoverUrl } from "../lib/lost-post-cover";
 import { invalidateMyLostPostsCache } from "../hooks/useMyLostPosts";
 import { useLostPost } from "../hooks/useLostPost";
-
-const MAX_EDIT_TAGS = 8;
 
 const inputBase =
   "w-full rounded-xl border border-border-subtle bg-surface px-4 py-3 text-[15px] text-text-main shadow-sm outline-none transition-all focus:border-action-primary focus:ring-2 focus:ring-action-primary/20 disabled:cursor-not-allowed disabled:opacity-60";
@@ -70,7 +69,11 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
     setTraitColor(item.trait_color ?? "");
     setTraitSize(normalizeTraitSize(item.trait_size));
     setTraitSpecies(item.trait_species ?? SPECIES_UNKNOWN);
-    setTraitTags(Array.isArray(item.trait_tags) ? item.trait_tags : []);
+    setTraitTags(
+      Array.isArray(item.trait_tags)
+        ? item.trait_tags.slice(0, TRAIT_TAGS_MAX)
+        : []
+    );
     setDescription(item.note ?? "");
     setStatus(item.status === "found" ? "found" : "searching");
     setPhoto({
@@ -148,7 +151,7 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
     setTraitTags((current) =>
       current.includes(tagId)
         ? current.filter((id) => id !== tagId)
-        : current.length >= MAX_EDIT_TAGS
+        : current.length >= TRAIT_TAGS_MAX
           ? current
           : [...current, tagId]
     );
@@ -416,7 +419,7 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
         traitTags={traitTags}
         description={description}
         disabled={saving}
-        maxTags={MAX_EDIT_TAGS}
+        maxTags={TRAIT_TAGS_MAX}
         idPrefix="lost-edit"
         onFieldChange={handleOptionalFieldChange}
         onTraitTagToggle={handleToggleTag}

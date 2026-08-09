@@ -9,7 +9,7 @@ import { sha256 } from "@/shared/lib/hash";
 import { triggerEmbeddingsProcess } from "@/shared/lib/embeddings-worker";
 import { extractColorTokens } from "@/shared/constants/traitColors";
 import { normalizeSize } from "@/shared/constants/traitSizes";
-import { TRAIT_TAG_IDS } from "@/shared/constants/traitTags";
+import { TRAIT_TAG_IDS, TRAIT_TAGS_MAX } from "@/shared/constants/traitTags";
 import {
   isValidUuid,
   parseLostPostCreateRequest,
@@ -20,8 +20,6 @@ import { verifyUploadIntents } from "@/shared/lib/upload-intents";
 import { getClientIp } from "@/shared/lib/ip";
 import { createRequestLogger } from "@/shared/lib/structured-log";
 import { getIdempotencyReplay } from "@/shared/lib/idempotency";
-
-const TRAIT_TAGS_MAX_LOST_POST = 8;
 
 /**
  * POST /api/v1/lost-posts — 유실글 생성 (인증 필수)
@@ -81,7 +79,7 @@ export async function POST(request: Request) {
     const sizeNorm = normalizeSize(traitSize) ?? null;
     const traitTagsNorm = traitTags
       .filter((id) => TRAIT_TAG_IDS.includes(id))
-      .slice(0, TRAIT_TAGS_MAX_LOST_POST);
+      .slice(0, TRAIT_TAGS_MAX);
 
     const idempotencyHeader = request.headers.get("Idempotency-Key");
     if (idempotencyHeader && !isValidUuid(idempotencyHeader)) {

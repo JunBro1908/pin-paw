@@ -6,15 +6,14 @@ import {
   SIZE_VALUES,
   type SizeValue,
 } from "@/shared/constants/traitSizes";
-import { TRAIT_TAGS } from "@/shared/constants/traitTags";
+import { TRAIT_TAGS, TRAIT_TAGS_MAX } from "@/shared/constants/traitTags";
 import { Icon } from "@/shared/ui/Icon";
 import { Text } from "@/shared/ui/Text";
 import { ScrollablePanel } from "@/shared/ui/ScrollablePanel";
 import { DOG_BREEDS, getBreedLabel } from "../constants/breeds";
 
-const MAX_TAG_SELECT_SIGHTING = 5;
 const inputBase =
-  "w-full rounded-xl border border-border-subtle bg-surface px-4 py-3 text-[15px] text-text-main shadow-sm outline-none transition-all focus:border-action-primary focus:ring-2 focus:ring-action-primary/20 disabled:cursor-not-allowed disabled:opacity-60";
+  "w-full rounded-xl border border-border-subtle bg-surface px-4 py-3 text-[15px] text-text-main placeholder:text-text-caption shadow-sm outline-none transition-all focus:border-action-primary focus:ring-2 focus:ring-action-primary/20 disabled:cursor-not-allowed disabled:opacity-60 autofill:bg-surface autofill:text-text-main";
 const selectBase =
   "w-full cursor-pointer appearance-none rounded-xl border border-border-subtle bg-surface bg-[length:1.25rem] bg-[right_0.75rem_center] bg-no-repeat px-4 py-3 pr-10 text-[15px] text-text-main shadow-sm outline-none transition-all focus:border-action-primary focus:ring-2 focus:ring-action-primary/20 disabled:cursor-not-allowed disabled:opacity-60";
 const fieldLabelClass = "text-text-main mb-1.5 block text-sm font-semibold";
@@ -32,7 +31,7 @@ export interface SightingOptionalDetailsProps {
   traitTags: string[];
   description: string;
   disabled: boolean;
-  /** Defaults to sighting create/edit limit (5). Lost-post edit uses 8. */
+  /** Defaults to the shared trait-tag maximum. */
   maxTags?: number;
   /** Prefix for field ids to avoid collisions when reused. */
   idPrefix?: string;
@@ -47,7 +46,7 @@ export function SightingOptionalDetails({
   traitTags,
   description,
   disabled,
-  maxTags = MAX_TAG_SELECT_SIGHTING,
+  maxTags = TRAIT_TAGS_MAX,
   idPrefix = "sighting",
   onFieldChange,
   onTraitTagToggle,
@@ -136,9 +135,12 @@ export function SightingOptionalDetails({
               </div>
             </div>
             <div className="space-y-2">
-              <Text variant="caption" color="caption">
-                특이사항 (선택, 최대 {maxTags}개)
-              </Text>
+              <div>
+                <span className={fieldLabelClass}>특이사항</span>
+                <Text variant="caption" className="text-text-caption block text-xs">
+                  최대 {maxTags}개
+                </Text>
+              </div>
               <div className="flex flex-wrap gap-2">
                 {TRAIT_TAGS.map((tag) => {
                   const selected = traitTags.includes(tag.id);

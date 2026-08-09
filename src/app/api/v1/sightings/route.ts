@@ -12,7 +12,7 @@ import {
 import { triggerEmbeddingsProcess } from "@/shared/lib/embeddings-worker";
 import { extractColorTokens } from "@/shared/constants/traitColors";
 import { normalizeSize } from "@/shared/constants/traitSizes";
-import { TRAIT_TAG_IDS } from "@/shared/constants/traitTags";
+import { TRAIT_TAG_IDS, TRAIT_TAGS_MAX } from "@/shared/constants/traitTags";
 import {
   isValidUuid,
   parseSightingCreateRequest,
@@ -22,8 +22,6 @@ import { verifyUploadIntents } from "@/shared/lib/upload-intents";
 import { createRequestLogger } from "@/shared/lib/structured-log";
 import { getIdempotencyReplay } from "@/shared/lib/idempotency";
 import { NextResponse } from "next/server";
-
-const TRAIT_TAGS_MAX_SIGHTING = 5;
 
 export async function POST(request: Request) {
   const logger = createRequestLogger(request, "/api/v1/sightings");
@@ -99,7 +97,7 @@ export async function POST(request: Request) {
     const sizeNorm = normalizeSize(traitSize) ?? null;
     const traitTagsNorm = traitTags
       .filter((id) => TRAIT_TAG_IDS.includes(id))
-      .slice(0, TRAIT_TAGS_MAX_SIGHTING);
+      .slice(0, TRAIT_TAGS_MAX);
     const requestHash = sha256(
       JSON.stringify({
         photoKeys,

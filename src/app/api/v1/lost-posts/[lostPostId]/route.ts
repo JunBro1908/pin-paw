@@ -7,7 +7,7 @@ import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 import { triggerEmbeddingsProcess } from "@/shared/lib/embeddings-worker";
 import { extractColorTokens } from "@/shared/constants/traitColors";
 import { normalizeSize } from "@/shared/constants/traitSizes";
-import { TRAIT_TAG_IDS } from "@/shared/constants/traitTags";
+import { TRAIT_TAG_IDS, TRAIT_TAGS_MAX } from "@/shared/constants/traitTags";
 import {
   isValidUuid,
   parseLostPostUpdateRequest,
@@ -18,7 +18,6 @@ import { verifyUploadIntents } from "@/shared/lib/upload-intents";
 import { getClientIp } from "@/shared/lib/ip";
 import { sha256 } from "@/shared/lib/hash";
 
-const TRAIT_TAGS_MAX_LOST_POST = 8;
 type RouteContext = { params: Promise<{ lostPostId: string }> };
 
 /**
@@ -147,7 +146,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   if (body.traitTags !== undefined) {
     const arr = body.traitTags
       .filter((id) => TRAIT_TAG_IDS.includes(id))
-      .slice(0, TRAIT_TAGS_MAX_LOST_POST);
+      .slice(0, TRAIT_TAGS_MAX);
     updates.trait_tags = arr.length ? arr : null;
   }
   if (body.note !== undefined) updates.note = body.note;
