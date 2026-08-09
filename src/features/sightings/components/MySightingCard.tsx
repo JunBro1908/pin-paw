@@ -53,9 +53,7 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
     ref && firstKey ? ref.getPublicUrl(firstKey).data.publicUrl : "";
 
   const occurredAt = formatSeoulLostDateTime(item.occurred_at);
-  const metadata = [occurredAt, item.approximate_region?.trim()]
-    .filter((value): value is string => Boolean(value))
-    .join(" · ");
+  const approximateRegion = item.approximate_region?.trim() || null;
   const traitTags = buildTraitTags(item);
 
   const handleDelete = async () => {
@@ -88,8 +86,9 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
   };
 
   return (
-    <div className="border-border-subtle bg-surface flex items-stretch gap-3 rounded-2xl border p-3.5 shadow-sm">
-      <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
+    <div className="border-border-subtle bg-surface rounded-2xl border p-3.5 shadow-sm">
+      <div className="grid grid-cols-[6rem_minmax(0,1fr)_auto] gap-3">
+      <div className="relative h-24 w-24 overflow-hidden rounded-xl bg-gray-100">
         {thumbUrl ? (
           <Image
             src={thumbUrl}
@@ -105,15 +104,12 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
         )}
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="min-w-0">
         <Text variant="body" color="main" className="font-semibold">
           목격 제보
         </Text>
-        {metadata ? (
-          <Text variant="caption" color="caption" className="mt-0.5 block truncate">
-            {metadata}
-          </Text>
-        ) : null}
+        {occurredAt ? <Text variant="caption" color="caption" className="mt-0.5 block">{occurredAt}</Text> : null}
+        {approximateRegion ? <Text variant="caption" color="caption" className="block">{approximateRegion}</Text> : null}
         {traitTags.length > 0 ? (
           <div className="mt-2 flex flex-wrap gap-1">
             {traitTags.map((tag) => (
@@ -123,16 +119,6 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
             ))}
           </div>
         ) : null}
-        <Link
-          href={
-            item.lat != null && item.lng != null
-              ? `/map?lat=${item.lat}&lng=${item.lng}&sightingId=${item.id}`
-              : `/map?sightingId=${item.id}`
-          }
-          className="text-action-primary hover:bg-primary-soft mt-auto inline-flex min-h-9 w-fit items-center rounded-lg px-2.5 pt-0.5 text-sm font-medium"
-        >
-          지도에서 보기
-        </Link>
       </div>
 
       <div className="flex shrink-0 items-start self-start">
@@ -190,6 +176,13 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
           </>
         ) : null}
       </div>
+      </div>
+      <Link
+        href={item.lat != null && item.lng != null ? `/map?lat=${item.lat}&lng=${item.lng}&sightingId=${item.id}` : `/map?sightingId=${item.id}`}
+        className="text-action-primary hover:bg-primary-soft mt-3 flex min-h-10 w-full items-center justify-center rounded-xl text-sm font-medium"
+      >
+        지도에서 보기
+      </Link>
 
       {showConfirm && (
         <div

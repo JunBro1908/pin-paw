@@ -198,8 +198,10 @@ test("my sighting cards pair quiet edit and delete icon actions", async () => {
   assert.match(card, /buildTraitTags/);
   assert.match(card, /bg-surface-soft text-text-sub rounded-lg/);
   assert.match(card, /bg-border-subtle mx-0\.5 h-5 w-px/);
-  assert.match(card, /flex items-stretch gap-3/);
+  assert.match(card, /grid grid-cols-\[6rem_minmax\(0,1fr\)_auto\] gap-3/);
   assert.match(card, /flex shrink-0 items-start self-start/);
+  assert.match(card, /min-h-10 w-full items-center justify-center/);
+  assert.doesNotMatch(card, /className="[^"]*truncate[^"]*"[^>]*>\s*\{occurredAt\}/);
   assert.match(card, /min-h-11 min-w-11/);
   assert.match(card, /text-text-caption/);
   assert.doesNotMatch(card, /item\.note/);
