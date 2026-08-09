@@ -24,6 +24,7 @@ export interface LostPostItem {
   pet_name: string;
   lost_at: string;
   lost_location?: unknown;
+  approximate_region?: string | null;
   trait_color: string | null;
   trait_size: string | null;
   trait_species: string | null;

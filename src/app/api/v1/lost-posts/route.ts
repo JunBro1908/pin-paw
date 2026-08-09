@@ -20,6 +20,22 @@ import { verifyUploadIntents } from "@/shared/lib/upload-intents";
 import { getClientIp } from "@/shared/lib/ip";
 import { createRequestLogger } from "@/shared/lib/structured-log";
 import { getIdempotencyReplay } from "@/shared/lib/idempotency";
+import { resolveApproxRegionLabel } from "@/shared/lib/approx-region-label";
+
+function extractPointCoordinates(
+  location: unknown
+): { lat: number; lng: number } | null {
+  if (!location || typeof location !== "object") return null;
+
+  const coordinates = (location as { coordinates?: unknown }).coordinates;
+  if (!Array.isArray(coordinates) || coordinates.length < 2) return null;
+
+  const [lng, lat] = coordinates;
+  if (typeof lat !== "number" || typeof lng !== "number") return null;
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+
+  return { lat, lng };
+}
 
 /**
  * POST /api/v1/lost-posts — 유실글 생성 (인증 필수)
@@ -254,6 +270,23 @@ export async function GET(request: Request) {
     );
   }
 
-  const list = rows ?? [];
+  const regionByCoordinates = new Map<string, Promise<string | null>>();
+  const list = await Promise.all(
+    (rows ?? []).map(async (row) => {
+      const point = extractPointCoordinates(row.lost_location);
+      let regionLookup: Promise<string | null> | null = null;
+      if (point) {
+        const key = `${point.lat},${point.lng}`;
+        regionLookup = regionByCoordinates.get(key) ?? null;
+        if (!regionLookup) {
+          regionLookup = resolveApproxRegionLabel(point.lat, point.lng);
+          regionByCoordinates.set(key, regionLookup);
+        }
+      }
+      const approximate_region = regionLookup ? await regionLookup : null;
+
+      return { ...row, approximate_region };
+    })
+  );
   return ok(list, { limit, offset });
 }
