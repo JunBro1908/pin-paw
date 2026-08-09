@@ -40,6 +40,27 @@ async function loadTsx(relativePath) {
             .join(" "),
       };
     }
+    if (specifier === "@/shared/constants/traitSizes") {
+      return {
+        formatDogSizeLabel(value) {
+          const labels = {
+            small: "소형견",
+            medium: "중형견",
+            large: "대형견",
+            소: "소형견",
+            중: "중형견",
+            대: "대형견",
+          };
+          return labels[value] ?? null;
+        },
+      };
+    }
+    if (specifier === "@/shared/lib/date") {
+      return { formatSeoulLostDateTime: () => null };
+    }
+    if (specifier === "@/features/sightings/constants/breeds") {
+      return { SPECIES_UNKNOWN: "unknown" };
+    }
     if (specifier === "@/shared/ui/ScrollablePanel") {
       return {
         scrollablePanelClass: {
