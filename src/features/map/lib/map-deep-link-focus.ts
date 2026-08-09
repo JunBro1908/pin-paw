@@ -46,7 +46,8 @@ function isValidCoordinate(
 
 export function buildRecommendationMapHref(
   sightingId: string,
-  lostPostId?: string
+  lostPostId?: string,
+  fallbackCenter?: DeepLinkCoordinate
 ): string {
   const params = new URLSearchParams({
     sightingId: normalizeId(sightingId),
@@ -54,6 +55,11 @@ export function buildRecommendationMapHref(
 
   if (lostPostId) {
     params.set("lostPostId", normalizeId(lostPostId));
+  }
+
+  if (fallbackCenter && isValidCoordinate(fallbackCenter)) {
+    params.set("lat", String(fallbackCenter.lat));
+    params.set("lng", String(fallbackCenter.lng));
   }
 
   return `/map?${params.toString()}`;

@@ -58,7 +58,12 @@ test("recommendation card presents a static score breakdown without model-only c
   assert.doesNotMatch(scoreBar, /<button|type="button"/);
   assert.match(scoreBar, /role="progressbar"/);
   assert.match(scoreBar, /h-5 overflow-hidden/);
-  assert.match(scoreBar, /min-w-9/);
-  assert.match(scoreBar, /style=\{\{ flex: segment\.value \}\}/);
+  assert.match(scoreBar, /MIN_SCORE_SEGMENT_PERCENT/);
+  assert.match(scoreBar, /const totalPercent/);
+  assert.match(scoreBar, /const displayPercent/);
+  assert.match(
+    scoreBar,
+    /style=\{\{ width: `\$\{segment\.displayPercent\}%` \}\}/
+  );
   assert.doesNotMatch(scoreBar, /aria-label="점수 상세"/);
 });

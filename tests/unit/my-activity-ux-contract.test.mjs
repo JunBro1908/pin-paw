@@ -98,7 +98,10 @@ test("login prompt states the purpose and links policies", async () => {
   assert.match(prompt, /flex-1 flex-col items-center justify-center gap-8/);
   assert.match(prompt, /mt-auto[\s\S]*href="\/terms"/);
   assert.match(guard, /flex min-h-0 w-full flex-1 flex-col/);
-  assert.match(tabsLayout, /flex flex-1 flex-col pb-\[calc\(var\(--bottom-nav-height\)/);
+  assert.match(
+    tabsLayout,
+    /flex flex-1 flex-col pb-\[calc\(var\(--bottom-nav-height\)/
+  );
 });
 
 test("my activity leads with user profile before case carousel", async () => {
@@ -127,14 +130,8 @@ test("my header exposes settings gear and omits alerts entry", async () => {
   assert.match(header[0], /href="\/my\/settings"/);
   assert.match(header[0], /name="settings"/);
   assert.match(header[0], /내 정보/);
-  assert.match(
-    header[0],
-    /flex min-h-11 items-center justify-between/
-  );
-  assert.doesNotMatch(
-    header[0],
-    /올린 유실글과 제보를 이어서 관리하세요/
-  );
+  assert.match(header[0], /flex min-h-11 items-center justify-between/);
+  assert.doesNotMatch(header[0], /올린 유실글과 제보를 이어서 관리하세요/);
   assert.doesNotMatch(page, /\/my\/notifications/);
   assert.doesNotMatch(page, />\s*알림\s*</);
   assert.doesNotMatch(page, />\s*설정\s*</);
@@ -152,10 +149,7 @@ test("my empty lost-post state centers title, copy, and CTA", async () => {
   assert.ok(container, "empty lost-post container should center content");
   assert.match(container[1], /flex-col/);
   assert.doesNotMatch(container[1], /sm:text-left|sm:justify-start/);
-  assert.match(
-    page,
-    /href="\/my\/lost-posts\/new"[\s\S]{0,200}?유실글 올리기/
-  );
+  assert.match(page, /href="\/my\/lost-posts\/new"[\s\S]{0,200}?유실글 올리기/);
   assert.match(emptyBlock[0], /min-h-11/);
 });
 
@@ -166,10 +160,7 @@ test("recommend empty lost-post state centers CTA", async () => {
   );
   assert.ok(container, "recommend empty lost-post state should be centered");
   assert.match(container[1], /flex-col/);
-  assert.match(
-    page,
-    /href="\/my\/lost-posts\/new"[\s\S]{0,200}?유실글 올리기/
-  );
+  assert.match(page, /href="\/my\/lost-posts\/new"[\s\S]{0,200}?유실글 올리기/);
 });
 
 test("my sighting empty state stays centered with hierarchy", async () => {
@@ -199,12 +190,25 @@ test("my sighting cards pair quiet edit and delete icon actions", async () => {
   assert.match(card, /bg-surface-soft text-text-sub rounded-lg/);
   assert.match(card, /bg-border-subtle mx-0\.5 h-5 w-px/);
   assert.match(card, /grid grid-cols-\[6rem_minmax\(0,1fr\)\] gap-3/);
-  assert.match(card, /grid grid-cols-\[minmax\(0,1fr\)_auto\] items-start gap-1/);
+  assert.match(
+    card,
+    /grid grid-cols-\[minmax\(0,1fr\)_auto\] items-start gap-1/
+  );
   assert.match(card, /flex shrink-0 items-center/);
+  assert.doesNotMatch(card, />\s*목격 제보\s*</);
+  assert.match(card, /const traitTagsMarkup/);
+  assert.match(card, /traitTagsMarkup[\s\S]*\{actionButtons\}/);
+  assert.ok(
+    card.indexOf("{approximateRegion}") < card.indexOf("{occurredAt}"),
+    "region should appear above the occurred time"
+  );
   assert.match(card, /min-h-10 w-full items-center justify-center/);
   assert.match(card, /flex flex-nowrap gap-1 overflow-hidden/);
   assert.match(card, /shrink-0/);
-  assert.doesNotMatch(card, /className="[^"]*truncate[^"]*"[^>]*>\s*\{occurredAt\}/);
+  assert.doesNotMatch(
+    card,
+    /className="[^"]*truncate[^"]*"[^>]*>\s*\{occurredAt\}/
+  );
   assert.match(card, /min-h-11 min-w-11/);
   assert.match(card, /text-text-caption/);
   assert.doesNotMatch(card, /item\.note/);

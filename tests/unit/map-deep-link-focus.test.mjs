@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   buildFocusedSightingFromDetail,
+  buildRecommendationMapHref,
   DEEP_LINK_FOCUS_ZOOM,
   findFocusedPointInItems,
   resolveDeepLinkCenter,
@@ -26,6 +27,13 @@ test("resolveDeepLinkCenter prefers precise detail over approximate URL grid", (
   assert.notDeepEqual(approximate, precise);
   assert.deepEqual(resolveDeepLinkCenter(null, approximate), approximate);
   assert.equal(resolveDeepLinkCenter(null, null), null);
+});
+
+test("recommendation deep link keeps an approximate coordinate fallback", () => {
+  assert.equal(
+    buildRecommendationMapHref(" S1 ", " L1 ", { lat: 37.5, lng: 127.1 }),
+    "/map?sightingId=s1&lostPostId=l1&lat=37.5&lng=127.1"
+  );
 });
 
 test("buildFocusedSightingFromDetail builds a point for the detail sheet", () => {
@@ -100,7 +108,10 @@ test("map applies a resolved deep-link target only after its map instance is rea
     source.indexOf("const queueDeepLinkFocus")
   );
   assert.match(apply, /mapInstanceRef\.current\.panTo/);
-  assert.match(apply, /mapInstanceRef\.current\.setZoom\(DEEP_LINK_FOCUS_ZOOM\)/);
+  assert.match(
+    apply,
+    /mapInstanceRef\.current\.setZoom\(DEEP_LINK_FOCUS_ZOOM\)/
+  );
   assert.match(apply, /setSelectedSighting\(pending\.sighting\)/);
   assert.match(apply, /hasAutoFocusedRef\.current = true/);
   assert.match(apply, /hasCenteredSightingRef\.current = true/);

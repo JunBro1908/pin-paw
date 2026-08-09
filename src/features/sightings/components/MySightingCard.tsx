@@ -143,56 +143,59 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
     </div>
   );
 
+  const traitTagsMarkup =
+    traitTags.length > 0 ? (
+      <div className="flex flex-nowrap gap-1 overflow-hidden">
+        {traitTags.map((tag) => (
+          <span key={tag} className={`${traitChipClass} shrink-0`}>
+            {tag}
+          </span>
+        ))}
+      </div>
+    ) : null;
+
   return (
     <div className="border-border-subtle bg-surface rounded-2xl border p-3.5 shadow-sm">
       <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3">
-      <div className="relative h-24 w-24 overflow-hidden rounded-xl bg-gray-100">
-        {thumbUrl ? (
-          <Image
-            src={thumbUrl}
-            alt="제보 사진"
-            fill
-            sizes="96px"
-            className="object-cover"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-2xl">
-            📷
-          </div>
-        )}
-      </div>
-
-      <div className="min-w-0">
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-1">
-          <Text variant="body" color="main" className="font-semibold">
-            목격 제보
-          </Text>
-          {actionButtons}
+        <div className="relative h-24 w-24 overflow-hidden rounded-xl bg-gray-100">
+          {thumbUrl ? (
+            <Image
+              src={thumbUrl}
+              alt="제보 사진"
+              fill
+              sizes="96px"
+              className="object-cover"
+            />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-2xl">
+              📷
+            </div>
+          )}
         </div>
-        {occurredAt ? (
-          <Text variant="caption" color="caption" className="mt-0.5 block">
-            {occurredAt}
-          </Text>
-        ) : null}
-        {approximateRegion ? (
-          <Text variant="caption" color="caption" className="block">
-            {approximateRegion}
-          </Text>
-        ) : null}
-        {traitTags.length > 0 ? (
-          <div className="mt-2 flex flex-nowrap gap-1 overflow-hidden">
-            {traitTags.map((tag) => (
-              <span key={tag} className={`${traitChipClass} shrink-0`}>
-                {tag}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </div>
 
+        <div className="min-w-0">
+          <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-1">
+            {traitTagsMarkup}
+            {actionButtons}
+          </div>
+          {approximateRegion ? (
+            <Text variant="caption" color="caption" className="mt-1 block">
+              {approximateRegion}
+            </Text>
+          ) : null}
+          {occurredAt ? (
+            <Text variant="caption" color="caption" className="block">
+              {occurredAt}
+            </Text>
+          ) : null}
+        </div>
       </div>
       <Link
-        href={item.lat != null && item.lng != null ? `/map?lat=${item.lat}&lng=${item.lng}&sightingId=${item.id}` : `/map?sightingId=${item.id}`}
+        href={
+          item.lat != null && item.lng != null
+            ? `/map?lat=${item.lat}&lng=${item.lng}&sightingId=${item.id}`
+            : `/map?sightingId=${item.id}`
+        }
         className="text-action-primary hover:bg-primary-soft mt-3 flex min-h-10 w-full items-center justify-center rounded-xl text-sm font-medium"
       >
         지도에서 보기

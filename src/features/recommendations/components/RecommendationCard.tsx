@@ -31,11 +31,36 @@ const SCORE_SEGMENTS = [
   },
 ] as const;
 
+// Preserve the 100-point scale while using spare bar space to keep tiny scores legible.
+const MIN_SCORE_SEGMENT_PERCENT = 10;
+
 function ScoreBreakdownBar({ item }: { item: RecommendationItem }) {
-  const segments = SCORE_SEGMENTS.map((segment) => ({
+  const scoreSegments = SCORE_SEGMENTS.map((segment) => ({
     ...segment,
     value: Math.max(0, Math.min(item.scoreGroups[segment.key], 1)),
   })).filter((segment) => segment.value > 0);
+  const totalPercent = scoreSegments.reduce(
+    (total, segment) => total + segment.value * 100,
+    0
+  );
+  const totalShortfall = scoreSegments.reduce(
+    (total, segment) =>
+      total + Math.max(0, MIN_SCORE_SEGMENT_PERCENT - segment.value * 100),
+    0
+  );
+  const availablePercent = Math.max(0, 100 - totalPercent);
+  const distributablePercent = Math.min(availablePercent, totalShortfall);
+  const segments = scoreSegments.map((segment) => {
+    const valuePercent = segment.value * 100;
+    const shortfall = Math.max(0, MIN_SCORE_SEGMENT_PERCENT - valuePercent);
+    const displayPercent =
+      valuePercent +
+      (totalShortfall > 0
+        ? (shortfall / totalShortfall) * distributablePercent
+        : 0);
+
+    return { ...segment, displayPercent };
+  });
 
   return (
     <div className="mt-2.5">
@@ -54,8 +79,8 @@ function ScoreBreakdownBar({ item }: { item: RecommendationItem }) {
             key={segment.key}
             title={`${segment.label} ${Math.round(segment.value * 100)}점`}
             aria-label={`${segment.label} ${Math.round(segment.value * 100)}점`}
-            className={`${segment.color} flex h-full min-w-9 items-center justify-center first:rounded-l-full last:rounded-r-full`}
-            style={{ flex: segment.value }}
+            className={`${segment.color} flex h-full items-center justify-center first:rounded-l-full last:rounded-r-full`}
+            style={{ width: `${segment.displayPercent}%` }}
           >
             <span className="text-[10px] font-semibold whitespace-nowrap text-white">
               {Math.round(segment.value * 100)}점
@@ -94,7 +119,10 @@ function SimilarityInfoTip() {
     const rect = trigger.getBoundingClientRect();
     const width = Math.min(288, window.innerWidth - 32);
     const estimatedHeight = 180;
-    const left = Math.max(16, Math.min(rect.right - width, window.innerWidth - width - 16));
+    const left = Math.max(
+      16,
+      Math.min(rect.right - width, window.innerWidth - width - 16)
+    );
     const top =
       rect.bottom + 8 + estimatedHeight <= window.innerHeight
         ? rect.bottom + 8
@@ -167,15 +195,23 @@ function SimilarityInfoTip() {
               <ul className="space-y-2">
                 {SCORE_SEGMENTS.map((segment) => (
                   <li key={segment.key} className="flex items-start gap-2">
-                    <span className={`${segment.color} mt-1 h-2.5 w-2.5 shrink-0 rounded-full`} />
+                    <span
+                      className={`${segment.color} mt-1 h-2.5 w-2.5 shrink-0 rounded-full`}
+                    />
                     <span>
                       <strong>{segment.label}:</strong>{" "}
-                      {segment.key === "locationTime" ? "유실·목격 시각 차이와 목격 위치까지의 거리" : segment.key === "appearance" ? "종, 크기, 색상·무늬의 유사도" : "목줄, 흉터 등 선택한 특징의 일치"}
+                      {segment.key === "locationTime"
+                        ? "유실·목격 시각 차이와 목격 위치까지의 거리"
+                        : segment.key === "appearance"
+                          ? "종, 크기, 색상·무늬의 유사도"
+                          : "목줄, 흉터 등 선택한 특징의 일치"}
                     </span>
                   </li>
                 ))}
               </ul>
-              <p className="text-text-caption mt-2 border-t pt-2 text-[11px]">{SIMILARITY_DISCLAIMER}</p>
+              <p className="text-text-caption mt-2 border-t pt-2 text-[11px]">
+                {SIMILARITY_DISCLAIMER}
+              </p>
             </span>,
             document.body
           )
@@ -218,7 +254,10 @@ export function RecommendationCard({
       })
     : "";
 
-  const mapHref = buildRecommendationMapHref(item.sightingId, lostPostId);
+  const mapHref = buildRecommendationMapHref(item.sightingId, lostPostId, {
+    lat: item.lat,
+    lng: item.lng,
+  });
 
   const handleRecordSeen = useCallback(() => {
     if (!accessToken) return;
@@ -401,19 +440,12 @@ export function RecommendationCard({
                 <Text
                   as="p"
                   variant="caption"
-                  className="text-text-sub text-xs font-medium"
-                >
-                  추천 점수
-                </Text>
-                <Text
-                  as="p"
-                  variant="caption"
                   className="text-action-primary text-lg font-bold"
                   aria-label={`추천 점수 ${item.displayMatchPercent}점`}
                 >
                   {item.displayMatchPercent}점
                 </Text>
-                    <SimilarityInfoTip />
+                <SimilarityInfoTip />
               </div>
               <ScoreBreakdownBar item={item} />
             </div>

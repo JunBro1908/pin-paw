@@ -21,11 +21,11 @@ test("confirmation card leads with distance-time chips, display fit score, group
   assert.match(card, /mt-auto[\s\S]*지도에서 보기/);
   assert.match(card, /item\.contextChips\.map/);
   assert.match(card, /variant="caption"[\s\S]*text-xs[\s\S]*\{occurredAt\}/);
+  assert.doesNotMatch(card, />\s*추천 점수\s*</);
   assert.match(
     card,
-    /variant="caption"[\s\S]*text-xs[\s\S]*추천 점수/
+    /aria-label=\{`추천 점수 \$\{item\.displayMatchPercent\}점`\}/
   );
-  assert.match(card, /aria-label=\{`추천 점수 \$\{item\.displayMatchPercent\}점`\}/);
   assert.match(card, /items-center gap-1\.5/);
   assert.match(card, /rounded-full border border-current/);
   assert.match(card, /h-3\.5 w-3\.5/);
@@ -46,10 +46,7 @@ test("confirmation card leads with distance-time chips, display fit score, group
   assert.match(card, /document\.body/);
   assert.match(card, /fixed z-\[130\]/);
   assert.match(card, /getBoundingClientRect\(\)/);
-  assert.doesNotMatch(
-    card,
-    /absolute top-full right-0 z-20[^]*role="tooltip"/
-  );
+  assert.doesNotMatch(card, /absolute top-full right-0 z-20[^]*role="tooltip"/);
   assert.match(card, /function ScoreBreakdownBar/);
   assert.match(
     card,
@@ -60,7 +57,9 @@ test("confirmation card leads with distance-time chips, display fit score, group
   assert.match(card, /외형 특징/);
   assert.match(card, /특이사항/);
   assert.match(card, /item\.scoreGroups/);
-  assert.match(card, /min-w-9/);
+  assert.match(card, /MIN_SCORE_SEGMENT_PERCENT/);
+  assert.match(card, /displayPercent/);
+  assert.match(card, /width: `\$\{segment\.displayPercent\}%`/);
   assert.match(card, /유실·목격 시각 차이와 목격 위치까지의 거리/);
   assert.match(card, /종, 크기, 색상·무늬의 유사도/);
   assert.doesNotMatch(scoreBreakdown, /aria-expanded/);
@@ -73,14 +72,13 @@ test("confirmation card leads with distance-time chips, display fit score, group
   );
   assert.match(
     card,
-    /const mapHref = buildRecommendationMapHref\(\s*item\.sightingId,\s*lostPostId\s*\);/
+    /const mapHref = buildRecommendationMapHref\(\s*item\.sightingId,\s*lostPostId,\s*\{\s*lat: item\.lat,\s*lng: item\.lng,\s*\}\s*\);/
   );
   assert.match(card, /router\.push\(mapHref\)/);
 
-  // 추천 결과의 마스킹된 좌표를 URL 중심점으로 직접 사용하지 않는다.
-  assert.doesNotMatch(card, /\/map\?lat=/);
-  assert.doesNotMatch(card, /item\.lat/);
-  assert.doesNotMatch(card, /item\.lng/);
+  // 카드가 이미 받은 approximate 좌표는 인증 상세 조회 실패 시 지도 중심 fallback으로만 사용한다.
+  assert.match(card, /item\.lat/);
+  assert.match(card, /item\.lng/);
 
   assert.match(card, /북마크 등록/);
   assert.doesNotMatch(card, /상세 보기/);

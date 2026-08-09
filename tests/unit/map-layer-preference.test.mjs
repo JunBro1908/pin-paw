@@ -65,18 +65,20 @@ test("recommend map deep link forces default layer before focus", async () => {
     /key=\{\s*initialFocusSightingId\s*\?\s*`focus:\$\{initialFocusSightingId\}`\s*:\s*"map"\s*\}/
   );
 
-  // 추천 카드에서는 마스킹된 lat/lng를 URL 중심점으로 사용하지 않는다.
-  // sightingId만 전달하고 인증 상세 API의 정확한 좌표로 포커스한다.
+  // 추천 카드의 approximate lat/lng는 auth 상세 조회가 실패해도 지도를 이동시키는
+  // fallback이며, 상세 API의 정확한 좌표가 도착하면 이를 우선해 포커스한다.
   assert.match(
     card,
     /import \{ buildRecommendationMapHref \} from "@\/features\/map\/lib\/map-deep-link-focus";/
   );
   assert.match(
     card,
-    /const mapHref = buildRecommendationMapHref\(item\.sightingId,\s*lostPostId\);/
+    /const mapHref = buildRecommendationMapHref\(\s*item\.sightingId,\s*lostPostId,\s*\{\s*lat: item\.lat,\s*lng: item\.lng,\s*\}\s*\);/
   );
   assert.match(card, /router\.push\(mapHref\)/);
-  assert.doesNotMatch(card, /\/map\?lat=\$\{item\.lat\}&lng=\$\{item\.lng\}/);
+  assert.match(focusLib, /fallbackCenter\?: DeepLinkCoordinate/);
+  assert.match(focusLib, /params\.set\("lat", String\(fallbackCenter\.lat\)\)/);
+  assert.match(focusLib, /params\.set\("lng", String\(fallbackCenter\.lng\)\)/);
 
   assert.match(
     map,
@@ -115,7 +117,7 @@ test("recommend map deep link forces default layer before focus", async () => {
     focusLib,
     /const params = new URLSearchParams\(\{\s*sightingId:/
   );
-  assert.doesNotMatch(focusLib, /params\.(?:set|append)\(["'](?:lat|lng)["']/);
+  assert.match(focusLib, /Prefer precise coords from auth detail RPC/);
 });
 
 test("NaverMap refetches bookmark layer after claim mutations succeed", async () => {
