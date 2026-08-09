@@ -48,6 +48,15 @@ async function mapWithConcurrency<T, R>(
 function extractPointCoordinates(
   location: unknown
 ): { lat: number; lng: number } | null {
+  if (typeof location === "string") {
+    const match = /^POINT\s*\(\s*([-+\d.]+)\s+([-+\d.]+)\s*\)$/i.exec(
+      location.trim()
+    );
+    if (!match) return null;
+    const lng = Number(match[1]);
+    const lat = Number(match[2]);
+    return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+  }
   if (!location || typeof location !== "object") return null;
 
   const coordinates = (location as { coordinates?: unknown }).coordinates;

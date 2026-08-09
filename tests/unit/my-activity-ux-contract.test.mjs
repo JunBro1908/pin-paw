@@ -195,7 +195,7 @@ test("my sighting cards pair quiet edit and delete icon actions", async () => {
   assert.match(card, /aria-label="삭제"/);
   assert.match(card, /\/my\/sightings\/\$\{item\.id\}\/edit/);
   assert.match(card, /지도에서 보기/);
-  assert.match(card, /formatSeoulMonthDay/);
+  assert.match(card, /formatSeoulLostDateTime/);
   assert.match(card, /buildTraitTags/);
   assert.match(card, /bg-surface-soft text-text-sub rounded-lg/);
   assert.match(card, /bg-border-subtle mx-0\.5 h-5 w-px/);

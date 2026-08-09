@@ -13,6 +13,13 @@ test("authenticated lost post list maps its existing location to an approximate 
   assert.match(route, /return ok\(list, \{ limit, offset \}\);/);
 });
 
+test("authenticated lost post list accepts PostGIS POINT text locations", async () => {
+  const route = await readFile(routePath, "utf8");
+  assert.match(route, /POINT\\s\*\\\(/);
+  assert.match(route, /const lng = Number\(match\[1\]\);/);
+  assert.match(route, /const lat = Number\(match\[2\]\);/);
+});
+
 test("authenticated lost post list bounds reverse-geocoding concurrency", async () => {
   const route = await readFile(routePath, "utf8");
 

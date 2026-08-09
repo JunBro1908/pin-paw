@@ -4,6 +4,7 @@ import {
 } from "@/shared/supabase/server";
 import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
 import { parsePagination } from "@/shared/lib/api-input";
+import { resolveApproxRegionLabel } from "@/shared/lib/approx-region-label";
 
 /**
  * GET /api/v1/me/sightings — 내 제보 목록 (인증 필수, userId 기반)
@@ -50,10 +51,16 @@ export async function GET(request: Request) {
     );
   }
 
-  const items = (rows ?? []).map((r: Record<string, unknown>) => ({
-    ...r,
-    lat: r.lat != null ? Number(r.lat) : undefined,
-    lng: r.lng != null ? Number(r.lng) : undefined,
-  }));
+  const items = await Promise.all(
+    (rows ?? []).map(async (r: Record<string, unknown>) => {
+      const lat = r.lat != null ? Number(r.lat) : undefined;
+      const lng = r.lng != null ? Number(r.lng) : undefined;
+      const approximate_region =
+        lat != null && lng != null
+          ? await resolveApproxRegionLabel(lat, lng)
+          : null;
+      return { ...r, lat, lng, approximate_region };
+    })
+  );
   return ok(items);
 }

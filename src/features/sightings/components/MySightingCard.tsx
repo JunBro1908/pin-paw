@@ -6,8 +6,8 @@ import { useRef, useState } from "react";
 import { Text } from "@/shared/ui/Text";
 import { createClient } from "@/shared/supabase/client";
 import { useAuth } from "@/features/auth/hooks/useAuth";
-import { formatSeoulMonthDay } from "@/shared/lib/date";
-import { normalizeSize, SIZE_LABELS } from "@/shared/constants/traitSizes";
+import { formatSeoulLostDateTime } from "@/shared/lib/date";
+import { formatDogSizeLabel } from "@/shared/constants/traitSizes";
 import { SPECIES_UNKNOWN } from "../constants/breeds";
 import type { MySightingItem } from "../model/types";
 
@@ -30,13 +30,8 @@ function buildTraitTags(item: MySightingItem): string[] {
     tags.push(species);
   }
 
-  const sizeRaw = item.trait_size?.trim();
-  if (sizeRaw) {
-    const normalized = normalizeSize(sizeRaw);
-    if (normalized && normalized !== "unknown") {
-      tags.push(SIZE_LABELS[normalized]);
-    }
-  }
+  const size = formatDogSizeLabel(item.trait_size);
+  if (size) tags.push(size);
 
   const color = item.trait_color?.trim();
   if (color) {
@@ -57,7 +52,10 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
   const thumbUrl =
     ref && firstKey ? ref.getPublicUrl(firstKey).data.publicUrl : "";
 
-  const occurredAt = formatSeoulMonthDay(item.occurred_at);
+  const occurredAt = formatSeoulLostDateTime(item.occurred_at);
+  const metadata = [occurredAt, item.approximate_region?.trim()]
+    .filter((value): value is string => Boolean(value))
+    .join(" · ");
   const traitTags = buildTraitTags(item);
 
   const handleDelete = async () => {
@@ -108,9 +106,9 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-        {occurredAt ? (
-          <Text variant="body" className="font-medium">
-            {occurredAt}
+        {metadata ? (
+          <Text variant="body" className="truncate font-medium">
+            {metadata}
           </Text>
         ) : null}
         {traitTags.length > 0 ? (

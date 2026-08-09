@@ -39,6 +39,7 @@ export interface MySightingItem {
   trait_species?: string | null;
   lat?: number;
   lng?: number;
+  approximate_region?: string | null;
 }
 
 export interface EditableSighting {
