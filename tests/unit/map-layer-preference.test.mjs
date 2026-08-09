@@ -84,29 +84,30 @@ test("recommend map deep link forces default layer before focus", async () => {
   );
   assert.match(map, /resolveDeepLinkCenter/);
   assert.match(map, /buildFocusedSightingFromDetail/);
-  assert.match(map, /findFocusedPointInItems/);
-  assert.match(map, /panMapToDeepLinkCenter/);
+  assert.match(map, /type PendingDeepLinkFocus/);
+  assert.match(map, /pendingDeepLinkFocusRef/);
+  assert.match(map, /queueDeepLinkFocus/);
+  assert.match(map, /applyPendingDeepLinkFocus/);
   assert.match(
     map,
-    /pendingDeepLinkCenterRef\.current = center;\s*if \(!mapInstanceRef\.current \|\| !window\.naver\?\.maps\) return;/
+    /pendingDeepLinkFocusRef\.current = \{ center, sighting \};\s*return applyPendingDeepLinkFocus\(\);/
   );
   assert.match(
     map,
-    /if \(pendingDeepLinkCenterRef\.current\) \{\s*panMapToDeepLinkCenter\(pendingDeepLinkCenterRef\.current\);/
+    /const latLng = new window\.naver\.maps\.LatLng\(\s*pending\.center\.lat,\s*pending\.center\.lng\s*\);\s*mapInstanceRef\.current\.panTo\(latLng\);\s*mapInstanceRef\.current\.setZoom\(DEEP_LINK_FOCUS_ZOOM\);\s*setSelectedSighting\(pending\.sighting\);\s*hasAutoFocusedRef\.current = true;/
   );
   assert.match(
     map,
     /\/api\/v1\/auth\/sightings\/\$\{encodeURIComponent\(focusId\)\}/
   );
 
-  // Success-gated lock: do not set hasAutoFocused before detail resolves.
+  // Detail opening waits for the exact map focus to complete.
   assert.match(
     map,
-    /hasAutoFocusedRef\.current = true;\s*setSelectedSighting\(focused\);\s*panMapToDeepLinkCenter\(center\);/
+    /const focused = buildFocusedSightingFromDetail\(detail, center\);\s*if \(!focused\) return;\s*queueDeepLinkFocus\(center, focused\);/
   );
-
-  // Viewport fallback must still run when URL center is present.
-  assert.doesNotMatch(map, /itemsInView\.length === 0 \|\|\s*initialCenter/);
+  assert.doesNotMatch(map, /pendingDeepLinkCenterRef/);
+  assert.doesNotMatch(map, /findFocusedPointInItems/);
 
   assert.match(focusLib, /Prefer precise coords from auth detail RPC/);
   assert.match(focusLib, /DEEP_LINK_FOCUS_ZOOM = 16/);

@@ -107,6 +107,11 @@ export function NaverMap({
   const autoLocateAttemptedRef = useRef(false);
   const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // 선택된 제보 정보 (팝업용)
+  const [selectedSighting, setSelectedSighting] = useState<MapItem | null>(
+    null
+  );
+
   const applyPendingDeepLinkFocus = useCallback(() => {
     const pending = pendingDeepLinkFocusRef.current;
     if (!pending || !mapInstanceRef.current || !window.naver?.maps) {
@@ -132,11 +137,6 @@ export function NaverMap({
       return applyPendingDeepLinkFocus();
     },
     [applyPendingDeepLinkFocus]
-  );
-
-  // 선택된 제보 정보 (팝업용)
-  const [selectedSighting, setSelectedSighting] = useState<MapItem | null>(
-    null
   );
 
   /**

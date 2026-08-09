@@ -7,6 +7,10 @@ const cardPath =
 
 test("confirmation card leads with distance-time chips, display fit score, grouped evidence, and map CTA", async () => {
   const card = await readFile(cardPath, "utf8");
+  const scoreBreakdown = card.slice(
+    card.indexOf("function ScoreBreakdownBar"),
+    card.indexOf("interface RecommendationCardProps")
+  );
 
   // Two-column: photo left, chips/date/%/CTA in the right column (not full-bleed above).
   assert.match(
@@ -19,8 +23,9 @@ test("confirmation card leads with distance-time chips, display fit score, group
   assert.match(card, /variant="caption"[\s\S]*text-xs[\s\S]*\{occurredAt\}/);
   assert.match(
     card,
-    /variant="caption"[\s\S]*text-sm[\s\S]*후보 적합도 \{item\.displayMatchPercent\}점/
+    /variant="caption"[\s\S]*text-xs[\s\S]*추천 점수/
   );
+  assert.match(card, /aria-label=\{`추천 점수 \$\{item\.displayMatchPercent\}점`\}/);
   assert.match(card, /items-center gap-1\.5/);
   assert.match(card, /rounded-full border border-current/);
   assert.match(card, /h-3\.5 w-3\.5/);
@@ -29,11 +34,11 @@ test("confirmation card leads with distance-time chips, display fit score, group
     card,
     /className="[^"]*text-2xl[^"]*"[\s\S]{0,120}\{item\.matchPercent\}%/
   );
-  assert.match(card, /aria-label="유사도 안내"/);
+  assert.match(card, /aria-label="추천 점수 안내"/);
   assert.match(card, /h-5 w-5 text-yellow-500/);
   assert.match(
     card,
-    /후보 적합도는 추천 후보를 비교하기 위한 표시용 점수입니다\. 동일한 동물임을 보장하지 않습니다\./
+    /추천 점수는 후보를 비교하기 위한 표시용 점수입니다\. 동일한 동물임을 보장하지 않습니다\./
   );
   assert.match(card, /role="tooltip"/);
   assert.match(card, /function ScoreBreakdownBar/);
@@ -41,11 +46,13 @@ test("confirmation card leads with distance-time chips, display fit score, group
     card,
     /aria-label="추천 점수 구성: 위치와 시간, 외형 특징, 특이사항"/
   );
-  assert.match(card, /현재 이동 가능 반경 약/);
+  assert.doesNotMatch(card, /현재 이동 가능 반경 약/);
   assert.match(card, /위치·시간/);
   assert.match(card, /외형 특징/);
   assert.match(card, /특이사항/);
   assert.match(card, /item\.scoreGroups/);
+  assert.doesNotMatch(scoreBreakdown, /aria-expanded/);
+  assert.doesNotMatch(scoreBreakdown, /onClick/);
 
   assert.match(card, /지도에서 보기/);
   assert.match(

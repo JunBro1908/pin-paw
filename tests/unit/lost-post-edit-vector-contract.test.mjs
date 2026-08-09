@@ -64,7 +64,9 @@ test("lost post edit form mirrors sighting edit surface and keeps cover replace"
   );
 
   assert.match(editForm, /<SightingOptionalDetails/);
-  assert.match(editForm, /maxTags=\{MAX_EDIT_TAGS\}/);
+  assert.match(editForm, /TRAIT_TAGS_MAX/);
+  assert.match(editForm, /maxTags=\{TRAIT_TAGS_MAX\}/);
+  assert.doesNotMatch(editForm, /MAX_EDIT_TAGS/);
   assert.match(editForm, /idPrefix="lost-edit"/);
   assert.match(editForm, /사진 \(1장\)/);
   assert.match(editForm, /aria-label="대표 사진 변경"/);

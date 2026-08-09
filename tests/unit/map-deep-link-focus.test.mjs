@@ -97,7 +97,7 @@ test("map applies a resolved deep-link target only after its map instance is rea
 
   const apply = source.slice(
     source.indexOf("const applyPendingDeepLinkFocus"),
-    source.indexOf("// 선택된 제보 정보")
+    source.indexOf("const queueDeepLinkFocus")
   );
   assert.match(apply, /mapInstanceRef\.current\.panTo/);
   assert.match(apply, /mapInstanceRef\.current\.setZoom\(DEEP_LINK_FOCUS_ZOOM\)/);
