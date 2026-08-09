@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import test from "node:test";
 import {
   groupRecommendationScoreBreakdown,
@@ -37,4 +38,24 @@ test("recommendation score breakdown groups raw contributions without rescaling 
       },
     }
   );
+});
+
+test("recommendation card presents a static score breakdown without model-only copy", async () => {
+  const source = await readFile(
+    "src/features/recommendations/components/RecommendationCard.tsx",
+    "utf8"
+  );
+  const scoreBar = source.slice(
+    source.indexOf("function ScoreBreakdownBar"),
+    source.indexOf("interface RecommendationCardProps")
+  );
+
+  assert.match(source, /추천 점수/);
+  assert.match(source, /\{item\.displayMatchPercent\}점/);
+  assert.doesNotMatch(source, /후보 적합도/);
+  assert.doesNotMatch(scoreBar, /movementRadiusKm|현재 이동 가능 반경/);
+  assert.doesNotMatch(scoreBar, /useState|setExpanded|aria-expanded/);
+  assert.doesNotMatch(scoreBar, /<button|type="button"/);
+  assert.match(scoreBar, /role="progressbar"/);
+  assert.match(scoreBar, /grid-cols-2/);
 });
