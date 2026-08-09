@@ -114,7 +114,7 @@ test("share trait labels localize size and hide unknown values", () => {
     hidden_at: null,
     archived_at: null,
   });
-  assert.deepEqual(buildShareTraitLabels(preview), ["말티즈", "중", "흰색"]);
+  assert.deepEqual(buildShareTraitLabels(preview), ["말티즈", "중형견", "흰색"]);
 });
 
 test("share page keeps public teaser CTAs without auth-only detail fields", async () => {

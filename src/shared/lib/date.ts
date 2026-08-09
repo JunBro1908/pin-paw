@@ -98,3 +98,24 @@ export function formatSeoulLostDateLabel(
 ): string {
   return formatSeoulMonthDay(value);
 }
+
+/** 표시용: 「8월 9일 오후 4:26」, 다른 해면 연도를 포함한다. */
+export function formatSeoulLostDateTime(
+  value: string | Date | null | undefined,
+  now: Date = new Date()
+): string | null {
+  if (value == null || value === "") return null;
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const current = Number.isNaN(now.getTime()) ? new Date() : now;
+  const parts = seoulDateTimeParts(date);
+  const includeYear = parts.year !== seoulDateTimeParts(current).year;
+  const hour = Number(parts.hour);
+  const twelveHour = hour % 12 || 12;
+  const dayPeriod = hour < 12 ? "오전" : "오후";
+  const dateLabel = `${Number(parts.month)}월 ${Number(parts.day)}일`;
+  const yearPrefix = includeYear ? `${parts.year}년 ` : "";
+
+  return `${yearPrefix}${dateLabel} ${dayPeriod} ${twelveHour}:${parts.minute}`;
+}

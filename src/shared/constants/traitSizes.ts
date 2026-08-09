@@ -28,6 +28,21 @@ export function normalizeSize(
   return null;
 }
 
+/** 저장 enum을 사용자용 크기 라벨로 변환한다. */
+export function formatDogSizeLabel(
+  value: string | null | undefined
+): string | null {
+  const size = normalizeSize(value);
+  if (!size || size === "unknown") return null;
+
+  const labels: Record<Exclude<SizeValue, "unknown">, string> = {
+    small: "소형견",
+    medium: "중형견",
+    large: "대형견",
+  };
+  return labels[size];
+}
+
 /** 비교 제외: null 또는 unknown이면 true */
 export function isSizeExcluded(value: SizeValue | null | undefined): boolean {
   return value == null || value === "unknown";

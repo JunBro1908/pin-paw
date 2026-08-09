@@ -1,8 +1,5 @@
 import { getBreedLabel } from "../constants/breeds.ts";
-import {
-  normalizeSize,
-  SIZE_LABELS,
-} from "../../../shared/constants/traitSizes.ts";
+import { formatDogSizeLabel } from "../../../shared/constants/traitSizes.ts";
 import { getTagById } from "../../../shared/constants/traitTags.ts";
 
 export type SightingDetailFieldInput = {
@@ -31,8 +28,7 @@ function formatSpecies(value: string | null | undefined): string {
 function formatSize(value: string | null | undefined): string {
   const rawSize = textOrEmpty(value);
   if (!rawSize) return "정보 없음";
-  const normalized = normalizeSize(rawSize);
-  return normalized ? SIZE_LABELS[normalized] : "정보 없음";
+  return formatDogSizeLabel(rawSize) ?? "정보 없음";
 }
 
 function formatTraitTags(value: string[] | null | undefined): string {

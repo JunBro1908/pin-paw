@@ -1,4 +1,5 @@
 import { createClient } from "@/shared/supabase/client";
+import { formatSeoulLostDateTime } from "@/shared/lib/date";
 
 /** Returns a public Storage URL for a lost-post cover key, or empty string. */
 export function getLostPostCoverUrl(coverPhotoKey: string | null | undefined): string {
@@ -10,12 +11,5 @@ export function getLostPostCoverUrl(coverPhotoKey: string | null | undefined): s
 }
 
 export function formatLostCaseDateTime(value: string | null | undefined): string {
-  if (!value) return "";
-  return new Date(value).toLocaleString("ko-KR", {
-    timeZone: "Asia/Seoul",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  return formatSeoulLostDateTime(value) ?? "";
 }

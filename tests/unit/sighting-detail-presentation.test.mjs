@@ -15,7 +15,7 @@ test("formats sighting detail fields in a fixed order with explicit empty states
     }),
     [
       { label: "종", value: "모름" },
-      { label: "크기", value: "중" },
+      { label: "크기", value: "중형견" },
       { label: "색/무늬", value: "검정 바탕에 흰 점" },
       { label: "특이사항", value: "목줄 있음, 흉터" },
       { label: "메모", value: "공원 입구 쪽에서 봤어요" },

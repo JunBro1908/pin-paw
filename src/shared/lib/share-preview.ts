@@ -1,3 +1,5 @@
+import { formatDogSizeLabel } from "../constants/traitSizes.ts";
+
 export const SHARE_PREVIEW_SENSITIVE_KEYS = [
   "note",
   "lat",
@@ -130,25 +132,13 @@ export function buildShareTraitLabels(
   if (species && species !== "unknown" && species !== "모름") {
     labels.push(species);
   }
-  const sizeLabel = formatShareTraitSize(preview.traitSize);
+  const sizeLabel = formatDogSizeLabel(preview.traitSize);
   if (sizeLabel) labels.push(sizeLabel);
   const color = preview.traitColor?.trim();
   if (color && color !== "unknown" && color !== "모름") {
     labels.push(color);
   }
   return labels;
-}
-
-function formatShareTraitSize(value: string | null | undefined): string | null {
-  if (value == null) return null;
-  const raw = value.trim();
-  if (!raw) return null;
-  const normalized = raw.toLowerCase();
-  if (normalized === "unknown" || raw === "모름") return null;
-  if (normalized === "small" || raw === "소") return "소";
-  if (normalized === "medium" || raw === "중") return "중";
-  if (normalized === "large" || raw === "대") return "대";
-  return raw;
 }
 
 export function buildOpenGraphDescription(
