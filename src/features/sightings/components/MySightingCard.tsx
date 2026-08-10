@@ -175,19 +175,19 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
 
         <div className="min-w-0">
           <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-1">
-            {traitTagsMarkup}
+            {approximateRegion ? (
+              <Text variant="caption" color="caption" className="mt-1 block">
+                {approximateRegion}
+              </Text>
+            ) : null}
             {actionButtons}
           </div>
-          {approximateRegion ? (
-            <Text variant="caption" color="caption" className="mt-1 block">
-              {approximateRegion}
-            </Text>
-          ) : null}
           {occurredAt ? (
             <Text variant="caption" color="caption" className="block">
               {occurredAt}
             </Text>
           ) : null}
+          {traitTagsMarkup ? <div className="mt-2">{traitTagsMarkup}</div> : null}
         </div>
       </div>
       <Link

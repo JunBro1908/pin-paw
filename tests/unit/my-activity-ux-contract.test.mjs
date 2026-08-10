@@ -197,10 +197,10 @@ test("my sighting cards pair quiet edit and delete icon actions", async () => {
   assert.match(card, /flex shrink-0 items-center/);
   assert.doesNotMatch(card, />\s*목격 제보\s*</);
   assert.match(card, /const traitTagsMarkup/);
-  assert.match(card, /traitTagsMarkup[\s\S]*\{actionButtons\}/);
-  assert.ok(
-    card.indexOf("{approximateRegion}") < card.indexOf("{occurredAt}"),
-    "region should appear above the occurred time"
+  const renderedCard = card.slice(card.indexOf("return ("));
+  assert.match(
+    renderedCard,
+    /\{approximateRegion\}[\s\S]*\{actionButtons\}[\s\S]*\{occurredAt\}[\s\S]*\{traitTagsMarkup\}/
   );
   assert.match(card, /min-h-10 w-full items-center justify-center/);
   assert.match(card, /flex flex-nowrap gap-1 overflow-hidden/);
