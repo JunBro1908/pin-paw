@@ -108,7 +108,7 @@ export async function POST(request: Request) {
 
   try {
     const {
-      coverPhotoKey,
+      photoKeys,
       lostAt,
       lostLocation,
       petName,
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
     const ipHash = sha256(await getClientIp());
     const requestHash = sha256(
       JSON.stringify({
-        coverPhotoKey,
+        photoKeys,
         lostAt,
         lostLocation: { lat, lng },
         petName: petNameTrimmed,
@@ -178,7 +178,7 @@ export async function POST(request: Request) {
     }
 
     const uploadVerification = await verifyUploadIntents(supabaseAdmin, {
-      keys: [coverPhotoKey],
+      keys: photoKeys,
       purpose: "lost_cover",
       userId: user.id,
       ipHash,
@@ -199,9 +199,9 @@ export async function POST(request: Request) {
     }
 
     const { data: rpcData, error } = await supabaseAdmin.rpc(
-      "create_lost_post_with_upload",
+      "create_lost_post_with_uploads",
       {
-        p_cover_photo_key: coverPhotoKey,
+        p_photo_keys: photoKeys,
         p_owner_id: user.id,
         p_pet_name: petNameTrimmed,
         p_lost_at: lostAt,

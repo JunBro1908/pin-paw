@@ -4,6 +4,8 @@
 export interface LostPostFormData {
   photo: File | null;
   photoUrl: string | null;
+  photos: File[];
+  photoUrls: string[];
   lat: number;
   lng: number;
   petName: string;
@@ -21,6 +23,7 @@ export interface LostPostFormData {
 export interface LostPostItem {
   id: string;
   cover_photo_key: string;
+  photo_keys?: string[];
   pet_name: string;
   lost_at: string;
   lost_location?: unknown;

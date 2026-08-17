@@ -4,6 +4,8 @@
 export interface SightingFormData {
   photo: File | null;
   photoUrl: string | null;
+  photos: File[];
+  photoUrls: string[];
   lat: number;
   lng: number;
   time: string;

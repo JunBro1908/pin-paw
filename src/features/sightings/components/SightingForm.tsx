@@ -10,6 +10,7 @@ import { Icon } from "@/shared/ui/Icon";
 import { useDialogFocus } from "@/shared/ui/dialog-focus";
 import { LocationPicker } from "@/features/map/components/LocationPicker";
 import { supabase } from "@/shared/supabase/client";
+import { useAuth } from "@/features/auth/hooks/useAuth";
 import { SPECIES_UNKNOWN } from "../constants/breeds";
 import {
   toLocalDateTimeInputValue,
@@ -23,17 +24,18 @@ import { SightingOptionalDetails } from "./SightingOptionalDetails";
 import {
   completeSubmission,
   fingerprintUploadFile,
-  markUploadCompleted,
   prepareSubmission,
-  rememberUploadIntent,
   runBestEffort,
   type FormSubmissionAttempt,
 } from "@/shared/lib/form-submission-lifecycle";
 
 export function SightingForm() {
+  const { session } = useAuth();
   const [formData, setFormData] = useState<SightingFormData>({
     photo: null,
     photoUrl: null,
+    photos: [],
+    photoUrls: [],
     lat: 37.5665,
     lng: 126.978,
     time: toLocalDateTimeInputValue(new Date()),
@@ -133,15 +135,25 @@ export function SightingForm() {
   }, []);
 
   useEffect(() => {
-    const photoUrl = formData.photoUrl;
+    const photoUrls = formData.photoUrls;
     return () => {
-      if (photoUrl) URL.revokeObjectURL(photoUrl);
+      for (const photoUrl of photoUrls) URL.revokeObjectURL(photoUrl);
     };
-  }, [formData.photoUrl]);
+  }, [formData.photoUrls]);
 
-  const handlePhotoChange = (file: File | null) => {
-    const photoUrl = file ? URL.createObjectURL(file) : null;
-    setFormData((prev) => ({ ...prev, photo: file, photoUrl }));
+  const handlePhotoChange = (file: File | null, files: File[] = []) => {
+    const selected = (session ? files : files.slice(0, 1)).slice(
+      0,
+      session ? 5 : 1
+    );
+    const photoUrls = selected.map((item) => URL.createObjectURL(item));
+    setFormData((prev) => ({
+      ...prev,
+      photo: selected[0] ?? file,
+      photoUrl: photoUrls[0] ?? null,
+      photos: selected,
+      photoUrls,
+    }));
   };
 
   const handleChange = (
@@ -168,7 +180,7 @@ export function SightingForm() {
 
   const errors = validateSightingForm(formData);
   const photoError =
-    showErrors && !formData.photo ? "사진을 등록해주세요." : undefined;
+    showErrors && !formData.photos.length ? "사진을 등록해주세요." : undefined;
   const locationError =
     showErrors && !isLocationSet
       ? "목격 위치를 확인해 주세요."
@@ -179,10 +191,10 @@ export function SightingForm() {
   const isValid =
     Object.keys(errors).length === 0 &&
     isLocationSet &&
-    Boolean(formData.photo);
+    Boolean(formData.photos.length);
 
   const firstValidationMessage = (): string => {
-    if (!formData.photo) return "사진을 등록해주세요.";
+    if (!formData.photos.length) return "사진을 등록해주세요.";
     if (!isLocationSet) return "목격 위치를 확인해 주세요.";
     if (errors.time) return errors.time;
     if (errors.location) return errors.location;
@@ -194,7 +206,7 @@ export function SightingForm() {
 
     if (isSubmitting) return;
 
-    if (!isValid || !formData.photo) {
+    if (!isValid || !formData.photos.length) {
       setShowErrors(true);
       setToast({
         message: firstValidationMessage(),
@@ -211,7 +223,7 @@ export function SightingForm() {
       return;
     }
 
-    const photo = formData.photo;
+    const photos = formData.photos;
 
     const domainPayload = {
       location: {
@@ -251,7 +263,7 @@ export function SightingForm() {
     const networkWork = (async () => {
       try {
         const payloadFingerprint = JSON.stringify({
-          file: await fingerprintUploadFile(photo),
+          files: await Promise.all(photos.map(fingerprintUploadFile)),
           domainPayload,
         });
 
@@ -263,11 +275,11 @@ export function SightingForm() {
 
         submissionAttemptRef.current = attempt;
 
-        const fileKey = await uploadPhoto(photo, attempt);
+        const fileKeys = await uploadPhotos(photos, attempt);
         const currentAttempt = submissionAttemptRef.current ?? attempt;
 
         await registerSighting(
-          fileKey,
+          fileKeys,
           domainPayload,
           currentAttempt.submissionIdempotencyKey
         );
@@ -305,85 +317,53 @@ export function SightingForm() {
     void networkWork;
   };
 
-  /**
-   * 사진을 업로드하고 fileKey를 반환합니다.
-   */
-  const uploadPhoto = async (
-    photo: File,
+  const uploadPhotos = async (
+    photos: File[],
     initialAttempt: FormSubmissionAttempt
-  ): Promise<string> => {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      let attempt = initialAttempt;
-
-      if (!attempt.uploadIntent) {
-        const presignRes = await fetch("/api/v1/uploads/presign", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Idempotency-Key": attempt.uploadIdempotencyKey,
-            ...(session?.access_token && {
-              Authorization: `Bearer ${session.access_token}`,
-            }),
-          },
-          body: JSON.stringify({
-            purpose: "sighting_photo",
-            files: [{ contentType: photo.type, sizeBytes: photo.size }],
-          }),
-        });
-
-        if (!presignRes.ok) {
-          const errorData = await presignRes.json();
-          const errorMessage =
-            errorData.error?.message || "이미지 업로드에 실패했습니다.";
-          throw new Error(errorMessage);
-        }
-
-        const presignResult = await presignRes.json();
-        if (!presignResult.success || !presignResult.data?.uploads?.[0]) {
-          const errorMessage =
-            presignResult.error?.message || "이미지 업로드에 실패했습니다.";
-          throw new Error(errorMessage);
-        }
-
-        attempt = rememberUploadIntent(attempt, presignResult.data.uploads[0]);
-        submissionAttemptRef.current = attempt;
-      }
-
-      const uploadIntent = attempt.uploadIntent;
-      if (!uploadIntent) throw new Error("이미지 업로드에 실패했습니다.");
-
-      if (!uploadIntent.uploaded) {
-        const uploadRes = await fetch(uploadIntent.uploadUrl, {
-          method: "PUT",
-          headers: { "Content-Type": photo.type },
-          body: photo,
-        });
-
-        if (!uploadRes.ok) {
-          throw new Error("이미지 업로드에 실패했습니다.");
-        }
-        attempt = markUploadCompleted(attempt);
-        submissionAttemptRef.current = attempt;
-      }
-
-      return uploadIntent.fileKey;
-    } catch (err) {
-      const message =
-        err instanceof Error && err.message && err.message !== "Failed to fetch"
-          ? err.message
-          : "이미지 업로드에 실패했습니다.";
-      throw new Error(message);
+  ): Promise<string[]> => {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const presignRes = await fetch("/api/v1/uploads/presign", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Idempotency-Key": initialAttempt.uploadIdempotencyKey,
+        ...(sessionData.session?.access_token && {
+          Authorization: `Bearer ${sessionData.session.access_token}`,
+        }),
+      },
+      body: JSON.stringify({
+        purpose: "sighting_photo",
+        files: photos.map((photo) => ({
+          contentType: photo.type,
+          sizeBytes: photo.size,
+        })),
+      }),
+    });
+    if (!presignRes.ok) {
+      const result = await presignRes.json().catch(() => null);
+      throw new Error(result?.error?.message || "이미지 업로드에 실패했습니다.");
     }
+    const result = await presignRes.json();
+    const uploads = result.data?.uploads;
+    if (!Array.isArray(uploads) || uploads.length !== photos.length) {
+      throw new Error("이미지 업로드 준비에 실패했습니다.");
+    }
+    for (let index = 0; index < uploads.length; index += 1) {
+      const uploadRes = await fetch(uploads[index].uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": photos[index].type },
+        body: photos[index],
+      });
+      if (!uploadRes.ok) throw new Error("이미지 업로드에 실패했습니다.");
+    }
+    return uploads.map((upload: { fileKey: string }) => upload.fileKey);
   };
 
   /**
    * 제보 정보를 서버에 저장합니다.
    */
   const registerSighting = async (
-    fileKey: string,
+    fileKeys: string[],
     data: {
       location: { lat: number; lng: number };
       occurredAt: string;
@@ -413,7 +393,7 @@ export function SightingForm() {
         method: "POST",
         headers,
         body: JSON.stringify({
-          photoKeys: [fileKey],
+          photoKeys: fileKeys,
           location: data.location,
           occurredAt: data.occurredAt,
           traitColor: data.traitColor,
@@ -462,6 +442,8 @@ export function SightingForm() {
     setFormData((prev) => ({
       photo: null,
       photoUrl: null,
+      photos: [],
+      photoUrls: [],
       lat: prev.lat,
       lng: prev.lng,
       time: toLocalDateTimeInputValue(new Date()),
@@ -559,6 +541,8 @@ export function SightingForm() {
       <form onSubmit={handleSubmit} className="space-y-6">
         <SightingEssentials
           photoUrl={formData.photoUrl}
+          photoUrls={formData.photoUrls}
+          multiple={Boolean(session)}
           occurredAt={formData.time}
           photoError={photoError}
           locationError={locationError}

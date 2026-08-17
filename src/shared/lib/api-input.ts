@@ -101,7 +101,7 @@ export function parseUploadRequest(
   if (
     !Array.isArray(input.files) ||
     input.files.length < 1 ||
-    input.files.length > 3
+    input.files.length > 5
   ) {
     return { ok: false, reason: "invalid_files" };
   }
@@ -214,6 +214,7 @@ export function parseSightingUpdateRequest(
 
 export interface LostPostCreateInput {
   coverPhotoKey: string;
+  photoKeys: string[];
   lostAt: string;
   lostLocation: { lat: number; lng: number };
   petName: string;
@@ -229,11 +230,20 @@ export function parseLostPostCreateRequest(
 ): InputResult<LostPostCreateInput> {
   const input = record(value);
   if (!input) return { ok: false, reason: "invalid_body" };
-  const coverPhotoKey =
-    typeof input.coverPhotoKey === "string" &&
-    LOST_COVER_KEY.test(input.coverPhotoKey)
-      ? input.coverPhotoKey
+  const requestedPhotoKeys = Array.isArray(input.photoKeys)
+    ? input.photoKeys
+    : typeof input.coverPhotoKey === "string"
+      ? [input.coverPhotoKey]
+      : [];
+  const photoKeys =
+    requestedPhotoKeys.length >= 1 &&
+    requestedPhotoKeys.length <= 3 &&
+    requestedPhotoKeys.every(
+      (key) => typeof key === "string" && LOST_COVER_KEY.test(key)
+    )
+      ? [...new Set(requestedPhotoKeys)]
       : undefined;
+  const coverPhotoKey = photoKeys?.[0];
   const lostAt = dateTime(input.lostAt);
   const lostLocation = coordinates(input.lostLocation);
   const petName = boundedString(input.petName, 80, true);
@@ -243,7 +253,7 @@ export function parseLostPostCreateRequest(
   const note = boundedString(input.note, 2000);
   const traitTags = tags(input.traitTags, TRAIT_TAGS_MAX);
   if (
-    !coverPhotoKey ||
+    !photoKeys?.length ||
     !lostAt ||
     !lostLocation ||
     !petName ||
@@ -259,6 +269,7 @@ export function parseLostPostCreateRequest(
     ok: true,
     value: {
       coverPhotoKey,
+      photoKeys,
       lostAt,
       lostLocation,
       petName,
