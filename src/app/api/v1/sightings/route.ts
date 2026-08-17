@@ -207,26 +207,44 @@ export async function POST(request: Request) {
       );
     }
 
-    const { data: rpcData, error } = await supabase.rpc(
-      userId ? "create_user_sighting_with_uploads" : "create_sighting_with_uploads",
-      {
-        p_photo_keys: photoKeys,
-        p_author_type: authorType,
-        p_user_id: userId,
-        p_ip_hash: ipHash,
-        p_occurred_at: occurredAt,
-        p_lat: location.lat,
-        p_lng: location.lng,
-        p_trait_color: traitColorNorm,
-        p_trait_size: sizeNorm ?? traitSize ?? null,
-        p_trait_species: traitSpecies ?? null,
-        p_trait_tags: traitTagsNorm,
-        p_color_tokens: colorTokens,
-        p_note: note ?? null,
-        p_idempotency_key: idempotencyKey,
-        p_request_hash: requestHash,
-      }
-    );
+    const rpcName = userId
+      ? "create_user_sighting_with_uploads"
+      : "create_sighting_with_uploads";
+    const rpcArgs = userId
+      ? {
+          p_photo_keys: photoKeys,
+          p_user_id: userId,
+          p_ip_hash: ipHash,
+          p_occurred_at: occurredAt,
+          p_lat: location.lat,
+          p_lng: location.lng,
+          p_trait_color: traitColorNorm,
+          p_trait_size: sizeNorm ?? traitSize ?? null,
+          p_trait_species: traitSpecies ?? null,
+          p_trait_tags: traitTagsNorm,
+          p_color_tokens: colorTokens,
+          p_note: note ?? null,
+          p_idempotency_key: idempotencyKey,
+          p_request_hash: requestHash,
+        }
+      : {
+          p_photo_keys: photoKeys,
+          p_author_type: authorType,
+          p_user_id: userId,
+          p_ip_hash: ipHash,
+          p_occurred_at: occurredAt,
+          p_lat: location.lat,
+          p_lng: location.lng,
+          p_trait_color: traitColorNorm,
+          p_trait_size: sizeNorm ?? traitSize ?? null,
+          p_trait_species: traitSpecies ?? null,
+          p_trait_tags: traitTagsNorm,
+          p_color_tokens: colorTokens,
+          p_note: note ?? null,
+          p_idempotency_key: idempotencyKey,
+          p_request_hash: requestHash,
+        };
+    const { data: rpcData, error } = await supabase.rpc(rpcName, rpcArgs);
     const data = Array.isArray(rpcData) ? rpcData[0] : rpcData;
 
     if (error || !data) {
