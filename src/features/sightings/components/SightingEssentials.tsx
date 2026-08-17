@@ -23,6 +23,7 @@ export interface SightingEssentialsProps {
   locationStatus: SightingLocationStatus;
   disabled: boolean;
   onPhotoChange(file: File | null, files?: File[]): void;
+  onPhotoRemove?(index: number): void;
   onOccurredAtChange(value: string): void;
   onOpenLocationPicker(): void;
 }
@@ -69,6 +70,7 @@ export function SightingEssentials({
   locationStatus,
   disabled,
   onPhotoChange,
+  onPhotoRemove,
   onOccurredAtChange,
   onOpenLocationPicker,
 }: SightingEssentialsProps) {
@@ -135,15 +137,41 @@ export function SightingEssentials({
             )}
           </label>
           {photoUrls.length ? (
-            <button
-              type="button"
-              onClick={() => onPhotoChange(null)}
-              disabled={disabled}
-              aria-label="선택한 사진 제거"
-              className="focus-visible:outline-action-primary absolute top-4 right-4 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              <span aria-hidden="true">×</span>
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => onPhotoRemove?.(0) ?? onPhotoChange(null)}
+                disabled={disabled}
+                aria-label="대표 사진 제거"
+                className="focus-visible:outline-action-primary absolute top-4 right-4 z-10 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <span aria-hidden="true">×</span>
+              </button>
+              {photoUrls.length > 1 ? (
+                <div className="absolute right-3 bottom-3 left-3 z-10 flex gap-2 overflow-x-auto rounded-xl bg-black/35 p-2 backdrop-blur-sm">
+                  {photoUrls.map((url, index) => (
+                    <div key={url} className="relative h-14 w-14 shrink-0">
+                      <Image
+                        src={url}
+                        alt={`${index + 1}번째 선택 사진`}
+                        fill
+                        unoptimized
+                        className="rounded-lg border border-white/70 object-cover"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => onPhotoRemove?.(index)}
+                        disabled={disabled}
+                        className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/75 text-xs text-white"
+                        aria-label={`${index + 1}번째 사진 제거`}
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </>
           ) : null}
         </div>
       </div>

@@ -156,6 +156,22 @@ export function SightingForm() {
     }));
   };
 
+  const handlePhotoRemove = (index: number) => {
+    setFormData((prev) => {
+      const nextPhotos = prev.photos.filter((_, itemIndex) => itemIndex !== index);
+      const nextUrls = prev.photoUrls.filter((_, itemIndex) => itemIndex !== index);
+      const removedUrl = prev.photoUrls[index];
+      if (removedUrl) URL.revokeObjectURL(removedUrl);
+      return {
+        ...prev,
+        photo: nextPhotos[0] ?? null,
+        photoUrl: nextUrls[0] ?? null,
+        photos: nextPhotos,
+        photoUrls: nextUrls,
+      };
+    });
+  };
+
   const handleChange = (
     e: React.ChangeEvent<
       HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
@@ -550,6 +566,7 @@ export function SightingForm() {
           locationStatus={locationStatus}
           disabled={isSubmitting}
           onPhotoChange={handlePhotoChange}
+          onPhotoRemove={handlePhotoRemove}
           onOccurredAtChange={(time) =>
             setFormData((prev) => ({ ...prev, time }))
           }
