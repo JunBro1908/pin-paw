@@ -288,7 +288,7 @@ export async function GET(request: Request) {
   const { data: rows, error } = await supabaseAuth
     .from("lost_posts")
     .select(
-      "id, cover_photo_key, pet_name, lost_at, lost_location, trait_color, trait_size, trait_species, note, status, embedding_status, created_at, updated_at"
+      "id, cover_photo_key, photo_keys, pet_name, lost_at, lost_location, trait_color, trait_size, trait_species, note, status, embedding_status, created_at, updated_at"
     )
     .order("created_at", { ascending: false })
     .range(offset, offset + limit - 1);

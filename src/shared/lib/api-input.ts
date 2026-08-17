@@ -148,7 +148,7 @@ export function parseSightingCreateRequest(
   const photoKeys =
     Array.isArray(input.photoKeys) &&
     input.photoKeys.length >= 1 &&
-    input.photoKeys.length <= 3 &&
+    input.photoKeys.length <= 5 &&
     input.photoKeys.every(
       (key) => typeof key === "string" && SIGHTING_KEY.test(key)
     )

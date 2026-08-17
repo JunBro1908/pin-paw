@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useState } from "react";
 import { Text } from "@/shared/ui/Text";
 import { Button } from "@/shared/ui/Button";
@@ -16,6 +15,8 @@ import { cn } from "@/shared/lib/cn";
 import { formatDogSizeLabel } from "@/shared/constants/traitSizes";
 import { formatSeoulLostDateTime } from "@/shared/lib/date";
 import { SPECIES_UNKNOWN } from "@/features/sightings/constants/breeds";
+import { createClient } from "@/shared/supabase/client";
+import { PhotoCarousel } from "@/shared/ui/PhotoCarousel";
 
 interface ActiveLostCaseCardProps {
   item: LostPostItem;
@@ -64,7 +65,13 @@ export function ActiveLostCaseCard({
     message: string;
     type: "success" | "error";
   } | null>(null);
-  const coverUrl = getLostPostCoverUrl(item.cover_photo_key);
+  const client = createClient();
+  const storage = client?.storage?.from("lost");
+  const photoUrls = storage
+    ? (item.photo_keys ?? [item.cover_photo_key]).map(
+        (key) => storage.getPublicUrl(key).data.publicUrl
+      )
+    : [getLostPostCoverUrl(item.cover_photo_key)].filter(Boolean);
   const lostAt = formatSeoulLostDateTime(item.lost_at) ?? "시간 정보 없음";
   const approximateRegion = item.approximate_region?.trim() || "지역 정보 없음";
   const traitTags = buildLostCaseTraitTags(item);
@@ -89,13 +96,12 @@ export function ActiveLostCaseCard({
         aria-label={`${item.pet_name?.trim() || "유실글"} 상세 보기`}
       >
         <div className="relative aspect-[2/1] overflow-hidden bg-gray-100 sm:aspect-[21/9]">
-          {coverUrl ? (
-            <Image
-              src={coverUrl}
-              alt=""
-              fill
-              sizes="(max-width: 768px) 100vw, 720px"
-              className="object-cover"
+          {photoUrls.length ? (
+            <PhotoCarousel
+              urls={photoUrls}
+              alt="유실글 사진"
+              className="h-full w-full"
+              aspectClassName="aspect-[2/1] sm:aspect-[21/9]"
             />
           ) : (
             <div

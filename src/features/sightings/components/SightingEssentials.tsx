@@ -136,6 +136,16 @@ export function SightingEssentials({
               </div>
             )}
           </label>
+          {multiple && photoUrls.length > 0 && photoUrls.length < 5 ? (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={disabled}
+              className="border-accent-warm-text text-accent-warm-text hover:bg-accent-warm/10 mt-3 flex min-h-11 w-full items-center justify-center rounded-xl border border-dashed text-sm font-semibold transition-colors disabled:opacity-60"
+            >
+              + 사진 추가 ({photoUrls.length}/5)
+            </button>
+          ) : null}
           {photoUrls.length ? (
             <>
               <button
