@@ -65,6 +65,19 @@ export async function POST(request: Request) {
       );
     }
     const userId = user?.id || null;
+    const maxFiles =
+      purpose === "sighting_photo" ? (userId ? 5 : 1) : userId ? 3 : 0;
+    if (files.length > maxFiles) {
+      return fail(
+        ApiErrorCode.VALIDATION_ERROR,
+        userId
+          ? purpose === "sighting_photo"
+            ? "로그인 제보 사진은 최대 5장까지 등록할 수 있습니다."
+            : "유실글 사진은 최대 3장까지 등록할 수 있습니다."
+          : "로그인 후 사진을 여러 장 등록할 수 있습니다.",
+        400
+      );
+    }
     const ip = await getClientIp();
     const ipHash = sha256(ip);
 

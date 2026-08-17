@@ -106,10 +106,12 @@ test("create routes verify storage bytes and use intent-consuming RPCs", async (
   assert.match(verifier, /expected_size_bytes/);
   assert.match(verifier, /isJpeg|isPng/);
   assert.match(sighting, /verifyUploadIntents/);
-  assert.match(sighting, /\.rpc\(\s*"create_sighting_with_uploads"/);
+  assert.match(sighting, /create_sighting_with_uploads/);
+  assert.match(sighting, /create_user_sighting_with_uploads/);
   assert.doesNotMatch(sighting, /\.from\("sightings"\)\s*\.insert/);
   assert.match(lostPost, /verifyUploadIntents/);
-  assert.match(lostPost, /\.rpc\(\s*"create_lost_post_with_upload"/);
+  assert.match(lostPost, /\.rpc\(\s*"create_lost_post_with_uploads"/);
+  assert.match(lostPost, /photoKeys/);
   assert.doesNotMatch(lostPost, /\.from\("lost_posts"\)\s*\.insert/);
   assert.match(lostPostUpdate, /verifyUploadIntents/);
   assert.match(lostPostUpdate, /purpose:\s*"lost_cover"/);

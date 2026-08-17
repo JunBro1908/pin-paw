@@ -83,6 +83,16 @@ export async function POST(request: Request) {
       }
     }
 
+    if (photoKeys.length > (userId ? 5 : 1)) {
+      return fail(
+        ApiErrorCode.VALIDATION_ERROR,
+        userId
+          ? "로그인 제보 사진은 최대 5장까지 등록할 수 있습니다."
+          : "비로그인 제보는 사진 1장만 등록할 수 있습니다.",
+        400
+      );
+    }
+
     // 1.1 Rate Limit 체크 (IP + 로그인 사용자는 user 이중 제한)
     const ipHash = sha256(await getClientIp());
     const idempotencyHeader = request.headers.get("Idempotency-Key");
@@ -198,7 +208,7 @@ export async function POST(request: Request) {
     }
 
     const { data: rpcData, error } = await supabase.rpc(
-      "create_sighting_with_uploads",
+      userId ? "create_user_sighting_with_uploads" : "create_sighting_with_uploads",
       {
         p_photo_keys: photoKeys,
         p_author_type: authorType,

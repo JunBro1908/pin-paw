@@ -50,6 +50,8 @@ const selectBase =
 const getInitialFormData = (): LostPostFormData => ({
   photo: null,
   photoUrl: null,
+  photos: [],
+  photoUrls: [],
   lat: 37.5665,
   lng: 126.978,
   petName: "",
@@ -124,20 +126,29 @@ export function LostPostForm() {
   }, []);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
+    const files = Array.from(e.target.files ?? []).slice(0, 3);
+    if (files.length) {
+      const photoUrls = files.map((item) => URL.createObjectURL(item));
       setFormData((prev) => ({
         ...prev,
-        photo: file,
-        photoUrl: URL.createObjectURL(file),
+        photo: files[0],
+        photoUrl: photoUrls[0],
+        photos: files,
+        photoUrls,
       }));
     }
   };
 
   const handleRemovePhoto = (e: React.MouseEvent) => {
     e.stopPropagation();
-    if (formData.photoUrl) URL.revokeObjectURL(formData.photoUrl);
-    setFormData((prev) => ({ ...prev, photo: null, photoUrl: null }));
+    for (const url of formData.photoUrls) URL.revokeObjectURL(url);
+    setFormData((prev) => ({
+      ...prev,
+      photo: null,
+      photoUrl: null,
+      photos: [],
+      photoUrls: [],
+    }));
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -153,14 +164,15 @@ export function LostPostForm() {
   };
 
   const isValid =
-    !!formData.photo && isLocationSet && !!formData.lostAt?.trim();
+    formData.photos.length > 0 && isLocationSet && !!formData.lostAt?.trim();
 
   const uploadCover = async (
-    file: File,
+    files: File[],
     initialAttempt: FormSubmissionAttempt
-  ): Promise<string> => {
+  ): Promise<string[]> => {
     const token = session?.access_token;
     let attempt = initialAttempt;
+    let uploads: Array<{ fileKey: string; uploadUrl: string }> = [];
 
     if (!attempt.uploadIntent) {
       const presignRes = await fetch("/api/v1/uploads/presign", {
@@ -172,7 +184,7 @@ export function LostPostForm() {
         },
         body: JSON.stringify({
           purpose: "lost_cover",
-          files: [{ contentType: file.type, sizeBytes: file.size }],
+          files: files.map((file) => ({ contentType: file.type, sizeBytes: file.size })),
         }),
       });
       if (!presignRes.ok) {
@@ -180,7 +192,10 @@ export function LostPostForm() {
         throw new Error(err.error?.message || "이미지 업로드에 실패했습니다.");
       }
       const { data } = await presignRes.json();
-      if (!data?.uploads?.[0]) throw new Error("이미지 업로드에 실패했습니다.");
+      if (!data?.uploads?.length || data.uploads.length !== files.length) {
+        throw new Error("이미지 업로드에 실패했습니다.");
+      }
+      uploads = data.uploads;
       attempt = rememberUploadIntent(attempt, data.uploads[0]);
       submissionAttemptRef.current = attempt;
     }
@@ -188,24 +203,27 @@ export function LostPostForm() {
     const uploadIntent = attempt.uploadIntent;
     if (!uploadIntent) throw new Error("이미지 업로드에 실패했습니다.");
 
-    if (!uploadIntent.uploaded) {
-      const uploadRes = await fetch(uploadIntent.uploadUrl, {
+    if (!uploads.length) uploads = [{ fileKey: uploadIntent.fileKey, uploadUrl: uploadIntent.uploadUrl }];
+    for (let index = 0; index < uploads.length; index += 1) {
+      const uploadRes = await fetch(uploads[index].uploadUrl, {
         method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
+        headers: { "Content-Type": files[index].type },
+        body: files[index],
       });
       if (!uploadRes.ok) throw new Error("이미지 업로드에 실패했습니다.");
+    }
+    if (!uploadIntent.uploaded) {
       attempt = markUploadCompleted(attempt);
       submissionAttemptRef.current = attempt;
     }
 
-    return uploadIntent.fileKey;
+    return uploads.map((upload) => upload.fileKey);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
-    if (!isValid || !formData.photo || !session?.access_token) {
+    if (!isValid || !formData.photos.length || !session?.access_token) {
       return;
     }
 
@@ -228,7 +246,7 @@ export function LostPostForm() {
         note: formData.description.trim() || undefined,
       };
       const payloadFingerprint = JSON.stringify({
-        file: await fingerprintUploadFile(formData.photo),
+        files: await Promise.all(formData.photos.map(fingerprintUploadFile)),
         domainPayload,
       });
       const attempt = prepareSubmission(
@@ -237,7 +255,7 @@ export function LostPostForm() {
         () => crypto.randomUUID()
       );
       submissionAttemptRef.current = attempt;
-      const fileKey = await uploadCover(formData.photo, attempt);
+      const fileKeys = await uploadCover(formData.photos, attempt);
       const currentAttempt = submissionAttemptRef.current ?? attempt;
       const res = await fetch("/api/v1/lost-posts", {
         method: "POST",
@@ -247,7 +265,7 @@ export function LostPostForm() {
           "Idempotency-Key": currentAttempt.submissionIdempotencyKey,
         },
         body: JSON.stringify({
-          coverPhotoKey: fileKey,
+          photoKeys: fileKeys,
           ...domainPayload,
         }),
       });
@@ -334,6 +352,7 @@ export function LostPostForm() {
             <input
               type="file"
               accept="image/*"
+              multiple
               hidden
               ref={fileInputRef}
               onChange={handlePhotoChange}

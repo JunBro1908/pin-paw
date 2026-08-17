@@ -13,6 +13,8 @@ import {
 
 export interface SightingEssentialsProps {
   photoUrl: string | null;
+  photoUrls?: string[];
+  multiple?: boolean;
   occurredAt: string;
   photoLabel?: string;
   photoError?: string;
@@ -20,7 +22,7 @@ export interface SightingEssentialsProps {
   timeError?: string;
   locationStatus: SightingLocationStatus;
   disabled: boolean;
-  onPhotoChange(file: File | null): void;
+  onPhotoChange(file: File | null, files?: File[]): void;
   onOccurredAtChange(value: string): void;
   onOpenLocationPicker(): void;
 }
@@ -57,6 +59,8 @@ function FieldTitle({
 
 export function SightingEssentials({
   photoUrl,
+  photoUrls = photoUrl ? [photoUrl] : [],
+  multiple = false,
   occurredAt,
   photoLabel = "사진 추가",
   photoError,
@@ -72,10 +76,10 @@ export function SightingEssentials({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    if (!photoUrl && fileInputRef.current) {
+    if (!photoUrls.length && fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, [photoUrl]);
+  }, [photoUrls]);
 
   return (
     <section className="space-y-6" aria-label="필수 목격 정보">
@@ -92,10 +96,14 @@ export function SightingEssentials({
             id="sighting-photo"
             type="file"
             accept="image/*"
+            multiple={multiple}
             disabled={disabled}
             className="peer sr-only"
             onChange={(event) =>
-              onPhotoChange(event.currentTarget.files?.[0] ?? null)
+              onPhotoChange(
+                event.currentTarget.files?.[0] ?? null,
+                Array.from(event.currentTarget.files ?? [])
+              )
             }
           />
           <label
@@ -106,9 +114,9 @@ export function SightingEssentials({
               photoError && "border-error"
             )}
           >
-            {photoUrl ? (
+            {photoUrls.length ? (
               <Image
-                src={photoUrl}
+                src={photoUrls[0]}
                 alt="선택한 목격 사진 미리보기"
                 fill
                 sizes="(max-width: 768px) 100vw, 768px"
@@ -126,7 +134,7 @@ export function SightingEssentials({
               </div>
             )}
           </label>
-          {photoUrl ? (
+          {photoUrls.length ? (
             <button
               type="button"
               onClick={() => onPhotoChange(null)}

@@ -196,7 +196,7 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
             ? `/map?lat=${item.lat}&lng=${item.lng}&sightingId=${item.id}`
             : `/map?sightingId=${item.id}`
         }
-        className="text-action-primary hover:bg-primary-soft mt-3 flex min-h-10 w-full items-center justify-center rounded-xl text-sm font-medium"
+        className="border-accent-warm text-action-primary hover:bg-primary-soft focus-visible:ring-action-primary mt-3 flex min-h-10 w-full items-center justify-center rounded-xl border bg-transparent text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2"
       >
         지도에서 보기
       </Link>
