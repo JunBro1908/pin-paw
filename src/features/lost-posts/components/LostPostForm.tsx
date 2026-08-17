@@ -187,6 +187,18 @@ export function LostPostForm() {
     files: File[],
     initialAttempt: FormSubmissionAttempt
   ): Promise<string[]> => {
+    const unsupportedIndex = files.findIndex(
+      (file) =>
+        !["image/jpeg", "image/png"].includes(file.type) ||
+        file.size < 1 ||
+        file.size > 10 * 1024 * 1024
+    );
+    if (unsupportedIndex >= 0) {
+      const file = files[unsupportedIndex];
+      throw new Error(
+        `${unsupportedIndex + 1}번째 사진은 JPEG/PNG 형식이며 10MB 이하여야 합니다. (${file.type || "알 수 없는 형식"})`
+      );
+    }
     const token = session?.access_token;
     let attempt = initialAttempt;
     let uploads: Array<{ fileKey: string; uploadUrl: string }> = [];
@@ -210,7 +222,7 @@ export function LostPostForm() {
       }
       const { data } = await presignRes.json();
       if (!data?.uploads?.length || data.uploads.length !== files.length) {
-        throw new Error("이미지 업로드에 실패했습니다.");
+        throw new Error(`이미지 업로드 준비에 실패했습니다. (${presignRes.status})`);
       }
       uploads = data.uploads;
       attempt = rememberUploadIntent(attempt, data.uploads[0]);
@@ -227,7 +239,11 @@ export function LostPostForm() {
         headers: { "Content-Type": files[index].type },
         body: files[index],
       });
-      if (!uploadRes.ok) throw new Error("이미지 업로드에 실패했습니다.");
+      if (!uploadRes.ok) {
+        throw new Error(
+          `${index + 1}번째 이미지 업로드에 실패했습니다. (Storage ${uploadRes.status})`
+        );
+      }
     }
     if (!uploadIntent.uploaded) {
       attempt = markUploadCompleted(attempt);
@@ -368,7 +384,7 @@ export function LostPostForm() {
             )}
             <input
               type="file"
-              accept="image/*"
+              accept="image/jpeg,image/png"
               multiple
               hidden
               ref={fileInputRef}
