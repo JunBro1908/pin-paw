@@ -126,15 +126,32 @@ export function LostPostForm() {
   }, []);
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files ?? []).slice(0, 3);
-    if (files.length) {
-      const photoUrls = files.map((item) => URL.createObjectURL(item));
+    const incoming = Array.from(e.target.files ?? []);
+    if (incoming.length) {
       setFormData((prev) => ({
-        ...prev,
-        photo: files[0],
-        photoUrl: photoUrls[0],
-        photos: files,
-        photoUrls,
+        ...(() => {
+          const merged = [...prev.photos, ...incoming]
+            .filter(
+              (item, index, all) =>
+                all.findIndex(
+                  (candidate) =>
+                    candidate.name === item.name &&
+                    candidate.size === item.size &&
+                    candidate.lastModified === item.lastModified
+                ) === index
+            )
+            .slice(0, 3);
+          const addedUrls = merged
+            .slice(prev.photos.length)
+            .map((item) => URL.createObjectURL(item));
+          return {
+            ...prev,
+            photo: merged[0],
+            photoUrl: prev.photoUrls[0] ?? addedUrls[0] ?? null,
+            photos: merged,
+            photoUrls: [...prev.photoUrls, ...addedUrls],
+          };
+        })(),
       }));
     }
   };
@@ -358,6 +375,16 @@ export function LostPostForm() {
               onChange={handlePhotoChange}
             />
           </div>
+          {formData.photos.length > 0 && formData.photos.length < 3 ? (
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              disabled={isSubmitting}
+              className="border-accent-warm-text text-accent-warm-text hover:bg-accent-warm/10 mt-3 flex min-h-11 w-full items-center justify-center rounded-xl border border-dashed text-sm font-semibold transition-colors disabled:opacity-60"
+            >
+              + 사진 추가 ({formData.photos.length}/3)
+            </button>
+          ) : null}
         </section>
 
         <section className="space-y-3">

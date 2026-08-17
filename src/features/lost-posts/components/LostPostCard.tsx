@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
 import { createClient } from "@/shared/supabase/client";
 import { StatusBadge } from "./StatusBadge";
@@ -9,6 +8,7 @@ import type { LostPostItem } from "../model/types";
 import { formatDogSizeLabel } from "@/shared/constants/traitSizes";
 import { formatSeoulLostDateTime } from "@/shared/lib/date";
 import { SPECIES_UNKNOWN } from "@/features/sightings/constants/breeds";
+import { PhotoCarousel } from "@/shared/ui/PhotoCarousel";
 
 interface LostPostCardProps {
   item: LostPostItem;
@@ -19,9 +19,11 @@ interface LostPostCardProps {
 export function LostPostCard({ item, href }: LostPostCardProps) {
   const client = createClient();
   const ref = client?.storage?.from("lost");
-  const coverUrl = ref
-    ? ref.getPublicUrl(item.cover_photo_key).data.publicUrl
-    : "";
+  const photoUrls = ref
+    ? (item.photo_keys ?? [item.cover_photo_key]).map(
+        (key) => ref.getPublicUrl(key).data.publicUrl
+      )
+    : [];
 
   const lostAt = formatSeoulLostDateTime(item.lost_at) ?? "시간 정보 없음";
   const traits = [
@@ -42,13 +44,12 @@ export function LostPostCard({ item, href }: LostPostCardProps) {
       className="border-border-subtle bg-surface flex gap-4 rounded-2xl border p-4 shadow-sm transition-shadow hover:shadow-md"
     >
       <div className="relative h-24 w-24 shrink-0 overflow-hidden rounded-xl bg-gray-100">
-        {coverUrl ? (
-          <Image
-            src={coverUrl}
-            alt="대표 사진"
-            fill
-            sizes="96px"
-            className="object-cover"
+        {photoUrls.length ? (
+          <PhotoCarousel
+            urls={photoUrls}
+            alt="유실글 사진"
+            className="h-full w-full"
+            aspectClassName="aspect-square"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-2xl">

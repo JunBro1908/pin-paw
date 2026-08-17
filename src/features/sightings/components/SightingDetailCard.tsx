@@ -1,13 +1,13 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import Image from "next/image";
 import { Text } from "@/shared/ui/Text";
 import { Icon } from "@/shared/ui/Icon";
 import { cn } from "@/shared/lib/cn";
 import { scrollablePanelClass } from "@/shared/ui/ScrollablePanel";
 import { useAuth } from "@/features/auth/hooks/useAuth";
 import { getSightingDetailFields } from "../lib/sighting-detail-presentation";
+import { PhotoCarousel } from "@/shared/ui/PhotoCarousel";
 
 /** 지도 상세 카드/추천 모달과 동일한 형식의 제보 상세 (API get_sighting_detail 응답과 호환) */
 export interface SightingDetailData {
@@ -167,19 +167,14 @@ export function SightingDetailCard({
         className={cn(scrollablePanelClass.sheet, "max-h-[min(70vh,32rem)]")}
       >
         <div className="flex flex-col">
-          {sighting.photo_keys?.[0] && (
-            <div className="relative aspect-[4/3] max-h-56 w-full overflow-hidden bg-gray-100 sm:max-h-64 dark:bg-gray-800">
-              <Image
-                src={getImageUrl(sighting.photo_keys[0])}
-                alt="목격 사진"
-                fill
-                sizes="(max-width: 768px) 100vw, 28rem"
-                className="object-cover"
-                priority
-              />
-              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
-            </div>
-          )}
+          {sighting.photo_keys?.length ? (
+            <PhotoCarousel
+              urls={sighting.photo_keys.map(getImageUrl)}
+              alt="목격 사진"
+              className="max-h-56 w-full sm:max-h-64"
+              aspectClassName="aspect-[4/3] max-h-64"
+            />
+          ) : null}
 
           <div className="space-y-4 px-5 py-5 sm:px-6 sm:py-6">
             <div className="flex items-start justify-between gap-3">

@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useRef, useState } from "react";
 import { Text } from "@/shared/ui/Text";
 import { createClient } from "@/shared/supabase/client";
@@ -10,6 +9,7 @@ import { formatSeoulLostDateTime } from "@/shared/lib/date";
 import { formatDogSizeLabel } from "@/shared/constants/traitSizes";
 import { SPECIES_UNKNOWN } from "../constants/breeds";
 import type { MySightingItem } from "../model/types";
+import { PhotoCarousel } from "@/shared/ui/PhotoCarousel";
 
 interface MySightingCardProps {
   item: MySightingItem;
@@ -48,9 +48,9 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
   const deleteAttemptKey = useRef<string | null>(null);
   const client = createClient();
   const ref = client?.storage?.from("sightings");
-  const firstKey = item.photo_keys?.[0];
-  const thumbUrl =
-    ref && firstKey ? ref.getPublicUrl(firstKey).data.publicUrl : "";
+  const photoUrls = ref
+    ? (item.photo_keys ?? []).map((key) => ref.getPublicUrl(key).data.publicUrl)
+    : [];
 
   const occurredAt = formatSeoulLostDateTime(item.occurred_at);
   const approximateRegion = item.approximate_region?.trim() || null;
@@ -158,13 +158,12 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
     <div className="border-border-subtle bg-surface rounded-2xl border p-3.5 shadow-sm">
       <div className="grid grid-cols-[6rem_minmax(0,1fr)] gap-3">
         <div className="relative h-24 w-24 overflow-hidden rounded-xl bg-gray-100">
-          {thumbUrl ? (
-            <Image
-              src={thumbUrl}
+          {photoUrls.length ? (
+            <PhotoCarousel
+              urls={photoUrls}
               alt="제보 사진"
-              fill
-              sizes="96px"
-              className="object-cover"
+              className="h-full w-full"
+              aspectClassName="aspect-square"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-2xl">
@@ -196,7 +195,7 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
             ? `/map?lat=${item.lat}&lng=${item.lng}&sightingId=${item.id}`
             : `/map?sightingId=${item.id}`
         }
-        className="border-accent-warm-text text-action-primary hover:bg-accent-warm/10 focus-visible:ring-action-primary mt-3 flex min-h-10 w-full items-center justify-center rounded-xl border bg-transparent text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2"
+        className="border-[#d7c6b3] text-[#8f7356] hover:bg-[#f6efe7] focus-visible:ring-[#b99a78] mt-3 flex min-h-10 w-full items-center justify-center rounded-xl border bg-transparent text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2"
       >
         지도에서 보기
       </Link>

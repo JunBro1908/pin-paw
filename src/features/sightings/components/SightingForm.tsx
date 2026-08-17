@@ -142,17 +142,28 @@ export function SightingForm() {
   }, [formData.photoUrls]);
 
   const handlePhotoChange = (file: File | null, files: File[] = []) => {
-    const selected = (session ? files : files.slice(0, 1)).slice(
-      0,
-      session ? 5 : 1
-    );
-    const photoUrls = selected.map((item) => URL.createObjectURL(item));
+    const incoming = session ? files : files.slice(0, 1);
     setFormData((prev) => ({
-      ...prev,
-      photo: selected[0] ?? file,
-      photoUrl: photoUrls[0] ?? null,
-      photos: selected,
-      photoUrls,
+      ...(() => {
+        const existing = prev.photos;
+        const merged = [...existing, ...incoming].filter(
+          (item, index, all) =>
+            all.findIndex(
+              (candidate) =>
+                candidate.name === item.name &&
+                candidate.size === item.size &&
+                candidate.lastModified === item.lastModified
+            ) === index
+        ).slice(0, session ? 5 : 1);
+        const addedUrls = merged.slice(existing.length).map((item) => URL.createObjectURL(item));
+        return {
+          ...prev,
+          photo: merged[0] ?? file,
+          photoUrl: prev.photoUrls[0] ?? addedUrls[0] ?? null,
+          photos: merged,
+          photoUrls: [...prev.photoUrls, ...addedUrls],
+        };
+      })(),
     }));
   };
 
