@@ -97,7 +97,7 @@ export function SightingEssentials({
             ref={fileInputRef}
             id="sighting-photo"
             type="file"
-            accept="image/*"
+            accept="image/jpeg,image/png"
             multiple={multiple}
             disabled={disabled}
             className="peer sr-only"

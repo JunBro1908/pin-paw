@@ -348,6 +348,18 @@ export function SightingForm() {
     photos: File[],
     initialAttempt: FormSubmissionAttempt
   ): Promise<string[]> => {
+    const unsupportedIndex = photos.findIndex(
+      (photo) =>
+        !["image/jpeg", "image/png"].includes(photo.type) ||
+        photo.size < 1 ||
+        photo.size > 10 * 1024 * 1024
+    );
+    if (unsupportedIndex >= 0) {
+      const photo = photos[unsupportedIndex];
+      throw new Error(
+        `${unsupportedIndex + 1}번째 사진은 JPEG/PNG 형식이며 10MB 이하여야 합니다. (${photo.type || "알 수 없는 형식"})`
+      );
+    }
     const { data: sessionData } = await supabase.auth.getSession();
     const presignRes = await fetch("/api/v1/uploads/presign", {
       method: "POST",
@@ -368,7 +380,10 @@ export function SightingForm() {
     });
     if (!presignRes.ok) {
       const result = await presignRes.json().catch(() => null);
-      throw new Error(result?.error?.message || "이미지 업로드에 실패했습니다.");
+      throw new Error(
+        result?.error?.message ||
+          `이미지 업로드 준비에 실패했습니다. (${presignRes.status})`
+      );
     }
     const result = await presignRes.json();
     const uploads = result.data?.uploads;
@@ -381,7 +396,11 @@ export function SightingForm() {
         headers: { "Content-Type": photos[index].type },
         body: photos[index],
       });
-      if (!uploadRes.ok) throw new Error("이미지 업로드에 실패했습니다.");
+      if (!uploadRes.ok) {
+        throw new Error(
+          `${index + 1}번째 이미지 업로드에 실패했습니다. (Storage ${uploadRes.status})`
+        );
+      }
     }
     return uploads.map((upload: { fileKey: string }) => upload.fileKey);
   };
