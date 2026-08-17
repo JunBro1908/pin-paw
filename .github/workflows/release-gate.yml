@@ -24,7 +24,7 @@ jobs:
       NEXT_PUBLIC_SUPABASE_ANON_KEY: "ci-anon-key"
       SUPABASE_SERVICE_ROLE_KEY: "ci-service-role-key"
       NEXT_PUBLIC_NAVER_CLIENT_ID: "ci-naver-search-client-id"
-      NEXT_PUBLIC_NAVER_SECRET: "ci-naver-search-secret"
+      NAVER_CLIENT_SECRET: "ci-naver-search-secret"
       NEXT_PUBLIC_NAVER_MAP_CLIENT_ID: "ci-naver-map-client-id"
       APP_ORIGIN: "https://pinpaw-ci.example"
       CRON_SECRET: "ci-cron-secret"
@@ -54,11 +54,22 @@ jobs:
       - name: Webpack production build
         run: npm run build
 
+      - name: Generate dependency SBOM
+        run: npm sbom --sbom-format=cyclonedx > pinpaw-sbom.cyclonedx.json
+
+      - name: Upload release evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: pinpaw-release-evidence-${{ github.sha }}
+          path: pinpaw-sbom.cyclonedx.json
+          if-no-files-found: error
+          retention-days: 14
+
       - name: HTTP boundary integration
         run: npm run test:integration
 
       - name: Production dependency audit
-        run: npm audit --omit=dev --audit-level=high
+        run: npm audit --omit=dev --audit-level=low
 
   database-replay:
     runs-on: ubuntu-latest
