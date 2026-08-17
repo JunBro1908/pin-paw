@@ -4,7 +4,12 @@ import {
   createServerSupabaseClient,
   getAuthenticatedUser,
 } from "@/shared/supabase/server";
-import { fail, notModified, ApiErrorCode } from "@/shared/lib/api-response";
+import {
+  fail,
+  notModified,
+  ApiErrorCode,
+  retryAfterHeaders,
+} from "@/shared/lib/api-response";
 import { parseMapViewportQuery } from "@/shared/lib/public-api-guard";
 import { getClientIp } from "@/shared/lib/ip";
 import { sha256 } from "@/shared/lib/hash";
@@ -67,7 +72,8 @@ export async function GET(request: Request) {
         ? ApiErrorCode.SERVICE_UNAVAILABLE
         : ApiErrorCode.RATE_LIMITED,
       rateLimit.errorMessage ?? "지도 요청을 처리할 수 없습니다.",
-      rateLimit.unavailable ? 503 : 429
+      rateLimit.unavailable ? 503 : 429,
+      retryAfterHeaders(rateLimit.retryAfterSeconds, rateLimit.unavailable)
     );
   }
 
@@ -120,7 +126,10 @@ export async function GET(request: Request) {
     // 5. If-None-Match 확인
     const ifNoneMatch = request.headers.get("if-none-match");
     if (ifNoneMatch === etag) {
-      return notModified();
+      return notModified({
+        ETag: etag,
+        "Cache-Control": "private, max-age=0, must-revalidate",
+      });
     }
 
     return NextResponse.json(

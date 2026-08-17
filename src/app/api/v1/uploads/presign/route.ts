@@ -4,7 +4,12 @@ import {
 } from "@/shared/supabase/server";
 import { getClientIp } from "@/shared/lib/ip";
 import { sha256 } from "@/shared/lib/hash";
-import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
+import {
+  ok,
+  fail,
+  ApiErrorCode,
+  retryAfterHeaders,
+} from "@/shared/lib/api-response";
 import {
   checkRateLimitDimensions,
   RateLimitPresets,
@@ -77,12 +82,15 @@ export async function POST(request: Request) {
     );
 
     // 멱등성 체크: 키가 이미 존재하는지 확인 (request_hash도 반드시 포함!)
-    const { data: cached } = await supabase
+    let idempotencyQuery = supabase
       .from("idempotency_keys")
       .select("response, request_hash")
       .eq("scope", SCOPE)
-      .eq("key", idempotencyKey)
-      .maybeSingle();
+      .eq("key", idempotencyKey);
+    idempotencyQuery = userId
+      ? idempotencyQuery.eq("owner_id", userId)
+      : idempotencyQuery.is("owner_id", null).eq("ip_hash", ipHash);
+    const { data: cached } = await idempotencyQuery.maybeSingle();
 
     if (cached) {
       // 1. 키는 같은데 내용(파일 등)이 다른 경우 -> 409 충돌!
@@ -112,7 +120,11 @@ export async function POST(request: Request) {
           ? ApiErrorCode.SERVICE_UNAVAILABLE
           : ApiErrorCode.RATE_LIMITED,
         rateLimitResult.errorMessage!,
-        rateLimitResult.unavailable ? 503 : 429
+        rateLimitResult.unavailable ? 503 : 429,
+        retryAfterHeaders(
+          rateLimitResult.retryAfterSeconds,
+          rateLimitResult.unavailable
+        )
       );
     }
 

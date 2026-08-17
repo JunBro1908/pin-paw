@@ -2,7 +2,12 @@ import {
   createServiceRoleSupabase,
   getVerifiedUser,
 } from "@/shared/supabase/server";
-import { ok, fail, ApiErrorCode } from "@/shared/lib/api-response";
+import {
+  ok,
+  fail,
+  ApiErrorCode,
+  retryAfterHeaders,
+} from "@/shared/lib/api-response";
 import { getClientIp } from "@/shared/lib/ip";
 import { sha256 } from "@/shared/lib/hash";
 import {
@@ -163,7 +168,11 @@ export async function POST(request: Request) {
           ? ApiErrorCode.SERVICE_UNAVAILABLE
           : ApiErrorCode.RATE_LIMITED,
         rateLimitResult.errorMessage!,
-        rateLimitResult.unavailable ? 503 : 429
+        rateLimitResult.unavailable ? 503 : 429,
+        retryAfterHeaders(
+          rateLimitResult.retryAfterSeconds,
+          rateLimitResult.unavailable
+        )
       );
     }
 

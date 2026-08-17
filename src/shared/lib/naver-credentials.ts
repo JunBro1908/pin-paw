@@ -16,10 +16,7 @@ export function getNaverSearchCredentials(env?: NodeJS.ProcessEnv): {
         env.NEXT_PUBLIC_NAVER_CLIENT_ID?.trim() ||
         env.NAVER_CLIENT_ID?.trim() ||
         undefined,
-      clientSecret:
-        env.NEXT_PUBLIC_NAVER_SECRET?.trim() ||
-        env.NAVER_CLIENT_SECRET?.trim() ||
-        undefined,
+      clientSecret: env.NAVER_CLIENT_SECRET?.trim() || undefined,
     };
   }
 
@@ -28,10 +25,7 @@ export function getNaverSearchCredentials(env?: NodeJS.ProcessEnv): {
       process.env.NEXT_PUBLIC_NAVER_CLIENT_ID?.trim() ||
       process.env.NAVER_CLIENT_ID?.trim() ||
       undefined,
-    clientSecret:
-      process.env.NEXT_PUBLIC_NAVER_SECRET?.trim() ||
-      process.env.NAVER_CLIENT_SECRET?.trim() ||
-      undefined,
+    clientSecret: process.env.NAVER_CLIENT_SECRET?.trim() || undefined,
   };
 }
 

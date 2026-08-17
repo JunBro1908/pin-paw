@@ -161,27 +161,29 @@ export async function GET(request: Request) {
 
   const applyFeedback = async (
     sparseItems: SparseRecommendationItem[]
-  ): Promise<ReturnType<typeof toPublicRecommendationItem>[]> => {
+  ): Promise<ReturnType<typeof toPublicRecommendationItem>[] | null> => {
     const rawItems = normalizeItems(sparseItems);
     if (rawItems.length === 0) return [];
     const { data: visibleIds, error: visibilityError } = await supabaseAuth.rpc(
       "filter_blocked_sighting_ids",
       { p_sighting_ids: rawItems.map((item) => item.sightingId) }
     );
-    // Missing block-filter RPC must not wipe an otherwise valid recommendation set.
-    let visibleItems = rawItems;
     if (visibilityError) {
-      logger.warn("recommendation.block_filter_unavailable", {
+      logger.error("recommendation.block_filter_unavailable", {
         error: visibilityError,
+        status: 503,
       });
-    } else {
-      const visibleSet = new Set(
-        Array.isArray(visibleIds)
-          ? visibleIds.filter((id): id is string => typeof id === "string")
-          : []
-      );
-      visibleItems = rawItems.filter((item) => visibleSet.has(item.sightingId));
+      return null;
     }
+
+    const visibleSet = new Set(
+      Array.isArray(visibleIds)
+        ? visibleIds.filter((id): id is string => typeof id === "string")
+        : []
+    );
+    const visibleItems = rawItems.filter((item) =>
+      visibleSet.has(item.sightingId)
+    );
     if (visibleItems.length === 0) return [];
 
     const { data: claimsRows } = await supabaseAuth
@@ -208,6 +210,13 @@ export async function GET(request: Request) {
   if (!cacheError && cached?.result) {
     const rawItems = cached.result as SparseRecommendationItem[];
     const items = await applyFeedback(rawItems);
+    if (items === null) {
+      return fail(
+        ApiErrorCode.SERVICE_UNAVAILABLE,
+        "추천 공개 범위를 확인할 수 없습니다. 잠시 후 다시 시도해주세요.",
+        503
+      );
+    }
     return ok({
       status: "ready" as const,
       items,
@@ -264,6 +273,13 @@ export async function GET(request: Request) {
   }
 
   const itemsWithFeedback = await applyFeedback(result);
+  if (itemsWithFeedback === null) {
+    return fail(
+      ApiErrorCode.SERVICE_UNAVAILABLE,
+      "추천 공개 범위를 확인할 수 없습니다. 잠시 후 다시 시도해주세요.",
+      503
+    );
+  }
   return ok({
     status: "ready" as const,
     items: itemsWithFeedback,

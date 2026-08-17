@@ -41,7 +41,7 @@ function stripNaverSearchMarkup(value: string): string {
  * 2023-08 이후 mapx/mapy는 WGS84 * 1e7 정수입니다.
  *
  * 검색용 환경 변수 (developers.naver.com):
- * - NEXT_PUBLIC_NAVER_CLIENT_ID / NEXT_PUBLIC_NAVER_SECRET
+ * - NEXT_PUBLIC_NAVER_CLIENT_ID / NAVER_CLIENT_SECRET
  * - fallback: NAVER_CLIENT_ID / NAVER_CLIENT_SECRET
  * ※ 지도 NCP 키(NEXT_PUBLIC_NAVER_MAP_CLIENT_ID)와 별개입니다.
  */
@@ -92,7 +92,7 @@ export async function GET(request: Request) {
       {
         error: {
           message:
-            "장소 검색이 설정되지 않았습니다. NEXT_PUBLIC_NAVER_CLIENT_ID, NEXT_PUBLIC_NAVER_SECRET을 확인해주세요.",
+            "장소 검색이 설정되지 않았습니다. NEXT_PUBLIC_NAVER_CLIENT_ID, NAVER_CLIENT_SECRET을 확인해주세요.",
         },
       },
       { status: 503 }
@@ -128,7 +128,7 @@ export async function GET(request: Request) {
         res.status === 403 ||
         (text && (text.includes("024") || text.includes("Authentication")));
       const hint = isAuthError
-        ? "네이버 개발자센터(developers.naver.com)에서 검색 API가 켜진 앱의 Client ID·Secret을 NEXT_PUBLIC_NAVER_CLIENT_ID, NEXT_PUBLIC_NAVER_SECRET에 넣어주세요. (지도 NCP 키와 별도입니다.)"
+        ? "네이버 개발자센터(developers.naver.com)에서 검색 API가 켜진 앱의 Client ID·Secret을 NEXT_PUBLIC_NAVER_CLIENT_ID, NAVER_CLIENT_SECRET에 넣어주세요. (지도 NCP 키와 별도입니다.)"
         : res.status === 403
           ? "API 권한을 확인해주세요."
           : undefined;

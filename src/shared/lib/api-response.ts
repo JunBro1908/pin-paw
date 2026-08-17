@@ -103,8 +103,20 @@ export function failWithHeaders(
 }
 
 /**
+ * Rate-limit 응답에만 재시도 가능 시점을 노출합니다.
+ */
+export function retryAfterHeaders(
+  retryAfterSeconds?: number,
+  unavailable?: boolean
+): HeadersInit | undefined {
+  if (unavailable || !retryAfterSeconds || retryAfterSeconds < 1)
+    return undefined;
+  return { "Retry-After": String(Math.ceil(retryAfterSeconds)) };
+}
+
+/**
  * 304 Not Modified 응답
  */
-export function notModified(): NextResponse {
-  return new NextResponse(null, { status: 304 });
+export function notModified(headers?: HeadersInit): NextResponse {
+  return new NextResponse(null, { status: 304, headers });
 }

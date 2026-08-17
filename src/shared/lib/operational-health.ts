@@ -1,9 +1,11 @@
+import { parseAppOrigin } from "./app-origin.ts";
+
 export const REQUIRED_READINESS_ENV = [
   "APP_ORIGIN",
   "CRON_SECRET",
   "NEXT_PUBLIC_NAVER_CLIENT_ID",
   "NEXT_PUBLIC_NAVER_MAP_CLIENT_ID",
-  "NEXT_PUBLIC_NAVER_SECRET",
+  "NAVER_CLIENT_SECRET",
   "NEXT_PUBLIC_SENTRY_DSN",
   "NEXT_PUBLIC_SUPABASE_ANON_KEY",
   "NEXT_PUBLIC_SUPABASE_URL",
@@ -35,6 +37,14 @@ export async function checkOperationalReadiness(
   const missingConfiguration = REQUIRED_READINESS_ENV.filter(
     (key) => !environment[key]?.trim()
   ).sort();
+
+  if (
+    environment.APP_ORIGIN?.trim() &&
+    !parseAppOrigin(environment.APP_ORIGIN).ok
+  ) {
+    missingConfiguration.push("APP_ORIGIN");
+    missingConfiguration.sort();
+  }
 
   if (missingConfiguration.length > 0) {
     return {
