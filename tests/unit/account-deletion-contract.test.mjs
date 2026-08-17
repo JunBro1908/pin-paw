@@ -127,3 +127,16 @@ test("backup expiry remains an explicitly unverified provider obligation", async
   const sql = await readOrEmpty(migrationUrl);
   assert.match(sql, /provider backup expiry policy must be verified/i);
 });
+
+test("operations runbook defines repeatable backup and restore evidence", async () => {
+  const runbook = await readOrEmpty(
+    new URL("../../docs/runbooks/OPERATIONS.md", import.meta.url)
+  );
+
+  assert.match(runbook, /RPO ≤ 24시간/);
+  assert.match(runbook, /RTO ≤ 4시간/);
+  assert.match(runbook, /별도 격리 프로젝트/);
+  assert.match(runbook, /permission matrix/);
+  assert.match(runbook, /checksum/);
+  assert.match(runbook, /민감정보 원문 0건 확인/);
+});

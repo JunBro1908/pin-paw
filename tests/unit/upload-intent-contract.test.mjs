@@ -86,6 +86,14 @@ test("presign records a short-lived intent before returning signed URLs", async 
   );
 });
 
+test("presign idempotency cache is bound to the authenticated owner or anonymous IP", async () => {
+  const route = await source("src/app/api/v1/uploads/presign/route.ts");
+
+  assert.match(route, /\.eq\("owner_id", userId\)/);
+  assert.match(route, /\.is\("owner_id", null\)/);
+  assert.match(route, /\.eq\("ip_hash", ipHash\)/);
+});
+
 test("create routes verify storage bytes and use intent-consuming RPCs", async () => {
   const verifier = await source("src/shared/lib/upload-intents.ts");
   const sighting = await source("src/app/api/v1/sightings/route.ts");

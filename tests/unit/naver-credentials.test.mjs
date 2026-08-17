@@ -4,13 +4,12 @@ import test from "node:test";
 const { getNaverMapsClientId, getNaverSearchCredentials } =
   await import("../../src/shared/lib/naver-credentials.ts");
 
-test("search credentials prefer NEXT_PUBLIC_NAVER_* names", () => {
+test("search credentials use a public client id and server-only secret", () => {
   assert.deepEqual(
     getNaverSearchCredentials({
       NEXT_PUBLIC_NAVER_CLIENT_ID: "search-id",
-      NEXT_PUBLIC_NAVER_SECRET: "search-secret",
+      NAVER_CLIENT_SECRET: "search-secret",
       NAVER_CLIENT_ID: "legacy-id",
-      NAVER_CLIENT_SECRET: "legacy-secret",
     }),
     { clientId: "search-id", clientSecret: "search-secret" }
   );

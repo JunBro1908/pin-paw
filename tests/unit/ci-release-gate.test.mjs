@@ -37,7 +37,7 @@ test("release gate requires tests, types, lint, Webpack build, and production au
     "npm run lint",
     "npm run build",
     "npm run test:integration",
-    "npm audit --omit=dev --audit-level=high",
+    "npm audit --omit=dev --audit-level=low",
   ]) {
     assert.ok(workflow.includes(`run: ${command}`), command);
   }
@@ -48,6 +48,10 @@ test("release gate requires tests, types, lint, Webpack build, and production au
   );
   assert.equal(packageJson.scripts.build, "next build --webpack");
   assert.equal(packageJson.scripts.dev, "next dev --webpack");
+  assert.equal(packageJson.overrides.nanoid, "3.3.18");
+  assert.match(workflow, /npm sbom --sbom-format=cyclonedx/);
+  assert.match(workflow, /actions\/upload-artifact@v4/);
+  assert.match(workflow, /if-no-files-found: error/);
 });
 
 test("CI build uses non-secret synthetic environment values", async () => {

@@ -192,6 +192,6 @@ test("recommendation cache write failures are logged without hiding results", as
   );
   assert.match(
     route,
-    /if \(cacheWriteError\) \{[\s\S]*?\}\s*const itemsWithFeedback = await applyFeedback\(result\);\s*return ok\(/
+    /if \(cacheWriteError\) \{[\s\S]*?\}\s*const itemsWithFeedback = await applyFeedback\(result\);[\s\S]*?return ok\(/
   );
 });

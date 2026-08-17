@@ -65,18 +65,18 @@ test("haversine returns roughly zero for identical points", () => {
   assert.ok(haversineKm(37.5, 127, 37.5, 127) < 0.001);
 });
 
-test("recommendations route keeps results when block filter RPC is missing", async () => {
+test("recommendations route fails closed when block filter RPC is missing", async () => {
   const route = await import("node:fs/promises").then((fs) =>
     fs.readFile("src/app/api/v1/recommendations/route.ts", "utf8")
   );
   assert.match(route, /block_filter_unavailable/);
   assert.match(route, /enrichRecommendationEvidence/);
   assert.match(route, /triggerEmbeddingsProcess/);
-  assert.match(route, /let visibleItems = rawItems/);
-  assert.ok(
-    !/if \(visibilityError\) \{\s*logger\.error[\s\S]*?return \[\];/.test(
-      route
-    ),
-    "visibility errors must not empty the recommendation list"
+  assert.match(route, /SERVICE_UNAVAILABLE/);
+  assert.match(route, /return null/);
+  assert.doesNotMatch(
+    route,
+    /if \(visibilityError\) \{[\s\S]*?let visibleItems = rawItems/,
+    "visibility errors must not fail open to raw recommendations"
   );
 });
