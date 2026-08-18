@@ -65,8 +65,8 @@ export async function GET(request: Request, context: RouteContext) {
 }
 
 /**
- * PATCH /api/v1/lost-posts/[lostPostId] — 상태·특징·대표사진 수정 (본인 소유만)
- * Body: { status?, petName?, traitColor?, traitSize?, traitSpecies?, traitTags?, note?, coverPhotoKey? }
+ * PATCH /api/v1/lost-posts/[lostPostId] — 상태·특징·사진 수정 (본인 소유만)
+ * Body: { status?, petName?, traitColor?, traitSize?, traitSpecies?, traitTags?, note?, coverPhotoKey?, photoKeys? }
  */
 export async function PATCH(request: Request, context: RouteContext) {
   const logger = createRequestLogger(
@@ -112,7 +112,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 
   const { data: existing } = await supabaseAuth
     .from("lost_posts")
-    .select("id, cover_photo_key")
+    .select("id, cover_photo_key, photo_keys")
     .eq("id", lostPostId)
     .maybeSingle();
 
@@ -121,10 +121,35 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
 
   const body = parsed.value;
+  const existingPhotoKeys =
+    Array.isArray(existing.photo_keys) && existing.photo_keys.length
+      ? existing.photo_keys
+      : [existing.cover_photo_key];
+  const requestedPhotoKeys =
+    body.photoKeys ??
+    (body.coverPhotoKey !== undefined
+      ? [
+          body.coverPhotoKey,
+          ...existingPhotoKeys.filter((key) => key !== body.coverPhotoKey),
+        ].slice(0, 3)
+      : undefined);
+  const photoKeysChanging =
+    requestedPhotoKeys !== undefined &&
+    (requestedPhotoKeys.length !== existingPhotoKeys.length ||
+      requestedPhotoKeys.some(
+        (key, index) => key !== existingPhotoKeys[index]
+      ));
+  const newPhotoKeys = photoKeysChanging
+    ? (requestedPhotoKeys ?? []).filter(
+        (key) => !existingPhotoKeys.includes(key)
+      )
+    : [];
+  const removedPhotoKeys = photoKeysChanging
+    ? existingPhotoKeys.filter(
+        (key) => !(requestedPhotoKeys ?? []).includes(key)
+      )
+    : [];
   const updates: Record<string, unknown> = {};
-  const coverPhotoChanging =
-    body.coverPhotoKey !== undefined &&
-    body.coverPhotoKey !== existing.cover_photo_key;
 
   if (body.status !== undefined) {
     updates.status = body.status;
@@ -151,32 +176,33 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
   if (body.note !== undefined) updates.note = body.note;
 
-  if (coverPhotoChanging && body.coverPhotoKey) {
-    const supabaseAdmin = createServiceRoleSupabase();
-    const uploadVerification = await verifyUploadIntents(supabaseAdmin, {
-      keys: [body.coverPhotoKey],
-      purpose: "lost_cover",
-      userId: user.id,
-      ipHash: sha256(await getClientIp()),
-    });
-    if (!uploadVerification.ok) {
-      const unavailable =
-        uploadVerification.reason === "verification_unavailable" ||
-        uploadVerification.reason === "object_unavailable";
-      return fail(
-        unavailable
-          ? ApiErrorCode.SERVICE_UNAVAILABLE
-          : ApiErrorCode.VALIDATION_ERROR,
-        unavailable
-          ? "업로드 파일을 확인할 수 없습니다."
-          : "업로드 파일이 발급 정보와 일치하지 않습니다.",
-        unavailable ? 503 : 400
-      );
+  if (photoKeysChanging && requestedPhotoKeys) {
+    if (newPhotoKeys.length > 0) {
+      const supabaseAdmin = createServiceRoleSupabase();
+      const uploadVerification = await verifyUploadIntents(supabaseAdmin, {
+        keys: newPhotoKeys,
+        purpose: "lost_cover",
+        userId: user.id,
+        ipHash: sha256(await getClientIp()),
+      });
+      if (!uploadVerification.ok) {
+        const unavailable =
+          uploadVerification.reason === "verification_unavailable" ||
+          uploadVerification.reason === "object_unavailable";
+        return fail(
+          unavailable
+            ? ApiErrorCode.SERVICE_UNAVAILABLE
+            : ApiErrorCode.VALIDATION_ERROR,
+          unavailable
+            ? "업로드 파일을 확인할 수 없습니다."
+            : "업로드 파일이 발급 정보와 일치하지 않습니다.",
+          unavailable ? 503 : 400
+        );
+      }
     }
-    updates.cover_photo_key = body.coverPhotoKey;
   }
 
-  if (Object.keys(updates).length === 0) {
+  if (Object.keys(updates).length === 0 && !photoKeysChanging) {
     const { data: current } = await supabaseAuth
       .from("lost_posts")
       .select("*")
@@ -185,42 +211,78 @@ export async function PATCH(request: Request, context: RouteContext) {
     return ok(current ?? existing);
   }
 
-  const { data: row, error } = await supabaseAuth
-    .from("lost_posts")
-    .update(updates)
-    .eq("id", lostPostId)
-    .select()
-    .single();
-
-  if (error) {
-    if (error.code === "23514" && body.status !== undefined) {
-      return fail(
-        ApiErrorCode.VALIDATION_ERROR,
-        "허용되지 않은 상태 변경입니다.",
-        409
-      );
-    }
-    logger.error("lost_post.update_failed", { error, status: 500 });
-    return fail(ApiErrorCode.INTERNAL_ERROR, "수정에 실패했습니다.", 500);
-  }
-
-  if (coverPhotoChanging && body.coverPhotoKey) {
-    const supabaseAdmin = createServiceRoleSupabase();
-    const { error: consumeError } = await supabaseAdmin
-      .from("upload_intents")
-      .update({
-        consumed_at: new Date().toISOString(),
-        consumed_by_type: "lost_post",
-        consumed_by_id: lostPostId,
-      })
-      .eq("object_key", body.coverPhotoKey)
-      .is("consumed_at", null);
-    if (consumeError) {
-      logger.error("lost_post.cover_intent_consume_failed", {
-        error: consumeError,
+  let row = existing;
+  if (photoKeysChanging && requestedPhotoKeys) {
+    const { data: photoRow, error: photoError } = await supabaseAuth.rpc(
+      "update_owned_lost_post_photos",
+      {
+        p_actor_id: user.id,
+        p_lost_post_id: lostPostId,
+        p_expected_photo_keys: existingPhotoKeys,
+        p_photo_keys: requestedPhotoKeys,
+        p_new_photo_keys: newPhotoKeys,
+        p_removed_photo_keys: removedPhotoKeys,
+      }
+    );
+    if (photoError || !photoRow) {
+      if (photoError?.message === "lost_post_photo_conflict") {
+        return fail(
+          ApiErrorCode.VALIDATION_ERROR,
+          "다른 기기에서 사진이 먼저 수정되었습니다. 다시 불러와주세요.",
+          409
+        );
+      }
+      if (photoError?.message === "resource_not_found") {
+        return fail(ApiErrorCode.NOT_FOUND, "유실글을 찾을 수 없습니다.", 404);
+      }
+      if (photoError?.message === "invalid_upload_intent") {
+        return fail(
+          ApiErrorCode.VALIDATION_ERROR,
+          "업로드 파일이 발급 정보와 일치하지 않습니다.",
+          400
+        );
+      }
+      logger.error("lost_post.photo_update_failed", {
+        error: photoError,
         status: 500,
       });
+      return fail(
+        ApiErrorCode.INTERNAL_ERROR,
+        "사진 수정에 실패했습니다.",
+        500
+      );
     }
+    row = photoRow;
+  }
+
+  if (Object.keys(updates).length > 0) {
+    const { data: updatedRow, error } = await supabaseAuth.rpc(
+      "update_owned_lost_post",
+      {
+        p_actor_id: user.id,
+        p_lost_post_id: lostPostId,
+        p_changes: updates,
+      }
+    );
+
+    if (error) {
+      if (
+        error.code === "23514" ||
+        error.message === "invalid_lost_post_input"
+      ) {
+        return fail(
+          ApiErrorCode.VALIDATION_ERROR,
+          "허용되지 않은 상태 변경입니다.",
+          409
+        );
+      }
+      if (error.message === "resource_not_found") {
+        return fail(ApiErrorCode.NOT_FOUND, "유실글을 찾을 수 없습니다.", 404);
+      }
+      logger.error("lost_post.update_failed", { error, status: 500 });
+      return fail(ApiErrorCode.INTERNAL_ERROR, "수정에 실패했습니다.", 500);
+    }
+    row = updatedRow;
   }
 
   // 특징/메모 수정 시 임베딩 재생성: 1행 pending upsert 후 worker 호출

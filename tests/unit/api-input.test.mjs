@@ -184,6 +184,26 @@ test("lost-post schema requires bounded owner data and a lost-cover key", () => 
   );
 });
 
+test("lost-post update accepts one to three photo keys and rejects a fourth", () => {
+  const key = (index) =>
+    `lost_cover/20260725/123e4567-e89b-42d3-a456-42661417400${index}.jpg`;
+  assert.equal(
+    parseLostPostUpdateRequest({ photoKeys: [1, 2, 3].map(key) }).ok,
+    true
+  );
+  assert.equal(
+    parseLostPostUpdateRequest({ photoKeys: [1, 2, 3, 4].map(key) }).ok,
+    false
+  );
+  assert.equal(
+    parseLostPostUpdateRequest({
+      coverPhotoKey: key(1),
+      photoKeys: [key(2), key(1)],
+    }).ok,
+    false
+  );
+});
+
 test("lost-post trait tags reject more than five selections", () => {
   assert.equal(
     parseLostPostCreateRequest({

@@ -26,7 +26,10 @@ test("detail page routes edit to full-page form like sighting edit", async () =>
   );
 
   assert.match(page, /searchParams\.get\("edit"\) === "1"/);
-  assert.match(page, /router\.replace\(`\/my\/lost-posts\/\$\{lostPostId\}\/edit`\)/);
+  assert.match(
+    page,
+    /router\.replace\(`\/my\/lost-posts\/\$\{lostPostId\}\/edit`\)/
+  );
   assert.match(page, /aria-label="수정"/);
   assert.match(page, /\/my\/lost-posts\/\$\{item\.id\}\/edit/);
   assert.match(page, /surface-light/);
@@ -43,18 +46,16 @@ test("detail page routes edit to full-page form like sighting edit", async () =>
   assert.match(editPage, /<LostPostEditForm/);
 });
 
-test("lost post edit form mirrors sighting edit surface and keeps cover replace", async () => {
-  const [editForm, sightingEdit, optional] = await Promise.all([
-    readFile(
-      "src/features/lost-posts/components/LostPostEditForm.tsx",
-      "utf8"
-    ),
-    readFile(
-      "src/features/sightings/components/SightingEditForm.tsx",
-      "utf8"
-    ),
+test("lost post edit form supports a bounded photo queue and keeps cover replace", async () => {
+  const [editForm, sightingEdit, optional, migration] = await Promise.all([
+    readFile("src/features/lost-posts/components/LostPostEditForm.tsx", "utf8"),
+    readFile("src/features/sightings/components/SightingEditForm.tsx", "utf8"),
     readFile(
       "src/features/sightings/components/SightingOptionalDetails.tsx",
+      "utf8"
+    ),
+    readFile(
+      "supabase/migrations/20260818010000_lost_post_photo_updates.sql",
       "utf8"
     ),
   ]);
@@ -68,14 +69,18 @@ test("lost post edit form mirrors sighting edit surface and keeps cover replace"
   assert.match(editForm, /maxTags=\{TRAIT_TAGS_MAX\}/);
   assert.doesNotMatch(editForm, /MAX_EDIT_TAGS/);
   assert.match(editForm, /idPrefix="lost-edit"/);
-  assert.match(editForm, /사진 \(1장\)/);
-  assert.match(editForm, /aria-label="대표 사진 변경"/);
+  assert.match(editForm, /유실글은 최대 3장/);
+  assert.match(editForm, /multiple/);
+  assert.match(editForm, /photoKeys/);
+  assert.match(editForm, /선택한 사진/);
+  assert.match(editForm, /photosRef/);
+  assert.match(editForm, /photosRef\.current/);
+  assert.match(editForm, /aria-label="사진 추가 또는 변경"/);
   assert.match(editForm, /prepareSubmission/);
   assert.match(editForm, /fingerprintUploadFile/);
-  assert.match(editForm, /rememberUploadIntent/);
-  assert.match(editForm, /markUploadCompleted/);
+  assert.match(editForm, /rememberUploadIntents/);
+  assert.match(editForm, /markUploadIntentCompleted/);
   assert.match(editForm, /purpose:\s*"lost_cover"/);
-  assert.match(editForm, /coverPhotoKey/);
   assert.match(editForm, /saving/);
   assert.match(editForm, /수정 저장/);
   assert.match(editForm, />\s*취소\s*</);
@@ -87,7 +92,7 @@ test("lost post edit form mirrors sighting edit surface and keeps cover replace"
   assert.match(editForm, /min-h-12 flex-\[1\.4\] rounded-2xl/);
   assert.match(editForm, /aspect-4\/3 max-h-80/);
   assert.match(editForm, /border-2 border-dashed/);
-  assert.match(editForm, /선택한 사진 제거/);
+  assert.match(editForm, /사진 제거/);
   assert.match(editForm, /<option value="searching">찾는 중<\/option>/);
   assert.match(editForm, /<option value="found">찾았어요<\/option>/);
   assert.doesNotMatch(editForm, /<option value="closed">마감<\/option>/);
@@ -97,10 +102,19 @@ test("lost post edit form mirrors sighting edit surface and keeps cover replace"
   assert.match(optional, /idPrefix/);
 
   assert.match(route, /coverPhotoKey/);
+  assert.match(route, /photoKeys/);
+  assert.match(route, /photo_keys/);
   assert.match(route, /verifyUploadIntents/);
+  assert.match(route, /update_owned_lost_post_photos/);
+  assert.match(route, /update_owned_lost_post/);
   assert.match(route, /purpose:\s*"lost_cover"/);
   assert.match(route, /cover_photo_key/);
-  assert.match(route, /consumed_by_type:\s*"lost_post"/);
+  assert.match(migration, /lost_photo_replaced/);
+  assert.match(migration, /update_owned_lost_post_photos/);
+  assert.match(migration, /consumed_by_type = 'lost_post'/);
+  assert.match(migration, /auth\.uid\(\) is distinct from p_actor_id/);
+  assert.match(migration, /invalid_lost_post_photo_delta/);
+  assert.match(migration, /revoke insert, update on table public\.lost_posts/);
 });
 
 test("recommend picker uses carousel without edit affordance", async () => {

@@ -468,6 +468,7 @@ export interface LostPostUpdateInput {
   traitTags?: string[];
   note?: string | null;
   coverPhotoKey?: string;
+  photoKeys?: string[];
 }
 
 export function parseLostPostUpdateRequest(
@@ -522,6 +523,32 @@ export function parseLostPostUpdateRequest(
       return { ok: false, reason: "invalid_cover_photo_key" };
     }
     result.coverPhotoKey = input.coverPhotoKey;
+  }
+
+  if (owns(input, "photoKeys")) {
+    if (
+      !Array.isArray(input.photoKeys) ||
+      input.photoKeys.length < 1 ||
+      input.photoKeys.length > 3 ||
+      input.photoKeys.some(
+        (key) => typeof key !== "string" || !LOST_COVER_KEY.test(key)
+      )
+    ) {
+      return { ok: false, reason: "invalid_photo_keys" };
+    }
+    const photoKeys = [...new Set(input.photoKeys)];
+    if (photoKeys.length !== input.photoKeys.length) {
+      return { ok: false, reason: "duplicate_photo_keys" };
+    }
+    result.photoKeys = photoKeys;
+  }
+
+  if (
+    result.coverPhotoKey !== undefined &&
+    result.photoKeys !== undefined &&
+    result.coverPhotoKey !== result.photoKeys[0]
+  ) {
+    return { ok: false, reason: "cover_photo_must_match_first_photo" };
   }
 
   return { ok: true, value: result };

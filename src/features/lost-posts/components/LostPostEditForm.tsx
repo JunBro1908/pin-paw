@@ -11,14 +11,16 @@ import { cn } from "@/shared/lib/cn";
 import {
   completeSubmission,
   fingerprintUploadFile,
-  markUploadCompleted,
+  markUploadIntentCompleted,
   prepareSubmission,
-  rememberUploadIntent,
+  rememberUploadIntents,
   type FormSubmissionAttempt,
 } from "@/shared/lib/form-submission-lifecycle";
 import { Button } from "@/shared/ui/Button";
 import { Icon } from "@/shared/ui/Icon";
 import { Text } from "@/shared/ui/Text";
+import { Toast } from "@/shared/ui/Toast";
+import { photoValidationMessage } from "@/shared/lib/photo-validation";
 import { getLostPostCoverUrl } from "../lib/lost-post-cover";
 import { invalidateMyLostPostsCache } from "../hooks/useMyLostPosts";
 import { useLostPost } from "../hooks/useLostPost";
@@ -35,6 +37,8 @@ type EditPhotoDraft = {
   file: File | null;
   url: string;
 };
+
+const MAX_EDIT_PHOTOS = 3;
 
 function normalizeTraitSize(raw: string | null | undefined): string {
   if (raw && ["small", "medium", "large", "unknown"].includes(raw)) return raw;
@@ -55,12 +59,17 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
   const [traitTags, setTraitTags] = useState<string[]>([]);
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<"searching" | "found">("searching");
-  const [photo, setPhoto] = useState<EditPhotoDraft | null>(null);
+  const [photos, setPhotos] = useState<EditPhotoDraft[]>([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showErrors, setShowErrors] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+  const [toast, setToast] = useState<{
+    message: string;
+    type: "success" | "error";
+  } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const photosRef = useRef<EditPhotoDraft[]>([]);
   const submissionAttemptRef = useRef<FormSubmissionAttempt | null>(null);
 
   useEffect(() => {
@@ -76,27 +85,39 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
     );
     setDescription(item.note ?? "");
     setStatus(item.status === "found" ? "found" : "searching");
-    setPhoto({
-      key: item.cover_photo_key?.trim() || null,
-      file: null,
-      url: getLostPostCoverUrl(item.cover_photo_key),
-    });
+    const photoKeys =
+      Array.isArray(item.photo_keys) && item.photo_keys.length
+        ? item.photo_keys
+        : [item.cover_photo_key];
+    setPhotos(
+      photoKeys.slice(0, MAX_EDIT_PHOTOS).map((key) => ({
+        key: key?.trim() || null,
+        file: null,
+        url: getLostPostCoverUrl(key),
+      }))
+    );
     setHydrated(true);
   }, [item, hydrated]);
 
   useEffect(() => {
-    return () => {
-      if (photo?.file && photo.url.startsWith("blob:")) {
-        URL.revokeObjectURL(photo.url);
-      }
-    };
-  }, [photo]);
+    photosRef.current = photos;
+  }, [photos]);
 
   useEffect(() => {
-    if (!photo?.url && fileInputRef.current) {
+    return () => {
+      for (const photo of photosRef.current) {
+        if (photo.file && photo.url.startsWith("blob:")) {
+          URL.revokeObjectURL(photo.url);
+        }
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!photos.length && fileInputRef.current) {
       fileInputRef.current.value = "";
     }
-  }, [photo?.url]);
+  }, [photos.length]);
 
   if (isLoading || (!hydrated && !loadError)) {
     return <Text color="caption">불러오는 중...</Text>;
@@ -107,8 +128,8 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
     );
   }
 
-  const photoUrl = photo?.url || null;
-  const hasPhoto = Boolean(photo && (photo.key || photo.file));
+  const photoUrl = photos[0]?.url || null;
+  const hasPhoto = photos.length > 0;
   const photoError =
     showErrors && !hasPhoto ? "사진을 등록해주세요." : undefined;
   const petNameError =
@@ -118,19 +139,67 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
     submissionAttemptRef.current = null;
   };
 
-  const handlePhotoChange = (file: File | null) => {
-    bumpDraft();
-    setPhoto((prev) => {
-      if (prev?.file && prev.url.startsWith("blob:")) {
-        URL.revokeObjectURL(prev.url);
+  const handlePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const incoming = Array.from(event.currentTarget.files ?? []);
+    event.currentTarget.value = "";
+    if (!incoming.length) return;
+
+    const validIncoming = incoming.filter((file, index) => {
+      const message = photoValidationMessage(file, index + 1);
+      if (message) {
+        setToast({ message, type: "error" });
+        return false;
       }
-      if (!file) return null;
-      return {
-        key: null,
-        file,
-        url: URL.createObjectURL(file),
-      };
+      return true;
     });
+    if (!validIncoming.length) return;
+
+    const incomingDrafts = validIncoming.map((file) => ({
+      key: null,
+      file,
+      url: URL.createObjectURL(file),
+    }));
+    const existing = photos;
+    const merged = [...existing, ...incomingDrafts].filter(
+      (draft, index, all) =>
+        all.findIndex((candidate) => {
+          if (draft.key || candidate.key) return draft.key === candidate.key;
+          return (
+            draft.file?.name === candidate.file?.name &&
+            draft.file?.size === candidate.file?.size &&
+            draft.file?.lastModified === candidate.file?.lastModified
+          );
+        }) === index
+    );
+    for (const draft of incomingDrafts) {
+      if (!merged.includes(draft)) {
+        URL.revokeObjectURL(draft.url);
+      }
+    }
+    const nextPhotos = merged.slice(0, MAX_EDIT_PHOTOS);
+    const rejected = merged.length - nextPhotos.length;
+    if (rejected > 0) {
+      for (const draft of merged.slice(MAX_EDIT_PHOTOS)) {
+        if (draft.file && draft.url.startsWith("blob:")) {
+          URL.revokeObjectURL(draft.url);
+        }
+      }
+      setToast({
+        message: `최대 ${MAX_EDIT_PHOTOS}장까지 등록할 수 있어요. ${rejected}장은 제외했어요.`,
+        type: "error",
+      });
+    }
+    bumpDraft();
+    setPhotos(nextPhotos);
+  };
+
+  const handlePhotoRemove = (index: number) => {
+    const removed = photos[index];
+    if (removed?.file && removed.url.startsWith("blob:")) {
+      URL.revokeObjectURL(removed.url);
+    }
+    bumpDraft();
+    setPhotos(photos.filter((_, photoIndex) => photoIndex !== index));
   };
 
   const handleOptionalFieldChange = (
@@ -157,14 +226,20 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
     );
   };
 
-  const uploadCover = async (
-    file: File,
+  const uploadPhotos = async (
+    drafts: EditPhotoDraft[],
     initialAttempt: FormSubmissionAttempt
-  ): Promise<string> => {
+  ): Promise<string[]> => {
     const token = session?.access_token;
     let attempt = initialAttempt;
+    const newDrafts = drafts.filter((draft) => !draft.key && draft.file);
 
-    if (!attempt.uploadIntent) {
+    if (!newDrafts.length) {
+      return drafts.map((draft) => draft.key as string);
+    }
+
+    let intents = attempt.uploadIntents ?? [];
+    if (intents.length !== newDrafts.length) {
       const presignRes = await fetch("/api/v1/uploads/presign", {
         method: "POST",
         headers: {
@@ -174,7 +249,10 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
         },
         body: JSON.stringify({
           purpose: "lost_cover",
-          files: [{ contentType: file.type, sizeBytes: file.size }],
+          files: newDrafts.map((draft) => ({
+            contentType: draft.file!.type,
+            sizeBytes: draft.file!.size,
+          })),
         }),
       });
       if (!presignRes.ok) {
@@ -182,26 +260,35 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
         throw new Error(err.error?.message || "이미지 업로드에 실패했습니다.");
       }
       const { data } = await presignRes.json();
-      if (!data?.uploads?.[0]) throw new Error("이미지 업로드에 실패했습니다.");
-      attempt = rememberUploadIntent(attempt, data.uploads[0]);
+      if (
+        !Array.isArray(data?.uploads) ||
+        data.uploads.length !== newDrafts.length
+      ) {
+        throw new Error("이미지 업로드에 실패했습니다.");
+      }
+      attempt = rememberUploadIntents(attempt, data.uploads);
+      intents = attempt.uploadIntents ?? [];
       submissionAttemptRef.current = attempt;
     }
 
-    const uploadIntent = attempt.uploadIntent;
-    if (!uploadIntent) throw new Error("이미지 업로드에 실패했습니다.");
-
-    if (!uploadIntent.uploaded) {
-      const uploadRes = await fetch(uploadIntent.uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": file.type },
-        body: file,
-      });
-      if (!uploadRes.ok) throw new Error("이미지 업로드에 실패했습니다.");
-      attempt = markUploadCompleted(attempt);
-      submissionAttemptRef.current = attempt;
+    for (let index = 0; index < newDrafts.length; index += 1) {
+      const intent = intents[index];
+      const file = newDrafts[index].file;
+      if (!intent || !file) throw new Error("이미지 업로드에 실패했습니다.");
+      if (!intent.uploaded) {
+        const uploadRes = await fetch(intent.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": file.type },
+          body: file,
+        });
+        if (!uploadRes.ok) throw new Error("이미지 업로드에 실패했습니다.");
+        attempt = markUploadIntentCompleted(attempt, index);
+        submissionAttemptRef.current = attempt;
+      }
     }
 
-    return uploadIntent.fileKey;
+    let newIndex = 0;
+    return drafts.map((draft) => draft.key ?? intents[newIndex++].fileKey);
   };
 
   const detailHref = `/my/lost-posts/${lostPostId}`;
@@ -213,7 +300,7 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
       setShowErrors(true);
       setError(
         !hasPhoto
-          ? "사진은 1장으로 유지해야 합니다."
+          ? "사진을 한 장 이상 선택해주세요."
           : "강아지 이름을 입력해주세요."
       );
       return;
@@ -236,10 +323,15 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
         status,
       };
 
-      let coverPhotoKey: string | undefined;
-      if (photo?.file) {
+      if (photos.some((photo) => photo.file)) {
         const payloadFingerprint = JSON.stringify({
-          file: await fingerprintUploadFile(photo.file),
+          files: await Promise.all(
+            photos.map((photo) =>
+              photo.file
+                ? fingerprintUploadFile(photo.file)
+                : `existing:${photo.key}`
+            )
+          ),
           domainPayload,
         });
         const attempt = prepareSubmission(
@@ -248,7 +340,21 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
           () => crypto.randomUUID()
         );
         submissionAttemptRef.current = attempt;
-        coverPhotoKey = await uploadCover(photo.file, attempt);
+      }
+
+      const photoKeys = photos.some((photo) => photo.file)
+        ? await uploadPhotos(
+            photos,
+            submissionAttemptRef.current ??
+              prepareSubmission(
+                null,
+                JSON.stringify(photos.map((photo) => photo.key)),
+                () => crypto.randomUUID()
+              )
+          )
+        : photos.map((photo) => photo.key as string);
+      if (!photoKeys.length) {
+        throw new Error("사진을 한 장 이상 선택해주세요.");
       }
 
       const response = await fetch(`/api/v1/lost-posts/${lostPostId}`, {
@@ -266,19 +372,27 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
         },
         body: JSON.stringify({
           ...domainPayload,
-          ...(coverPhotoKey ? { coverPhotoKey } : {}),
+          photoKeys,
         }),
       });
       const result = await response.json().catch(() => null);
       if (!response.ok || !result?.success) {
-        throw new Error(result?.error?.message ?? "유실글 수정에 실패했습니다.");
+        throw new Error(
+          result?.error?.message ?? "유실글 수정에 실패했습니다."
+        );
       }
       submissionAttemptRef.current = completeSubmission();
       invalidateMyLostPostsCache();
       router.push(detailHref);
       router.refresh();
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "오류가 발생했습니다.");
+      const message =
+        cause instanceof Error ? cause.message : "오류가 발생했습니다.";
+      if (message.includes("JPEG/PNG") || message.includes("10MB")) {
+        setToast({ message, type: "error" });
+      } else {
+        setError(message);
+      }
     } finally {
       setSaving(false);
     }
@@ -286,12 +400,26 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
 
   return (
     <form onSubmit={submit} className="space-y-6">
+      {toast ? (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onClose={() => setToast(null)}
+        />
+      ) : null}
       <section className="space-y-6" aria-label="필수 유실 정보">
         <div className="space-y-3">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
             <Icon name="camera" size={18} className="text-action-primary" />
             <Text variant="body" color="main" className="font-semibold">
-              사진 (1장) <span className="text-action-primary">*</span>
+              사진 (최대 3장) <span className="text-action-primary">*</span>
+            </Text>
+            <Text
+              variant="caption"
+              color="caption"
+              className="block w-full text-xs"
+            >
+              유실글은 최대 3장
             </Text>
             {photoError ? (
               <span role="alert" className="text-error text-xs font-medium">
@@ -307,13 +435,12 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
               accept="image/jpeg,image/png"
               disabled={saving}
               className="peer sr-only"
-              onChange={(event) =>
-                handlePhotoChange(event.currentTarget.files?.[0] ?? null)
-              }
+              multiple
+              onChange={handlePhotoChange}
             />
             <label
               htmlFor="lost-edit-photo"
-              aria-label="대표 사진 변경"
+              aria-label="사진 추가 또는 변경"
               className={cn(
                 "group border-border-subtle bg-surface-soft hover:border-action-primary/50 hover:bg-accent-warm/10 peer-focus-visible:outline-action-primary relative flex aspect-4/3 max-h-80 w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed transition-all peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2",
                 saving && "pointer-events-none opacity-60",
@@ -323,10 +450,10 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
               {photoUrl ? (
                 <Image
                   src={photoUrl}
-                  alt="대표 사진 미리보기"
+                  alt="선택한 유실글 사진 미리보기"
                   fill
                   sizes="(max-width: 768px) 100vw, 768px"
-                  unoptimized={Boolean(photo?.file)}
+                  unoptimized={Boolean(photos[0]?.file)}
                   className="object-contain p-2"
                 />
               ) : (
@@ -339,17 +466,47 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
                   </Text>
                 </div>
               )}
+              <div className="absolute inset-x-3 bottom-3 flex items-center justify-between rounded-xl bg-black/55 px-3 py-2 text-sm font-semibold text-white backdrop-blur-sm">
+                <span>{photoUrl ? "사진 더 추가" : "사진 선택"}</span>
+                <span>
+                  {photos.length}/{MAX_EDIT_PHOTOS}
+                </span>
+              </div>
             </label>
-            {photoUrl ? (
-              <button
-                type="button"
-                onClick={() => handlePhotoChange(null)}
-                disabled={saving}
-                aria-label="선택한 사진 제거"
-                className="focus-visible:outline-action-primary absolute top-4 right-4 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            {photos.length ? (
+              <div
+                className="flex gap-2 overflow-x-auto py-2"
+                aria-label="선택한 사진"
               >
-                <span aria-hidden="true">×</span>
-              </button>
+                {photos.map((entry, index) => (
+                  <div
+                    key={`${entry.key ?? entry.url}-${index}`}
+                    className="relative h-16 w-16 shrink-0"
+                  >
+                    <Image
+                      src={entry.url}
+                      alt={`${index + 1}번째 선택 사진`}
+                      fill
+                      unoptimized={Boolean(entry.file)}
+                      className={cn(
+                        "rounded-xl border-2 object-cover",
+                        index === 0
+                          ? "border-accent-warm-text"
+                          : "border-border-subtle"
+                      )}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => handlePhotoRemove(index)}
+                      disabled={saving}
+                      aria-label={`${index + 1}번째 사진 제거`}
+                      className="bg-text-main absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full text-xs text-white shadow-sm"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
             ) : null}
           </div>
         </div>
@@ -360,7 +517,12 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
             className="flex flex-wrap items-center gap-x-2 gap-y-1"
           >
             <Icon name="activity" size={18} className="text-action-primary" />
-            <Text as="span" variant="body" color="main" className="font-semibold">
+            <Text
+              as="span"
+              variant="body"
+              color="main"
+              className="font-semibold"
+            >
               상태
             </Text>
           </label>
@@ -385,7 +547,12 @@ export function LostPostEditForm({ lostPostId }: { lostPostId: string }) {
             className="flex flex-wrap items-center gap-x-2 gap-y-1"
           >
             <Icon name="paw" size={18} className="text-action-primary" />
-            <Text as="span" variant="body" color="main" className="font-semibold">
+            <Text
+              as="span"
+              variant="body"
+              color="main"
+              className="font-semibold"
+            >
               강아지 이름 <span className="text-action-primary">*</span>
             </Text>
             {petNameError ? (
