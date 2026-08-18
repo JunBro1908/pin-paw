@@ -164,6 +164,10 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
               alt="제보 사진"
               className="h-full w-full"
               aspectClassName="aspect-square"
+              swipe={false}
+              autoPlay
+              intervalMs={1000}
+              showIndicators={false}
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-2xl">
@@ -186,7 +190,9 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
               {occurredAt}
             </Text>
           ) : null}
-          {traitTagsMarkup ? <div className="mt-2">{traitTagsMarkup}</div> : null}
+          {traitTagsMarkup ? (
+            <div className="mt-2">{traitTagsMarkup}</div>
+          ) : null}
         </div>
       </div>
       <Link
@@ -195,7 +201,7 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
             ? `/map?lat=${item.lat}&lng=${item.lng}&sightingId=${item.id}`
             : `/map?sightingId=${item.id}`
         }
-        className="border-[#d7c6b3] text-[#8f7356] hover:bg-[#f6efe7] focus-visible:ring-[#b99a78] mt-3 flex min-h-10 w-full items-center justify-center rounded-xl border bg-transparent text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-offset-2"
+        className="mt-3 flex min-h-10 w-full items-center justify-center rounded-xl border border-[#d7c6b3] bg-transparent text-sm font-medium text-[#8f7356] transition-colors hover:bg-[#f6efe7] focus-visible:ring-2 focus-visible:ring-[#b99a78] focus-visible:ring-offset-2"
       >
         지도에서 보기
       </Link>

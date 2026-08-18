@@ -23,7 +23,7 @@ export async function shareLostPost(
 ): Promise<ShareLostPostResult> {
   const shareUrl = buildLostPostShareUrl(lostPostId);
   const text = buildLostPostShareText(options.petName);
-  const sharePayload = `${text} ${shareUrl}`;
+  const sharePayload = `${text}\n\n${shareUrl}`;
   try {
     if (typeof navigator !== "undefined" && navigator.share) {
       await navigator.share({
