@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/shared/lib/cn";
+import { nextPhotoIndex } from "@/shared/lib/photo-carousel";
 
 interface PhotoCarouselProps {
   urls: string[];
@@ -32,7 +33,7 @@ export function PhotoCarousel({
   useEffect(() => {
     if (!autoPlay || urls.length < 2) return;
     const timer = window.setInterval(() => {
-      setIndex((value) => (value + 1) % urls.length);
+      setIndex((value) => nextPhotoIndex(value, urls.length));
     }, intervalMs);
     return () => window.clearInterval(timer);
   }, [autoPlay, intervalMs, urls.length]);
@@ -61,6 +62,38 @@ export function PhotoCarousel({
   };
 
   if (!urls.length) return null;
+
+  if (autoPlay && !swipe) {
+    return (
+      <div
+        className={cn(
+          "border-border-subtle bg-surface-soft relative overflow-hidden border",
+          className
+        )}
+      >
+        <div className={cn("relative w-full", aspectClassName)}>
+          {urls.map((url, photoIndex) => (
+            <div
+              key={`${url}-${photoIndex}`}
+              className={cn(
+                "absolute inset-0 transition-opacity duration-700 ease-in-out",
+                photoIndex === current ? "opacity-100" : "opacity-0"
+              )}
+            >
+              <Image
+                src={url}
+                alt={`${alt} ${photoIndex + 1}/${urls.length}`}
+                fill
+                sizes="6rem"
+                className="object-cover"
+                priority={photoIndex === 0}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

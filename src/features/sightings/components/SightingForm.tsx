@@ -24,11 +24,14 @@ import { SightingOptionalDetails } from "./SightingOptionalDetails";
 import {
   completeSubmission,
   fingerprintUploadFile,
+  markUploadIntentCompleted,
   prepareSubmission,
+  rememberUploadIntents,
   runBestEffort,
   type FormSubmissionAttempt,
 } from "@/shared/lib/form-submission-lifecycle";
 import { mergePhotoSelection } from "@/shared/lib/photo-selection";
+import { photoValidationMessage } from "@/shared/lib/photo-validation";
 
 export function SightingForm() {
   const { session } = useAuth();
@@ -146,9 +149,19 @@ export function SightingForm() {
     const incoming = files.length ? files : file ? [file] : [];
     if (!incoming.length) return;
 
+    const validIncoming = incoming.filter((candidate, index) => {
+      const message = photoValidationMessage(candidate, index + 1);
+      if (message) {
+        setToast({ message, type: "error" });
+        return false;
+      }
+      return true;
+    });
+    if (!validIncoming.length) return;
+
     const maxPhotos = session ? 5 : 1;
     const existing = formData.photos;
-    const selection = mergePhotoSelection(existing, incoming, maxPhotos);
+    const selection = mergePhotoSelection(existing, validIncoming, maxPhotos);
     const addedUrls = selection.added.map((item) => URL.createObjectURL(item));
 
     if (selection.rejected > 0) {
@@ -352,61 +365,69 @@ export function SightingForm() {
     photos: File[],
     initialAttempt: FormSubmissionAttempt
   ): Promise<string[]> => {
-    const unsupportedIndex = photos.findIndex(
-      (photo) =>
-        !["image/jpeg", "image/png"].includes(photo.type) ||
-        photo.size < 1 ||
-        photo.size > 10 * 1024 * 1024
+    const unsupportedIndex = photos.findIndex((photo, index) =>
+      photoValidationMessage(photo, index + 1)
     );
     if (unsupportedIndex >= 0) {
       const photo = photos[unsupportedIndex];
-      throw new Error(
-        `${unsupportedIndex + 1}번째 사진은 JPEG/PNG 형식이며 10MB 이하여야 합니다. (${photo.type || "알 수 없는 형식"})`
-      );
+      throw new Error(photoValidationMessage(photo, unsupportedIndex + 1)!);
     }
     const { data: sessionData } = await supabase.auth.getSession();
-    const presignRes = await fetch("/api/v1/uploads/presign", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Idempotency-Key": initialAttempt.uploadIdempotencyKey,
-        ...(sessionData.session?.access_token && {
-          Authorization: `Bearer ${sessionData.session.access_token}`,
+    let attempt = initialAttempt;
+    let intents = attempt.uploadIntents ?? [];
+    if (intents.length !== photos.length) {
+      const presignRes = await fetch("/api/v1/uploads/presign", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Idempotency-Key": attempt.uploadIdempotencyKey,
+          ...(sessionData.session?.access_token && {
+            Authorization: `Bearer ${sessionData.session.access_token}`,
+          }),
+        },
+        body: JSON.stringify({
+          purpose: "sighting_photo",
+          files: photos.map((photo) => ({
+            contentType: photo.type,
+            sizeBytes: photo.size,
+          })),
         }),
-      },
-      body: JSON.stringify({
-        purpose: "sighting_photo",
-        files: photos.map((photo) => ({
-          contentType: photo.type,
-          sizeBytes: photo.size,
-        })),
-      }),
-    });
-    if (!presignRes.ok) {
-      const result = await presignRes.json().catch(() => null);
-      throw new Error(
-        result?.error?.message ||
-          `이미지 업로드 준비에 실패했습니다. (${presignRes.status})`
-      );
-    }
-    const result = await presignRes.json();
-    const uploads = result.data?.uploads;
-    if (!Array.isArray(uploads) || uploads.length !== photos.length) {
-      throw new Error("이미지 업로드 준비에 실패했습니다.");
-    }
-    for (let index = 0; index < uploads.length; index += 1) {
-      const uploadRes = await fetch(uploads[index].uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": photos[index].type },
-        body: photos[index],
       });
-      if (!uploadRes.ok) {
+      if (!presignRes.ok) {
+        const result = await presignRes.json().catch(() => null);
         throw new Error(
-          `${index + 1}번째 이미지 업로드에 실패했습니다. (Storage ${uploadRes.status})`
+          result?.error?.message ||
+            `이미지 업로드 준비에 실패했습니다. (${presignRes.status})`
         );
       }
+      const result = await presignRes.json();
+      const uploads = result.data?.uploads;
+      if (!Array.isArray(uploads) || uploads.length !== photos.length) {
+        throw new Error("이미지 업로드 준비에 실패했습니다.");
+      }
+      attempt = rememberUploadIntents(attempt, uploads);
+      intents = attempt.uploadIntents ?? [];
+      submissionAttemptRef.current = attempt;
     }
-    return uploads.map((upload: { fileKey: string }) => upload.fileKey);
+    for (let index = 0; index < photos.length; index += 1) {
+      const intent = intents[index];
+      if (!intent) throw new Error("이미지 업로드 준비에 실패했습니다.");
+      if (!intent.uploaded) {
+        const uploadRes = await fetch(intent.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": photos[index].type },
+          body: photos[index],
+        });
+        if (!uploadRes.ok) {
+          throw new Error(
+            `${index + 1}번째 이미지 업로드에 실패했습니다. (Storage ${uploadRes.status})`
+          );
+        }
+        attempt = markUploadIntentCompleted(attempt, index);
+        submissionAttemptRef.current = attempt;
+      }
+    }
+    return intents.map((intent) => intent.fileKey);
   };
 
   /**
@@ -594,9 +615,7 @@ export function SightingForm() {
           photoUrls={formData.photoUrls}
           multiple={Boolean(session)}
           photoHint={
-            session
-              ? "로그인 제보는 최대 5장 · JPEG/PNG · 장당 10MB"
-              : "비로그인 제보는 사진 1장 · JPEG/PNG · 장당 10MB"
+            session ? "회원 제보는 최대 5장" : "비회원 제보는 최대 1장"
           }
           occurredAt={formData.time}
           photoError={photoError}

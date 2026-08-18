@@ -7,8 +7,10 @@ import * as submissionLifecycle from "../../src/shared/lib/form-submission-lifec
 const {
   completeSubmission,
   fingerprintUploadFile,
+  markUploadIntentCompleted,
   prepareSubmission,
   rememberUploadIntent,
+  rememberUploadIntents,
   startNewSubmission,
 } = submissionLifecycle;
 
@@ -102,6 +104,27 @@ test("rotates keys and discards the upload intent when the payload changes", () 
   assert.equal(changed.uploadIdempotencyKey, uuids[2]);
   assert.equal(changed.submissionIdempotencyKey, uuids[3]);
   assert.equal(changed.uploadIntent, null);
+});
+
+test("tracks each photo upload intent independently across a retry", () => {
+  const createUuid = uuidFactory();
+  const first = prepareSubmission(null, "photo-queue", createUuid);
+  const withIntents = rememberUploadIntents(first, [
+    {
+      uploadUrl: "https://storage.example/upload-1",
+      fileKey: "lost_cover/20260725/one.jpg",
+    },
+    {
+      uploadUrl: "https://storage.example/upload-2",
+      fileKey: "lost_cover/20260725/two.jpg",
+    },
+  ]);
+  const afterFirstUpload = markUploadIntentCompleted(withIntents, 0);
+  const retry = prepareSubmission(afterFirstUpload, "photo-queue", createUuid);
+
+  assert.equal(retry.uploadIntents?.[0].uploaded, true);
+  assert.equal(retry.uploadIntents?.[1].uploaded, false);
+  assert.equal(retry.uploadIntents?.[1].fileKey, "lost_cover/20260725/two.jpg");
 });
 
 test("rotates only after success or an explicit new submission", () => {

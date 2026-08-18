@@ -30,9 +30,9 @@ import { TRAIT_TAGS, TRAIT_TAGS_MAX } from "@/shared/constants/traitTags";
 import {
   completeSubmission,
   fingerprintUploadFile,
-  markUploadCompleted,
+  markUploadIntentCompleted,
   prepareSubmission,
-  rememberUploadIntent,
+  rememberUploadIntents,
   type FormSubmissionAttempt,
 } from "@/shared/lib/form-submission-lifecycle";
 import { trackFunnelEvent } from "@/shared/lib/funnel-client";
@@ -41,6 +41,7 @@ import {
   type LocationInputSource,
 } from "@/shared/lib/location-input-presentation";
 import { mergePhotoSelection } from "@/shared/lib/photo-selection";
+import { photoValidationMessage } from "@/shared/lib/photo-validation";
 
 const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
 const inputBase =
@@ -130,7 +131,17 @@ export function LostPostForm() {
     const incoming = Array.from(e.target.files ?? []);
     if (!incoming.length) return;
 
-    const selection = mergePhotoSelection(formData.photos, incoming, 3);
+    const validIncoming = incoming.filter((candidate, index) => {
+      const message = photoValidationMessage(candidate, index + 1);
+      if (message) {
+        setToast({ message, type: "error" });
+        return false;
+      }
+      return true;
+    });
+    if (!validIncoming.length) return;
+
+    const selection = mergePhotoSelection(formData.photos, validIncoming, 3);
     const addedUrls = selection.added.map((item) => URL.createObjectURL(item));
     if (selection.rejected > 0) {
       setToast({
@@ -179,23 +190,18 @@ export function LostPostForm() {
     files: File[],
     initialAttempt: FormSubmissionAttempt
   ): Promise<string[]> => {
-    const unsupportedIndex = files.findIndex(
-      (file) =>
-        !["image/jpeg", "image/png"].includes(file.type) ||
-        file.size < 1 ||
-        file.size > 10 * 1024 * 1024
+    const unsupportedIndex = files.findIndex((file, index) =>
+      photoValidationMessage(file, index + 1)
     );
     if (unsupportedIndex >= 0) {
       const file = files[unsupportedIndex];
-      throw new Error(
-        `${unsupportedIndex + 1}번째 사진은 JPEG/PNG 형식이며 10MB 이하여야 합니다. (${file.type || "알 수 없는 형식"})`
-      );
+      throw new Error(photoValidationMessage(file, unsupportedIndex + 1)!);
     }
     const token = session?.access_token;
     let attempt = initialAttempt;
-    let uploads: Array<{ fileKey: string; uploadUrl: string }> = [];
+    let intents = attempt.uploadIntents ?? [];
 
-    if (!attempt.uploadIntent) {
+    if (intents.length !== files.length) {
       const presignRes = await fetch("/api/v1/uploads/presign", {
         method: "POST",
         headers: {
@@ -221,36 +227,31 @@ export function LostPostForm() {
           `이미지 업로드 준비에 실패했습니다. (${presignRes.status})`
         );
       }
-      uploads = data.uploads;
-      attempt = rememberUploadIntent(attempt, data.uploads[0]);
+      attempt = rememberUploadIntents(attempt, data.uploads);
+      intents = attempt.uploadIntents ?? [];
       submissionAttemptRef.current = attempt;
     }
 
-    const uploadIntent = attempt.uploadIntent;
-    if (!uploadIntent) throw new Error("이미지 업로드에 실패했습니다.");
-
-    if (!uploads.length)
-      uploads = [
-        { fileKey: uploadIntent.fileKey, uploadUrl: uploadIntent.uploadUrl },
-      ];
-    for (let index = 0; index < uploads.length; index += 1) {
-      const uploadRes = await fetch(uploads[index].uploadUrl, {
-        method: "PUT",
-        headers: { "Content-Type": files[index].type },
-        body: files[index],
-      });
-      if (!uploadRes.ok) {
-        throw new Error(
-          `${index + 1}번째 이미지 업로드에 실패했습니다. (Storage ${uploadRes.status})`
-        );
+    for (let index = 0; index < files.length; index += 1) {
+      const intent = intents[index];
+      if (!intent) throw new Error("이미지 업로드에 실패했습니다.");
+      if (!intent.uploaded) {
+        const uploadRes = await fetch(intent.uploadUrl, {
+          method: "PUT",
+          headers: { "Content-Type": files[index].type },
+          body: files[index],
+        });
+        if (!uploadRes.ok) {
+          throw new Error(
+            `${index + 1}번째 이미지 업로드에 실패했습니다. (Storage ${uploadRes.status})`
+          );
+        }
+        attempt = markUploadIntentCompleted(attempt, index);
+        submissionAttemptRef.current = attempt;
       }
     }
-    if (!uploadIntent.uploaded) {
-      attempt = markUploadCompleted(attempt);
-      submissionAttemptRef.current = attempt;
-    }
 
-    return uploads.map((upload) => upload.fileKey);
+    return intents.map((intent) => intent.fileKey);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -347,7 +348,7 @@ export function LostPostForm() {
             대표 사진 <span className="text-primary">*</span>
           </Text>
           <Text variant="caption" color="caption" className="block text-xs">
-            최대 3장 · JPEG/PNG · 장당 10MB
+            유실글은 최대 3장
           </Text>
           <div
             role="button"

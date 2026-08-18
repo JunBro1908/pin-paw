@@ -166,7 +166,7 @@ export function MySightingCard({ item, onDeleted }: MySightingCardProps) {
               aspectClassName="aspect-square"
               swipe={false}
               autoPlay
-              intervalMs={1000}
+              intervalMs={3200}
               showIndicators={false}
             />
           ) : (

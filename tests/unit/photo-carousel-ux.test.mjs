@@ -18,8 +18,12 @@ test("my sightings card opts into quiet automatic photo rotation", async () => {
     "src/features/sightings/components/MySightingCard.tsx",
     "utf8"
   );
+  const carousel = await readFile("src/shared/ui/PhotoCarousel.tsx", "utf8");
 
   assert.match(source, /autoPlay/);
-  assert.match(source, /intervalMs=\{1000\}/);
+  assert.doesNotMatch(source, /intervalMs=\{1000\}/);
   assert.match(source, /showIndicators=\{false\}/);
+  assert.match(source, /intervalMs=\{3200\}/);
+  assert.match(carousel, /duration-700/);
+  assert.match(carousel, /nextPhotoIndex/);
 });

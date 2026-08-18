@@ -9,6 +9,7 @@ export interface FormSubmissionAttempt {
   uploadIdempotencyKey: string;
   submissionIdempotencyKey: string;
   uploadIntent: UploadIntent | null;
+  uploadIntents?: UploadIntent[];
 }
 
 type CreateUuid = () => string;
@@ -67,6 +68,35 @@ export function rememberUploadIntent(
       ...intent,
       uploaded: intent.uploaded ?? false,
     },
+  };
+}
+
+export function rememberUploadIntents(
+  current: FormSubmissionAttempt,
+  intents: Array<
+    Omit<UploadIntent, "uploaded"> & Partial<Pick<UploadIntent, "uploaded">>
+  >
+): FormSubmissionAttempt {
+  return {
+    ...current,
+    uploadIntents: intents.map((intent) => ({
+      ...intent,
+      uploaded: intent.uploaded ?? false,
+    })),
+  };
+}
+
+export function markUploadIntentCompleted(
+  current: FormSubmissionAttempt,
+  index: number
+): FormSubmissionAttempt {
+  const intents = current.uploadIntents ?? [];
+  if (!intents[index]) throw new Error("Upload intent is not prepared.");
+  return {
+    ...current,
+    uploadIntents: intents.map((intent, intentIndex) =>
+      intentIndex === index ? { ...intent, uploaded: true } : intent
+    ),
   };
 }
 
