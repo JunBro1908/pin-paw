@@ -15,6 +15,7 @@ export interface SightingEssentialsProps {
   photoUrl: string | null;
   photoUrls?: string[];
   multiple?: boolean;
+  photoHint?: string;
   occurredAt: string;
   photoLabel?: string;
   photoError?: string;
@@ -62,6 +63,7 @@ export function SightingEssentials({
   photoUrl,
   photoUrls = photoUrl ? [photoUrl] : [],
   multiple = false,
+  photoHint,
   occurredAt,
   photoLabel = "사진 추가",
   photoError,
@@ -92,6 +94,11 @@ export function SightingEssentials({
           required
           error={photoError}
         />
+        {photoHint ? (
+          <Text variant="caption" color="caption" className="block text-xs">
+            {photoHint}
+          </Text>
+        ) : null}
         <div className="relative">
           <input
             ref={fileInputRef}
@@ -101,12 +108,13 @@ export function SightingEssentials({
             multiple={multiple}
             disabled={disabled}
             className="peer sr-only"
-            onChange={(event) =>
+            onChange={(event) => {
               onPhotoChange(
                 event.currentTarget.files?.[0] ?? null,
                 Array.from(event.currentTarget.files ?? [])
-              )
-            }
+              );
+              event.currentTarget.value = "";
+            }}
           />
           <label
             htmlFor="sighting-photo"
@@ -135,53 +143,44 @@ export function SightingEssentials({
                 </Text>
               </div>
             )}
+            <div className="absolute inset-x-3 bottom-3 flex items-center justify-between rounded-xl bg-black/55 px-3 py-2 text-sm font-semibold text-white backdrop-blur-sm">
+              <span>{photoUrls.length ? "사진 더 추가" : "사진 선택"}</span>
+              <span>
+                {photoUrls.length}/{multiple ? 5 : 1}
+              </span>
+            </div>
           </label>
-          {multiple && photoUrls.length > 0 && photoUrls.length < 5 ? (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={disabled}
-              className="border-accent-warm-text text-accent-warm-text hover:bg-accent-warm/10 mt-3 flex min-h-11 w-full items-center justify-center rounded-xl border border-dashed text-sm font-semibold transition-colors disabled:opacity-60"
-            >
-              + 사진 추가 ({photoUrls.length}/5)
-            </button>
-          ) : null}
           {photoUrls.length ? (
-            <>
-              <button
-                type="button"
-                onClick={() => onPhotoRemove?.(0) ?? onPhotoChange(null)}
-                disabled={disabled}
-                aria-label="대표 사진 제거"
-                className="focus-visible:outline-action-primary absolute top-4 right-4 z-10 flex min-h-11 min-w-11 items-center justify-center rounded-full bg-black/60 text-white shadow-lg backdrop-blur-sm transition-transform hover:scale-105 focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <span aria-hidden="true">×</span>
-              </button>
-              {photoUrls.length > 1 ? (
-                <div className="absolute right-3 bottom-3 left-3 z-10 flex gap-2 overflow-x-auto rounded-xl bg-black/35 p-2 backdrop-blur-sm">
-                  {photoUrls.map((url, index) => (
-                    <div key={url} className="relative h-14 w-14 shrink-0">
-                      <Image
-                        src={url}
-                        alt={`${index + 1}번째 선택 사진`}
-                        fill
-                        unoptimized
-                        className="rounded-lg border border-white/70 object-cover"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => onPhotoRemove?.(index)}
-                        disabled={disabled}
-                        className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/75 text-xs text-white"
-                        aria-label={`${index + 1}번째 사진 제거`}
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
+            <div
+              className="flex gap-2 overflow-x-auto py-2"
+              aria-label="선택한 사진"
+            >
+              {photoUrls.map((url, index) => (
+                <div key={url} className="relative h-16 w-16 shrink-0">
+                  <Image
+                    src={url}
+                    alt={`${index + 1}번째 선택 사진`}
+                    fill
+                    unoptimized
+                    className={cn(
+                      "rounded-xl border-2 object-cover",
+                      index === 0
+                        ? "border-accent-warm-text"
+                        : "border-border-subtle"
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onPhotoRemove?.(index)}
+                    disabled={disabled}
+                    className="bg-text-main absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full text-xs text-white shadow-sm"
+                    aria-label={`${index + 1}번째 사진 제거`}
+                  >
+                    ×
+                  </button>
                 </div>
-              ) : null}
-            </>
+              ))}
+            </div>
           ) : null}
         </div>
       </div>

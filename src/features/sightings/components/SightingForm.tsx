@@ -28,6 +28,7 @@ import {
   runBestEffort,
   type FormSubmissionAttempt,
 } from "@/shared/lib/form-submission-lifecycle";
+import { mergePhotoSelection } from "@/shared/lib/photo-selection";
 
 export function SightingForm() {
   const { session } = useAuth();
@@ -142,35 +143,38 @@ export function SightingForm() {
   }, [formData.photoUrls]);
 
   const handlePhotoChange = (file: File | null, files: File[] = []) => {
-    const incoming = session ? files : files.slice(0, 1);
+    const incoming = files.length ? files : file ? [file] : [];
+    if (!incoming.length) return;
+
+    const maxPhotos = session ? 5 : 1;
+    const existing = formData.photos;
+    const selection = mergePhotoSelection(existing, incoming, maxPhotos);
+    const addedUrls = selection.added.map((item) => URL.createObjectURL(item));
+
+    if (selection.rejected > 0) {
+      setToast({
+        message: `최대 ${maxPhotos}장까지 등록할 수 있어요. ${selection.rejected}장은 제외했어요.`,
+        type: "error",
+      });
+    }
+
     setFormData((prev) => ({
-      ...(() => {
-        const existing = prev.photos;
-        const merged = [...existing, ...incoming].filter(
-          (item, index, all) =>
-            all.findIndex(
-              (candidate) =>
-                candidate.name === item.name &&
-                candidate.size === item.size &&
-                candidate.lastModified === item.lastModified
-            ) === index
-        ).slice(0, session ? 5 : 1);
-        const addedUrls = merged.slice(existing.length).map((item) => URL.createObjectURL(item));
-        return {
-          ...prev,
-          photo: merged[0] ?? file,
-          photoUrl: prev.photoUrls[0] ?? addedUrls[0] ?? null,
-          photos: merged,
-          photoUrls: [...prev.photoUrls, ...addedUrls],
-        };
-      })(),
+      ...prev,
+      photo: selection.files[0] ?? null,
+      photoUrl: prev.photoUrls[0] ?? addedUrls[0] ?? null,
+      photos: selection.files,
+      photoUrls: [...prev.photoUrls, ...addedUrls],
     }));
   };
 
   const handlePhotoRemove = (index: number) => {
     setFormData((prev) => {
-      const nextPhotos = prev.photos.filter((_, itemIndex) => itemIndex !== index);
-      const nextUrls = prev.photoUrls.filter((_, itemIndex) => itemIndex !== index);
+      const nextPhotos = prev.photos.filter(
+        (_, itemIndex) => itemIndex !== index
+      );
+      const nextUrls = prev.photoUrls.filter(
+        (_, itemIndex) => itemIndex !== index
+      );
       const removedUrl = prev.photoUrls[index];
       if (removedUrl) URL.revokeObjectURL(removedUrl);
       return {
@@ -589,6 +593,11 @@ export function SightingForm() {
           photoUrl={formData.photoUrl}
           photoUrls={formData.photoUrls}
           multiple={Boolean(session)}
+          photoHint={
+            session
+              ? "로그인 제보는 최대 5장 · JPEG/PNG · 장당 10MB"
+              : "비로그인 제보는 사진 1장 · JPEG/PNG · 장당 10MB"
+          }
           occurredAt={formData.time}
           photoError={photoError}
           locationError={locationError}

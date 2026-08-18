@@ -95,6 +95,30 @@ test("sighting schema rejects invalid coordinates, dates, photo keys, and long n
   );
 });
 
+test("sighting schema accepts five photos but rejects a sixth", () => {
+  const key = (index) =>
+    `sighting_photo/20260725/123e4567-e89b-42d3-a456-42661417400${index}.jpg`;
+  const base = {
+    location: { lat: 37.5, lng: 127 },
+    occurredAt: "2026-07-25T12:00:00+09:00",
+  };
+
+  assert.equal(
+    parseSightingCreateRequest?.({
+      ...base,
+      photoKeys: [1, 2, 3, 4, 5].map(key),
+    }).ok,
+    true
+  );
+  assert.equal(
+    parseSightingCreateRequest?.({
+      ...base,
+      photoKeys: [1, 2, 3, 4, 5, 6].map(key),
+    }).ok,
+    false
+  );
+});
+
 test("sighting update accepts only the complete bounded mutable field set", () => {
   const key =
     "sighting_photo/20260725/123e4567-e89b-42d3-a456-426614174000.jpg";

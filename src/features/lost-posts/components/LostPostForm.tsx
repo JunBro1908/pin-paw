@@ -40,6 +40,7 @@ import {
   formatLocationInputStatus,
   type LocationInputSource,
 } from "@/shared/lib/location-input-presentation";
+import { mergePhotoSelection } from "@/shared/lib/photo-selection";
 
 const naverMapsClientId = process.env.NEXT_PUBLIC_NAVER_MAP_CLIENT_ID || "";
 const inputBase =
@@ -127,48 +128,39 @@ export function LostPostForm() {
 
   const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const incoming = Array.from(e.target.files ?? []);
-    if (incoming.length) {
-      setFormData((prev) => ({
-        ...(() => {
-          const merged = [...prev.photos, ...incoming]
-            .filter(
-              (item, index, all) =>
-                all.findIndex(
-                  (candidate) =>
-                    candidate.name === item.name &&
-                    candidate.size === item.size &&
-                    candidate.lastModified === item.lastModified
-                ) === index
-            )
-            .slice(0, 3);
-          const addedUrls = merged
-            .slice(prev.photos.length)
-            .map((item) => URL.createObjectURL(item));
-          return {
-            ...prev,
-            photo: merged[0],
-            photoUrl: prev.photoUrls[0] ?? addedUrls[0] ?? null,
-            photos: merged,
-            photoUrls: [...prev.photoUrls, ...addedUrls],
-          };
-        })(),
-      }));
-    }
-  };
+    if (!incoming.length) return;
 
-  const handleRemovePhoto = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    for (const url of formData.photoUrls) URL.revokeObjectURL(url);
+    const selection = mergePhotoSelection(formData.photos, incoming, 3);
+    const addedUrls = selection.added.map((item) => URL.createObjectURL(item));
+    if (selection.rejected > 0) {
+      setToast({
+        message: `최대 3장까지 등록할 수 있어요. ${selection.rejected}장은 제외했어요.`,
+        type: "error",
+      });
+    }
+
     setFormData((prev) => ({
       ...prev,
-      photo: null,
-      photoUrl: null,
-      photos: [],
-      photoUrls: [],
+      photo: selection.files[0] ?? null,
+      photoUrl: prev.photoUrls[0] ?? addedUrls[0] ?? null,
+      photos: selection.files,
+      photoUrls: [...prev.photoUrls, ...addedUrls],
     }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = "";
-    }
+    e.currentTarget.value = "";
+  };
+
+  const handleRemovePhoto = (index: number) => {
+    const removedUrl = formData.photoUrls[index];
+    if (removedUrl) URL.revokeObjectURL(removedUrl);
+    setFormData((prev) => ({
+      ...prev,
+      photo:
+        prev.photos.filter((_, itemIndex) => itemIndex !== index)[0] ?? null,
+      photoUrl:
+        prev.photoUrls.filter((_, itemIndex) => itemIndex !== index)[0] ?? null,
+      photos: prev.photos.filter((_, itemIndex) => itemIndex !== index),
+      photoUrls: prev.photoUrls.filter((_, itemIndex) => itemIndex !== index),
+    }));
   };
 
   const handleChange = (
@@ -213,7 +205,10 @@ export function LostPostForm() {
         },
         body: JSON.stringify({
           purpose: "lost_cover",
-          files: files.map((file) => ({ contentType: file.type, sizeBytes: file.size })),
+          files: files.map((file) => ({
+            contentType: file.type,
+            sizeBytes: file.size,
+          })),
         }),
       });
       if (!presignRes.ok) {
@@ -222,7 +217,9 @@ export function LostPostForm() {
       }
       const { data } = await presignRes.json();
       if (!data?.uploads?.length || data.uploads.length !== files.length) {
-        throw new Error(`이미지 업로드 준비에 실패했습니다. (${presignRes.status})`);
+        throw new Error(
+          `이미지 업로드 준비에 실패했습니다. (${presignRes.status})`
+        );
       }
       uploads = data.uploads;
       attempt = rememberUploadIntent(attempt, data.uploads[0]);
@@ -232,7 +229,10 @@ export function LostPostForm() {
     const uploadIntent = attempt.uploadIntent;
     if (!uploadIntent) throw new Error("이미지 업로드에 실패했습니다.");
 
-    if (!uploads.length) uploads = [{ fileKey: uploadIntent.fileKey, uploadUrl: uploadIntent.uploadUrl }];
+    if (!uploads.length)
+      uploads = [
+        { fileKey: uploadIntent.fileKey, uploadUrl: uploadIntent.uploadUrl },
+      ];
     for (let index = 0; index < uploads.length; index += 1) {
       const uploadRes = await fetch(uploads[index].uploadUrl, {
         method: "PUT",
@@ -346,6 +346,9 @@ export function LostPostForm() {
           <Text variant="body" className="font-bold">
             대표 사진 <span className="text-primary">*</span>
           </Text>
+          <Text variant="caption" color="caption" className="block text-xs">
+            최대 3장 · JPEG/PNG · 장당 10MB
+          </Text>
           <div
             role="button"
             tabIndex={0}
@@ -368,18 +371,15 @@ export function LostPostForm() {
                   unoptimized
                   className="object-cover"
                 />
-                <button
-                  type="button"
-                  onClick={handleRemovePhoto}
-                  className="absolute top-2 right-2 rounded-full bg-black/60 p-2 text-white"
-                >
-                  ✕
-                </button>
+                <div className="absolute inset-x-3 bottom-3 flex items-center justify-between rounded-xl bg-black/55 px-3 py-2 text-sm font-semibold text-white backdrop-blur-sm">
+                  <span>사진 더 추가</span>
+                  <span>{formData.photos.length}/3</span>
+                </div>
               </>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <span className="text-3xl">📷</span>
-                <Text variant="caption">사진 선택</Text>
+                <Text variant="caption">사진 선택 (최대 3장)</Text>
               </div>
             )}
             <input
@@ -391,15 +391,40 @@ export function LostPostForm() {
               onChange={handlePhotoChange}
             />
           </div>
-          {formData.photos.length > 0 && formData.photos.length < 3 ? (
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={isSubmitting}
-              className="border-accent-warm-text text-accent-warm-text hover:bg-accent-warm/10 mt-3 flex min-h-11 w-full items-center justify-center rounded-xl border border-dashed text-sm font-semibold transition-colors disabled:opacity-60"
+          {formData.photoUrls.length ? (
+            <div
+              className="flex gap-2 overflow-x-auto py-2"
+              aria-label="선택한 사진"
             >
-              + 사진 추가 ({formData.photos.length}/3)
-            </button>
+              {formData.photoUrls.map((url, index) => (
+                <div key={url} className="relative h-16 w-16 shrink-0">
+                  <Image
+                    src={url}
+                    alt={`${index + 1}번째 선택 사진`}
+                    fill
+                    unoptimized
+                    className={cn(
+                      "rounded-xl border-2 object-cover",
+                      index === 0
+                        ? "border-accent-warm-text"
+                        : "border-border-subtle"
+                    )}
+                  />
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleRemovePhoto(index);
+                    }}
+                    disabled={isSubmitting}
+                    className="bg-text-main absolute -top-1.5 -right-1.5 flex h-6 w-6 items-center justify-center rounded-full text-xs text-white shadow-sm"
+                    aria-label={`${index + 1}번째 사진 제거`}
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
           ) : null}
         </section>
 
@@ -642,7 +667,7 @@ export function LostPostForm() {
                   rows={4}
                   className={cn(
                     inputBase,
-                    "resize-none py-4 placeholder:text-text-caption autofill:bg-surface autofill:text-text-main"
+                    "placeholder:text-text-caption autofill:bg-surface autofill:text-text-main resize-none py-4"
                   )}
                 />
               </div>
